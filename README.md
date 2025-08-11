@@ -1,6 +1,8 @@
-# Mastui - A Mastodon TUI Client Built with Python and Textual
+# Mastui - A Mastodon TUI Client Built with Python
 
-Mastui is a Mastodon TUI client built with Python and Textual. It allows users to interact with their Mastodon instance in a terminal environment, providing a more efficient and intuitive way of managing their Mastodon experience.
+![A screenshot](mastui.png)
+
+Mastui is a Mastodon TUI client built with Python and Textual. It allows users to interact with their Mastodon instance in a terminal environment, providing a more efficient and intuitive way of managing their Mastodon experience. The UI is multi-column to get an easy overview of activities.
 
 ## Features
 
@@ -8,13 +10,17 @@ Mastui is a Mastodon TUI client built with Python and Textual. It allows users t
 * Timeline Viewing
 * Post Creation
 * Reply Creation
-* Like/Unlike/Hide
+* Like/Unlike
 * Direct Messaging
 * Local Mastodon Server Support
-* Theming and Customization
+* Theming and Customization (via textual themes)
+* Content warning support (currently always shown)
 
-### Mastodon
+### TODO
 
+* Profile viewing
+* View threads
+* database backend
 * Bookmarking
 * Follow/Unfollow
 * Hashtag Searching
