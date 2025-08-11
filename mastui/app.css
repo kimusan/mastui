@@ -1,0 +1,255 @@
+Screen {
+    layout: vertical;
+}
+
+Timelines {
+    layout: horizontal;
+    height: 1fr;
+}
+
+Timeline {
+    layout: vertical;
+    border: solid $accent;
+    width: 1fr;
+    height: 100%;
+    margin: 1;
+}
+
+.timeline-content {
+    display: none; /* Hidden by default */
+}
+
+Timeline:focus {
+    border: double $accent-darken-2;
+}
+
+.timeline_title {
+    dock: top;
+    text-align: center;
+    background: $accent;
+    color: $text;
+    padding: 0 1;
+    height: 1;
+}
+
+Timeline > LoadingIndicator {
+    align: center middle;
+    height: 1fr;
+}
+
+.timeline-item {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.boost-header {
+    padding: 0 1;
+    background: $primary-darken-2;
+    color: $text;
+    height: 1;
+}
+
+SplashScreen {
+    align: center middle;
+}
+
+#logo {
+    width: auto;
+    height: auto;
+}
+
+#version {
+    width: 100%;
+    text-align: center;
+}
+
+
+.post-footer {
+    height: 1;
+    padding: 0 1;
+    background: $surface-darken-1;
+}
+
+.post-footer > Static {
+    width: 1fr;
+    text-align: center;
+}
+
+.status-message {
+    margin-top: 1;
+    text-align: center;
+}
+
+Post.favourited {
+    background: $success 20%;
+}
+
+Post.reblogged {
+    background: $warning 20%;
+}
+
+Post.selected {
+    background: $primary 20%;
+}
+
+
+#dialog {
+    grid-size: 2;
+    grid-gutter: 1;
+    align: center middle;
+    width: 80%;
+    height: auto;
+    max-height: 80%;
+    background: $surface;
+    border: thick $primary 80%;
+    padding: 1;
+}
+
+#dialog > .hidden {
+    display: none;
+}
+
+#auth_link_container {
+    column-span: 2;
+    margin-top: 1;
+    border: round $primary;
+    padding: 1;
+}
+
+#auth_link_container > TextArea {
+    height: 5;
+}
+
+#auth_link_container.hidden {
+    display: none;
+}
+
+#status {
+    column-span: 2;
+    text-align: center;
+    color: $error;
+    height: auto;
+}
+
+#status.hidden {
+    display: none;
+}
+
+#post_dialog {
+    grid-size: 1;
+    grid-gutter: 1;
+    align: center middle;
+    width: 80%;
+    height: auto;
+    max-height: 80%;
+    background: $surface;
+    border: thick $primary 80%;
+    padding: 1;
+}
+
+#post_title {
+    width: 100%;
+    text-align: center;
+    background: $primary;
+    color: $text;
+    padding: 0 1;
+}
+
+#post_content {
+    height: 10;
+}
+
+#post_options {
+    height: auto;
+}
+
+#post_language_container {
+    height: auto;
+}
+
+.post_option_label {
+    width: auto;
+    height: 100%;
+    content-align: left middle;
+}
+
+#cw_input {
+    width: 1fr;
+}
+
+#language_select {
+    width: 1fr;
+}
+
+#post_buttons {
+    width: 100%;
+    align-horizontal: right;
+    height: auto;
+}
+
+#post_buttons > Button {
+    margin-left: 1;
+}
+
+#reply_dialog {
+    grid-size: 1;
+    grid-gutter: 1;
+    align: center middle;
+    width: 80%;
+    height: auto;
+    max-height: 90%;
+    background: $surface;
+    border: thick $primary 80%;
+    padding: 1;
+}
+
+#reply_title {
+    width: 100%;
+    text-align: center;
+    background: $primary;
+    color: $text;
+    padding: 0 1;
+}
+
+#original_post_preview {
+    height: auto;
+    max-height: 10;
+    overflow: auto;
+    margin-bottom: 1;
+}
+
+#reply_content {
+    height: 10;
+}
+
+#reply_options {
+    height: auto;
+}
+
+#reply_language_container {
+    height: auto;
+}
+
+.reply_option_label {
+    width: auto;
+    height: 100%;
+    content-align: left middle;
+}
+
+#cw_input {
+    width: 1fr;
+}
+
+#language_select {
+    width: 1fr;
+}
+
+#reply_buttons {
+    width: 100%;
+    align-horizontal: right;
+    height: auto;
+}
+
+#reply_buttons > Button {
+    margin-left: 1;
+}

@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "mastui"
+version = "0.1.0"
+description = "A Mastodon TUI client."
+authors = ["Kim Schulz"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+textual = ">=0.59.0"
+mastodon-py = "^2.0.1"
+python-dotenv = "^1.0.1"
+pyperclip = "^1.8.2"
+html2text = "^2024.2.26"
+requests = "^2.32.4"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+mastui = "mastui.app:main"
