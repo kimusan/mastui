@@ -164,6 +164,7 @@ class Timeline(Static, can_focus=True):
         self.title = title
         self.posts_data = posts_data
         self.selected_item = None
+        self.post_ids = set()
 
     @property
     def content_container(self) -> VerticalScroll:
@@ -202,23 +203,47 @@ class Timeline(Static, can_focus=True):
 
     def render_posts(self, posts_data):
         """Renders the given posts data in the timeline."""
-        for item in self.content_container.query("Post, Notification, .status-message"):
-            item.remove()
+        is_initial_load = not self.post_ids
 
-        if self.id == "home" or self.id == "federated":
-            if not posts_data:
+        if is_initial_load:
+            # Clear any existing messages
+            for item in self.content_container.query(".status-message"):
+                item.remove()
+
+        new_posts_mounted = False
+
+        # On refresh, we prepend so we reverse.
+        # On initial load, we append, so no reverse.
+        post_iterator = reversed(posts_data) if not is_initial_load else posts_data
+
+        for post in post_iterator:
+            if post["id"] not in self.post_ids:
+                new_posts_mounted = True
+                self.post_ids.add(post["id"])
+
+                widget_to_mount = None
+                if self.id == "home" or self.id == "federated":
+                    widget_to_mount = Post(post)
+                elif self.id == "notifications":
+                    widget_to_mount = Notification(post)
+
+                if widget_to_mount:
+                    if is_initial_load:
+                        self.content_container.mount(widget_to_mount)
+                    else:
+                        self.content_container.mount(widget_to_mount, before=0)
+
+        if is_initial_load and not posts_data:
+            if self.id == "home" or self.id == "federated":
                 self.content_container.mount(Static(f"{self.title} timeline is empty.", classes="status-message"))
-            for post in posts_data:
-                self.content_container.mount(Post(post))
-        elif self.id == "notifications":
-            if not posts_data:
+            elif self.id == "notifications":
                 self.content_container.mount(Static("No new notifications.", classes="status-message"))
-            for notif in posts_data:
-                self.content_container.mount(Notification(notif))
 
         self.loading_indicator.display = False
         self.content_container.display = True
-        self.select_first_item()
+
+        if new_posts_mounted or self.selected_item is None:
+            self.select_first_item()
 
     def on_focus(self):
         self.select_first_item()
