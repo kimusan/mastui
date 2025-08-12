@@ -9,6 +9,9 @@ from textual.events import Key
 from textual.message import Message
 from mastui.utils import get_full_content_md
 from mastui.reply import ReplyScreen
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class PostMessage(Message):
@@ -16,6 +19,13 @@ class PostMessage(Message):
 
     def __init__(self, post_id: str) -> None:
         self.post_id = post_id
+        super().__init__()
+
+
+class TimelineUpdate(Message):
+    """A message to update the timeline with new posts."""
+    def __init__(self, posts: list) -> None:
+        self.posts = posts
         super().__init__()
 
 
@@ -75,6 +85,7 @@ class Post(Widget):
             )
         )
         with Horizontal(classes="post-footer"):
+            yield LoadingIndicator(classes="action-spinner")
             yield Static(
                 f"Boosts: {status_to_display.get('reblogs_count', 0)}", id="boost-count"
             )
@@ -82,14 +93,31 @@ class Post(Widget):
                 f"Likes: {status_to_display.get('favourites_count', 0)}", id="like-count"
             )
 
-    def update_stats(self):
+    def show_spinner(self):
+        self.query_one(".action-spinner").display = True
+
+    def hide_spinner(self):
+        self.query_one(".action-spinner").display = False
+
+    def update_from_post(self, post):
+        self.post = post
         status_to_display = self.post.get("reblog") or self.post
+        
+        # Update classes
+        self.remove_class("favourited", "reblogged")
+        if status_to_display.get("favourited"):
+            self.add_class("favourited")
+        if status_to_display.get("reblogged"):
+            self.add_class("reblogged")
+
+        # Update stats
         self.query_one("#boost-count").update(
             f"Boosts: {status_to_display.get('reblogs_count', 0)}"
         )
         self.query_one("#like-count").update(
             f"Likes: {status_to_display.get('favourites_count', 0)}"
         )
+        self.hide_spinner()
 
 
 class Notification(Widget):
@@ -177,12 +205,12 @@ class Notification(Widget):
 class Timeline(Static, can_focus=True):
     """A widget to display a single timeline."""
 
-    def __init__(self, title, posts_data=None, **kwargs):
+    def __init__(self, title, **kwargs):
         super().__init__(**kwargs)
         self.title = title
-        self.posts_data = posts_data
         self.selected_item = None
         self.post_ids = set()
+        self.latest_post_id = None
 
     @property
     def content_container(self) -> VerticalScroll:
@@ -190,77 +218,103 @@ class Timeline(Static, can_focus=True):
 
     @property
     def loading_indicator(self) -> LoadingIndicator:
-        return self.query_one(LoadingIndicator)
+        return self.query_one(".timeline-refresh-spinner", LoadingIndicator)
 
     def on_mount(self):
-        if self.posts_data is not None:
-            self.render_posts(self.posts_data)
-        else:
-            self.app.call_later(self.load_posts)
+        self.load_posts()
+
+    def on_timeline_update(self, message: TimelineUpdate) -> None:
+        """Handle a timeline update message."""
+        self.render_posts(message.posts)
+
+    def refresh_posts(self):
+        """Refresh the timeline with new posts."""
+        log.info(f"Refreshing {self.id} timeline...")
+        self.loading_indicator.display = True
+        self.run_worker(self.do_fetch_posts, exclusive=True, thread=True)
 
     def load_posts(self):
+        if self.post_ids:
+            return
+        log.info(f"Loading posts for {self.id} timeline...")
         self.loading_indicator.display = True
-        self.content_container.display = False
-        
+        self.run_worker(self.do_fetch_posts, thread=True)
+        log.info(f"Worker requested for {self.id} timeline.")
+
+    def do_fetch_posts(self):
+        """Worker method to fetch posts and post a message with the result."""
+        log.info(f"Worker thread started for {self.id}")
+        try:
+            posts = self.fetch_posts(since_id=self.latest_post_id)
+            log.info(f"Worker thread finished for {self.id}, got {len(posts)} posts.")
+            self.post_message(TimelineUpdate(posts))
+        except Exception as e:
+            log.error(f"Worker for {self.id} failed in do_fetch_posts: {e}", exc_info=True)
+            self.post_message(TimelineUpdate([]))
+
+    def fetch_posts(self, since_id=None):
         api = self.app.api
         posts = []
         if api:
             try:
+                log.info(f"Fetching posts for {self.id} since id {self.latest_post_id}")
                 if self.id == "home":
-                    posts = api.timeline_home()
+                    posts = api.timeline_home(since_id=since_id)
                 elif self.id == "notifications":
-                    posts = api.notifications()
+                    posts = api.notifications(since_id=since_id)
                 elif self.id == "federated":
-                    posts = api.timeline_public()
+                    posts = api.timeline_public(since_id=since_id)
+                log.info(f"Fetched {len(posts)} new posts for {self.id}")
             except Exception as e:
-                self.content_container.mount(
-                    Static(f"[red]Error: {e}[/red]", classes="status-message")
-                )
-        
-        self.render_posts(posts)
+                log.error(f"Error loading {self.id} timeline: {e}", exc_info=True)
+                self.app.notify(f"Error loading {self.id} timeline: {e}", severity="error")
+        return posts
 
     def render_posts(self, posts_data):
         """Renders the given posts data in the timeline."""
+        log.info(f"render_posts called for {self.id} with {len(posts_data)} posts.")
+        self.loading_indicator.display = False
         is_initial_load = not self.post_ids
 
-        if is_initial_load:
-            # Clear any existing messages
-            for item in self.content_container.query(".status-message"):
-                item.remove()
-
-        new_posts_mounted = False
-
-        # On refresh, we prepend so we reverse.
-        # On initial load, we append, so no reverse.
-        post_iterator = reversed(posts_data) if not is_initial_load else posts_data
-
-        for post in post_iterator:
-            if post["id"] not in self.post_ids:
-                new_posts_mounted = True
-                self.post_ids.add(post["id"])
-
-                widget_to_mount = None
-                if self.id == "home" or self.id == "federated":
-                    widget_to_mount = Post(post)
-                elif self.id == "notifications":
-                    widget_to_mount = Notification(post)
-
-                if widget_to_mount:
-                    if is_initial_load:
-                        self.content_container.mount(widget_to_mount)
-                    else:
-                        self.content_container.mount(widget_to_mount, before=0)
-
         if is_initial_load and not posts_data:
+            log.info(f"No posts to render for {self.id} on initial load.")
             if self.id == "home" or self.id == "federated":
                 self.content_container.mount(Static(f"{self.title} timeline is empty.", classes="status-message"))
             elif self.id == "notifications":
                 self.content_container.mount(Static("No new notifications.", classes="status-message"))
+            return
 
-        self.loading_indicator.display = False
-        self.content_container.display = True
+        if not posts_data and not is_initial_load:
+            log.info(f"No new posts to render for {self.id}.")
+            return
 
-        if new_posts_mounted or self.selected_item is None:
+        if posts_data:
+            new_latest_post_id = posts_data[0]["id"]
+            if self.latest_post_id is None or new_latest_post_id > self.latest_post_id:
+                self.latest_post_id = new_latest_post_id
+                log.info(f"New latest post for {self.id} is {self.latest_post_id}")
+
+        if is_initial_load:
+            for item in self.content_container.query(".status-message"):
+                item.remove()
+
+        new_widgets = []
+        for post in posts_data:
+            if post["id"] not in self.post_ids:
+                self.post_ids.add(post["id"])
+                if self.id == "home" or self.id == "federated":
+                    new_widgets.append(Post(post))
+                elif self.id == "notifications":
+                    new_widgets.append(Notification(post))
+
+        if new_widgets:
+            log.info(f"Mounting {len(new_widgets)} new posts in {self.id}")
+            if is_initial_load:
+                self.content_container.mount_all(new_widgets)
+            else:
+                self.content_container.mount_all(reversed(new_widgets), before=0)
+        
+        if new_widgets and is_initial_load:
             self.select_first_item()
 
     def on_focus(self):
@@ -322,6 +376,7 @@ class Timeline(Static, can_focus=True):
             if not status_to_action:
                 self.app.notify("Cannot like a post that has been deleted.", severity="error")
                 return
+            self.selected_item.show_spinner()
             self.post_message(LikePost(status_to_action["id"]))
 
     def boost_post(self):
@@ -330,6 +385,7 @@ class Timeline(Static, can_focus=True):
             if not status_to_action:
                 self.app.notify("Cannot boost a post that has been deleted.", severity="error")
                 return
+            self.selected_item.show_spinner()
             self.post_message(BoostPost(status_to_action["id"]))
 
     def scroll_up(self):
@@ -359,8 +415,9 @@ class Timeline(Static, can_focus=True):
                 self.select_first_item()
 
     def compose(self):
-        yield Static(self.title, classes="timeline_title")
-        yield LoadingIndicator()
+        with Horizontal(classes="timeline-header"):
+            yield Static(self.title, classes="timeline_title")
+            yield LoadingIndicator(classes="timeline-refresh-spinner")
         yield VerticalScroll(classes="timeline-content")
 
 
@@ -370,7 +427,14 @@ class Timelines(Static):
         super().__init__(**kwargs)
         self.initial_data = initial_data or {}
 
+    def on_mount(self):
+        if self.initial_data:
+            for timeline_id, data in self.initial_data.items():
+                timeline = self.query_one(f"#{timeline_id}", Timeline)
+                if data:
+                    timeline.render_posts(data)
+
     def compose(self):
-        yield Timeline("Home", id="home", posts_data=self.initial_data.get("home"))
-        yield Timeline("Notifications", id="notifications", posts_data=self.initial_data.get("notifications"))
-        yield Timeline("Federated", id="federated", posts_data=self.initial_data.get("federated"))
+        yield Timeline("Home", id="home")
+        yield Timeline("Notifications", id="notifications")
+        yield Timeline("Federated", id="federated")

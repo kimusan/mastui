@@ -16,25 +16,33 @@ Timeline {
 }
 
 .timeline-content {
-    display: none; /* Hidden by default */
+    /* This is now empty, as display is handled by the widget itself */
 }
 
 Timeline:focus {
     border: double $accent-darken-2;
 }
 
-.timeline_title {
-    dock: top;
-    text-align: center;
+.timeline-header {
+    height: 1;
     background: $accent;
     color: $text;
-    padding: 0 1;
-    height: 1;
+    dock: top;
 }
 
-Timeline > LoadingIndicator {
-    align: center middle;
-    height: 1fr;
+.timeline_title {
+    width: 1fr;
+    height: 1;
+    text-align: center;
+    padding: 0 1;
+}
+
+.timeline-refresh-spinner {
+    dock: right;
+    width: auto;
+    height: 1;
+    display: none;
+    margin: 0 1;
 }
 
 .timeline-item {
@@ -61,6 +69,15 @@ SplashScreen {
 #version {
     width: auto;
     text-align: center;
+}
+
+#splash-status {
+    width: auto;
+    text-align: center;
+}
+
+.action-spinner {
+    display: none;
 }
 
 

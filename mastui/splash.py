@@ -22,4 +22,13 @@ class SplashScreen(Screen):
             """,
             id="logo",
         )
-        yield Static("Mastui v0.1.0 loading...", id="version")
+        yield Static("Mastui v0.1.0", id="version")
+        yield Static("Loading...", id="splash-status")
+
+    def update_status(self, message: str) -> None:
+        """Update the status message on the splash screen."""
+        try:
+            self.query_one("#splash-status").update(message)
+        except Exception:
+            # The screen might be gone, which is fine.
+            pass
