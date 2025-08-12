@@ -4,7 +4,8 @@ from textual.events import Key
 from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
-from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline
+from mastui.profile import ProfileScreen
+from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile
 import logging
 
 log = logging.getLogger(__name__)
@@ -143,7 +144,7 @@ class Timeline(Static, can_focus=True):
         elif event.key == "right":
             self.post_message(FocusNextTimeline())
             event.stop()
-        elif event.key in ("up", "down", "l", "b", "a", "enter"):
+        elif event.key in ("up", "down", "l", "b", "a", "enter", "p"):
             event.stop()
             if event.key == "up":
                 self.scroll_up()
@@ -157,6 +158,8 @@ class Timeline(Static, can_focus=True):
                 self.reply_to_post()
             elif event.key == "enter":
                 self.open_thread()
+            elif event.key == "p":
+                self.view_profile()
         # Let other keys bubble up to the app
 
     def select_first_item(self):
@@ -182,6 +185,15 @@ class Timeline(Static, can_focus=True):
                 status = self.selected_item.notif.get("status")
                 if status:
                     self.app.push_screen(ThreadScreen(status["id"], self.app.api))
+
+    def view_profile(self):
+        if isinstance(self.selected_item, Post):
+            status = self.selected_item.post.get("reblog") or self.selected_item.post
+            account_id = status["account"]["id"]
+            self.post_message(ViewProfile(account_id))
+        elif isinstance(self.selected_item, Notification):
+            account_id = self.selected_item.notif["account"]["id"]
+            self.post_message(ViewProfile(account_id))
 
     def reply_to_post(self):
         post_to_reply_to = None

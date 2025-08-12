@@ -37,3 +37,10 @@ class TimelineUpdate(Message):
     def __init__(self, posts: list) -> None:
         self.posts = posts
         super().__init__()
+
+
+class ViewProfile(Message):
+    """A message to view a user's profile."""
+    def __init__(self, account_id: str) -> None:
+        self.account_id = account_id
+        super().__init__()

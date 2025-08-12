@@ -9,6 +9,7 @@ from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
 from mastui.widgets import Post, LikePost, BoostPost
 from mastui.thread import ThreadScreen
+from mastui.profile import ProfileScreen
 from mastui.logging_config import setup_logging
 import logging
 import argparse
@@ -20,6 +21,7 @@ from mastui.messages import (
     TimelineData,
     FocusNextTimeline,
     FocusPreviousTimeline,
+    ViewProfile,
 )
 
 # Set up logging
@@ -38,6 +40,7 @@ class Mastui(App):
         ("d", "toggle_dark", "Toggle dark mode"),
         ("r", "refresh_timelines", "Refresh timelines"),
         ("c", "compose_post", "Compose post"),
+        ("p", "view_profile", "View profile"),
         ("a", "reply_to_post", "Reply to post"),
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
@@ -54,6 +57,7 @@ class Mastui(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
+        self.dark = config.theme == "dark"
         self.push_screen(SplashScreen())
         self.api = get_api()
         if self.api:
@@ -119,9 +123,10 @@ class Mastui(App):
         except Exception:
             pass
 
-    def action_toggle_dark(self) -> None:
-        """An action to toggle dark mode."""
-        self.dark = not self.dark
+    def watch_dark(self, dark: bool) -> None:
+        """Called when dark mode is toggled."""
+        config.theme = "dark" if dark else "light"
+        config.save_config()
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""
@@ -230,6 +235,10 @@ class Mastui(App):
             if timeline.has_focus:
                 timelines[(i - 1) % len(timelines)].focus()
                 return
+
+    @on(ViewProfile)
+    def on_view_profile(self, message: ViewProfile) -> None:
+        self.push_screen(ProfileScreen(message.account_id, self.api))
 
     def action_like_post(self) -> None:
         focused = self.query("Timeline:focus")

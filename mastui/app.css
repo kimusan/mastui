@@ -57,9 +57,11 @@ Timeline:focus {
     height: 1;
 }
 
-SplashScreen {
+SplashScreen > Vertical {
     align: center middle;
+    height: 100%;
 }
+
 
 #logo {
     width: auto;
