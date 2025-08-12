@@ -6,11 +6,29 @@ from rich.markdown import Markdown
 from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
 from textual.events import Key
+from textual.message import Message
 from mastui.utils import get_full_content_md
 from mastui.reply import ReplyScreen
 
 
+class PostMessage(Message):
+    """A message relating to a post."""
 
+    def __init__(self, post_id: str) -> None:
+        self.post_id = post_id
+        super().__init__()
+
+
+class LikePost(PostMessage):
+    """A message to like a post."""
+
+    pass
+
+
+class BoostPost(PostMessage):
+    """A message to boost a post."""
+
+    pass
 
 
 class Post(Widget):
@@ -300,31 +318,19 @@ class Timeline(Static, can_focus=True):
 
     def like_post(self):
         if isinstance(self.selected_item, Post):
-            api = self.app.api
             status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
             if not status_to_action:
                 self.app.notify("Cannot like a post that has been deleted.", severity="error")
                 return
-            try:
-                api.status_favourite(status_to_action["id"])
-                self.app.notify("Post liked! Refreshing...", severity="information")
-                self.app.action_refresh_timelines()
-            except Exception as e:
-                self.app.notify(f"Error liking post: {e}", severity="error")
+            self.post_message(LikePost(status_to_action["id"]))
 
     def boost_post(self):
         if isinstance(self.selected_item, Post):
-            api = self.app.api
             status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
             if not status_to_action:
                 self.app.notify("Cannot boost a post that has been deleted.", severity="error")
                 return
-            try:
-                api.status_reblog(status_to_action["id"])
-                self.app.notify("Post boosted! Refreshing...", severity="information")
-                self.app.action_refresh_timelines()
-            except Exception as e:
-                self.app.notify(f"Error boosting post: {e}", severity="error")
+            self.post_message(BoostPost(status_to_action["id"]))
 
     def scroll_up(self):
         items = self.content_container.query("Post, Notification")

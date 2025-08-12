@@ -2,12 +2,15 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer
 from textual.containers import Container
 from textual import work
+from textual.message import Message
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
 from mastui.reply import ReplyScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
-from mastui.timeline import Timelines, Timeline
+from mastui.timeline import Timelines, Timeline, LikePost, BoostPost
+from textual import on
+
 
 
 class Mastui(App):
@@ -131,6 +134,24 @@ class Mastui(App):
             except Exception as e:
                 self.notify(f"Error sending reply: {e}", severity="error")
 
+    @on(LikePost)
+    def handle_like_post(self, message: LikePost):
+        """Called when a post is liked."""
+        try:
+            self.api.status_favourite(message.post_id)
+            self.notify("Post liked!", severity="information")
+        except Exception as e:
+            self.notify(f"Error liking post: {e}", severity="error")
+
+    @on(BoostPost)
+    def handle_boost_post(self, message: BoostPost):
+        """Called when a post is boosted."""
+        try:
+            self.api.status_reblog(message.post_id)
+            self.notify("Post boosted!", severity="information")
+        except Exception as e:
+            self.notify(f"Error boosting post: {e}", severity="error")
+
     def action_focus_next(self) -> None:
         """An action to focus the next timeline."""
         timelines = self.query("Timeline")
@@ -149,14 +170,14 @@ class Mastui(App):
 
     def action_like_post(self) -> None:
         """An action to like the selected post."""
-        for timeline in self.query("Timeline"):
+        for timeline in self.query(Timeline):
             if timeline.has_focus:
                 timeline.like_post()
                 return
 
     def action_boost_post(self) -> None:
         """An action to boost the selected post."""
-        for timeline in self.query("Timeline"):
+        for timeline in self.query(Timeline):
             if timeline.has_focus:
                 timeline.boost_post()
                 return
