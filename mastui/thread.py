@@ -1,7 +1,8 @@
 from textual.screen import ModalScreen
 from textual.widgets import Static
 from textual.containers import VerticalScroll, Container
-from mastui.widgets import Post, LikePost, BoostPost
+from textual.events import Key
+from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 import logging
 
@@ -88,8 +89,25 @@ class ThreadScreen(ModalScreen):
         except Exception:
             self.selected_item = None
 
-    def action_scroll_up(self):
-        items = self.query(Post)
+    def on_key(self, event: Key) -> None:
+        if event.key == "down":
+            self.scroll_down()
+            event.stop()
+        elif event.key == "up":
+            self.scroll_up()
+            event.stop()
+        elif event.key == "l":
+            self.action_like_post()
+            event.stop()
+        elif event.key == "b":
+            self.action_boost_post()
+            event.stop()
+        elif event.key == "a":
+            self.action_reply_to_post()
+            event.stop()
+
+    def scroll_up(self):
+        items = self.query("Post")
         if self.selected_item and items:
             try:
                 idx = items.nodes.index(self.selected_item)
@@ -101,8 +119,8 @@ class ThreadScreen(ModalScreen):
             except ValueError:
                 self.select_first_item()
 
-    def action_scroll_down(self):
-        items = self.query(Post)
+    def scroll_down(self):
+        items = self.query("Post")
         if self.selected_item and items:
             try:
                 idx = items.nodes.index(self.selected_item)

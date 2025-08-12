@@ -1,28 +1,22 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import VerticalScroll, Horizontal
 from textual.events import Key
-from textual.message import Message
 from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
+from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline
 import logging
 
 log = logging.getLogger(__name__)
 
 
-class TimelineUpdate(Message):
-    """A message to update the timeline with new posts."""
-    def __init__(self, posts: list) -> None:
-        self.posts = posts
-        super().__init__()
-
-
 class Timeline(Static, can_focus=True):
     """A widget to display a single timeline."""
 
-    def __init__(self, title, **kwargs):
+    def __init__(self, title, posts_data=None, **kwargs):
         super().__init__(**kwargs)
         self.title = title
+        self.posts_data = posts_data
         self.selected_item = None
         self.post_ids = set()
         self.latest_post_id = None
@@ -36,7 +30,10 @@ class Timeline(Static, can_focus=True):
         return self.query_one(".timeline-refresh-spinner", LoadingIndicator)
 
     def on_mount(self):
-        self.load_posts()
+        if self.posts_data is not None:
+            self.render_posts(self.posts_data)
+        else:
+            self.load_posts()
 
     def on_timeline_update(self, message: TimelineUpdate) -> None:
         """Handle a timeline update message."""
@@ -140,26 +137,27 @@ class Timeline(Static, can_focus=True):
             self.selected_item.remove_class("selected")
 
     def on_key(self, event: Key) -> None:
-        if event.key == "tab":
-            return
-        if event.key == "down":
-            self.scroll_down()
+        if event.key == "left":
+            self.post_message(FocusPreviousTimeline())
             event.stop()
-        elif event.key == "up":
-            self.scroll_up()
+        elif event.key == "right":
+            self.post_message(FocusNextTimeline())
             event.stop()
-        elif event.key == "l":
-            self.like_post()
+        elif event.key in ("up", "down", "l", "b", "a", "enter"):
             event.stop()
-        elif event.key == "b":
-            self.boost_post()
-            event.stop()
-        elif event.key == "a":
-            self.reply_to_post()
-            event.stop()
-        elif event.key == "enter":
-            self.open_thread()
-            event.stop()
+            if event.key == "up":
+                self.scroll_up()
+            elif event.key == "down":
+                self.scroll_down()
+            elif event.key == "l":
+                self.like_post()
+            elif event.key == "b":
+                self.boost_post()
+            elif event.key == "a":
+                self.reply_to_post()
+            elif event.key == "enter":
+                self.open_thread()
+        # Let other keys bubble up to the app
 
     def select_first_item(self):
         if self.selected_item:
@@ -255,14 +253,7 @@ class Timelines(Static):
         super().__init__(**kwargs)
         self.initial_data = initial_data or {}
 
-    def on_mount(self):
-        if self.initial_data:
-            for timeline_id, data in self.initial_data.items():
-                timeline = self.query_one(f"#{timeline_id}", Timeline)
-                if data:
-                    timeline.render_posts(data)
-
     def compose(self):
-        yield Timeline("Home", id="home")
-        yield Timeline("Notifications", id="notifications")
-        yield Timeline("Federated", id="federated")
+        yield Timeline("Home", id="home", posts_data=self.initial_data.get("home"))
+        yield Timeline("Notifications", id="notifications", posts_data=self.initial_data.get("notifications"))
+        yield Timeline("Federated", id="federated", posts_data=self.initial_data.get("federated"))

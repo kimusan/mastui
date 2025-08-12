@@ -105,7 +105,15 @@ Post.reblogged {
     background: $warning 20%;
 }
 
+.timeline-item.selected {
+    background: $primary 20%;
+}
+
 Post.selected {
+    background: $primary 20%;
+}
+
+Notification.selected {
     background: $primary 20%;
 }
 
@@ -283,7 +291,7 @@ Post.selected {
 }
 
 .main-post {
-    background: $accent 20%;
+    border: round $accent;
 }
 
 .reply-post {
