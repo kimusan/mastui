@@ -56,7 +56,8 @@ class Mastui(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
-        self.dark = config.theme == "dark"
+        self.dark = config.theme != "light"
+        self.theme = config.theme
         self.push_screen(SplashScreen())
         self.api = get_api()
         if self.api:
@@ -87,7 +88,15 @@ class Mastui(App):
 
     def watch_dark(self, dark: bool) -> None:
         """Called when dark mode is toggled."""
-        config.theme = "dark" if dark else "light"
+        if dark:
+            # Restore the preferred dark theme
+            config.theme = config.preferred_dark_theme
+        else:
+            # If we are currently on a dark theme, save it as preferred before switching to light
+            if config.theme != "light":
+                config.preferred_dark_theme = config.theme
+            config.theme = "light"
+        self.theme = config.theme
         config.save_config()
 
     def action_refresh_timelines(self) -> None:

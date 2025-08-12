@@ -16,7 +16,9 @@ class Config:
         self.mastodon_client_secret = os.getenv("MASTODON_CLIENT_SECRET")
         self.mastodon_access_token = os.getenv("MASTODON_ACCESS_TOKEN")
         self.ssl_verify = True
+        
         self.theme = os.getenv("THEME", "dark")
+        self.preferred_dark_theme = os.getenv("PREFERRED_DARK_THEME", "dark")
 
     def save_config(self):
         with open(self.env_file, "w") as f:
@@ -30,6 +32,8 @@ class Config:
                 f.write(f"MASTODON_ACCESS_TOKEN={self.mastodon_access_token}\n")
             if self.theme:
                 f.write(f"THEME={self.theme}\n")
+            if self.preferred_dark_theme:
+                f.write(f"PREFERRED_DARK_THEME={self.preferred_dark_theme}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host
