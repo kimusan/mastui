@@ -12,6 +12,8 @@ from mastui.timeline import Timelines, Timeline, Post, LikePost, BoostPost
 from textual import on
 from mastui.logging_config import setup_logging
 import logging
+import argparse
+from mastui.config import config
 
 # Set up logging
 setup_logging()
@@ -288,6 +290,11 @@ class Mastui(App):
 
 def main():
     """Run the app."""
+    parser = argparse.ArgumentParser(description="A Textual app to interact with Mastodon.")
+    parser.add_argument("--no-ssl-verify", action="store_false", dest="ssl_verify", help="Disable SSL verification.")
+    args = parser.parse_args()
+    config.ssl_verify = args.ssl_verify
+
     app = Mastui()
     app.run()
 

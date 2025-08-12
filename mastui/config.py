@@ -9,6 +9,7 @@ class Config:
         self.mastodon_client_id = os.getenv("MASTODON_CLIENT_ID")
         self.mastodon_client_secret = os.getenv("MASTODON_CLIENT_SECRET")
         self.mastodon_access_token = os.getenv("MASTODON_ACCESS_TOKEN")
+        self.ssl_verify = True
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         with open(".env", "w") as f:

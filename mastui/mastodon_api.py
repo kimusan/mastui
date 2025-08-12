@@ -7,7 +7,7 @@ def get_api():
     """Initializes and returns a Mastodon API instance."""
     if config.mastodon_access_token:
         s = Session()
-        s.verify = False
+        s.verify = config.ssl_verify
         return Mastodon(
             access_token=config.mastodon_access_token,
             api_base_url=f"https://{config.mastodon_host}",
@@ -20,12 +20,12 @@ def login(host, auth_code):
     """Logs in to a Mastodon instance using an auth code and returns the API object or an error."""
     try:
         s = Session()
-        s.verify = False
+        s.verify = config.ssl_verify
         mastodon = Mastodon(
             client_id=config.mastodon_client_id,
             client_secret=config.mastodon_client_secret,
             api_base_url=f"https://{host}",
-            ssl_verify=False,
+            
             session=s,
         )
         access_token = mastodon.log_in(
@@ -50,7 +50,7 @@ def create_app(host):
     """Creates a new Mastodon app and returns the auth URL."""
     try:
         s = Session()
-        s.verify = False
+        s.verify = config.ssl_verify
         client_id, client_secret = Mastodon.create_app(
             "mastui",
             api_base_url=f"https://{host}",
@@ -58,8 +58,8 @@ def create_app(host):
             scopes=["read", "write", "follow", "push"],
             redirect_uris="urn:ietf:wg:oauth:2.0:oob",
             session=s,
-            ssl_verify=False,
-            ssl=False,
+            
+            
         )
         # We need to save the client creds to the .env file for the login step
         with open(".env", "w") as f:
