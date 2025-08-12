@@ -25,7 +25,6 @@ from mastui.messages import (
 )
 
 # Set up logging
-setup_logging()
 log = logging.getLogger(__name__)
 
 
@@ -264,7 +263,9 @@ class Mastui(App):
 def main():
     parser = argparse.ArgumentParser(description="A Textual app to interact with Mastodon.")
     parser.add_argument("--no-ssl-verify", action="store_false", dest="ssl_verify", help="Disable SSL verification.")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
     args = parser.parse_args()
+    setup_logging(debug=args.debug)
     config.ssl_verify = args.ssl_verify
     app = Mastui()
     app.run()
