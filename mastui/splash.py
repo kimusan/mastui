@@ -22,7 +22,7 @@ class SplashScreen(Screen):
             """,
             id="logo",
         )
-        yield Static("Mastui v0.1.0", id="version")
+        yield Static("Mastui v0.2.0", id="version")
         yield Static("Loading...", id="splash-status")
 
     def update_status(self, message: str) -> None:
