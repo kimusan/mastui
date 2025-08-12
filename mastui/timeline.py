@@ -72,12 +72,13 @@ class Timeline(Static, can_focus=True):
         if api:
             try:
                 log.info(f"Fetching posts for {self.id} since id {since_id} max_id {max_id}")
+                limit = 20 if since_id or max_id else 10  # Fetch more when paginating
                 if self.id == "home":
-                    posts = api.timeline_home(since_id=since_id, max_id=max_id)
+                    posts = api.timeline_home(since_id=since_id, max_id=max_id, limit=limit)
                 elif self.id == "notifications":
-                    posts = api.notifications(since_id=since_id, max_id=max_id)
+                    posts = api.notifications(since_id=since_id, max_id=max_id, limit=limit)
                 elif self.id == "federated":
-                    posts = api.timeline_public(since_id=since_id, max_id=max_id)
+                    posts = api.timeline_public(since_id=since_id, max_id=max_id, limit=limit)
                 log.info(f"Fetched {len(posts)} new posts for {self.id}")
             except Exception as e:
                 log.error(f"Error loading {self.id} timeline: {e}", exc_info=True)
@@ -285,11 +286,7 @@ class Timeline(Static, can_focus=True):
 
 class Timelines(Static):
     """A widget to display the three timelines."""
-    def __init__(self, initial_data=None, **kwargs):
-        super().__init__(**kwargs)
-        self.initial_data = initial_data or {}
-
     def compose(self):
-        yield Timeline("Home", id="home", posts_data=self.initial_data.get("home"))
-        yield Timeline("Notifications", id="notifications", posts_data=self.initial_data.get("notifications"))
-        yield Timeline("Federated", id="federated", posts_data=self.initial_data.get("federated"))
+        yield Timeline("Home", id="home")
+        yield Timeline("Notifications", id="notifications")
+        yield Timeline("Federated", id="federated")

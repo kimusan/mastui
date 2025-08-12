@@ -60,7 +60,7 @@ class Mastui(App):
         self.push_screen(SplashScreen())
         self.api = get_api()
         if self.api:
-            self.load_initial_data()
+            self.set_timer(2, self.show_timelines)
         else:
             self.call_later(self.show_login_screen)
 
@@ -69,54 +69,17 @@ class Mastui(App):
             self.pop_screen()
         self.push_screen(LoginScreen(), self.on_login)
 
-    def load_initial_data(self):
-        """Starts the worker to load initial data."""
-        self.run_worker(self.do_load_initial_data, exclusive=True, thread=True)
-
-    def do_load_initial_data(self):
-        """Worker to load initial data from the Mastodon API."""
-        log.info("Starting initial data load...")
-        def update_status(message):
-            if isinstance(self.screen, SplashScreen):
-                self.call_from_thread(self.screen.update_status, message)
-
-        try:
-            update_status("Fetching home timeline...")
-            home_timeline = self.api.timeline_home()
-            log.info(f"Fetched {len(home_timeline)} posts for home timeline.")
-
-            update_status("Fetching notifications...")
-            notifications = self.api.notifications()
-            log.info(f"Fetched {len(notifications)} notifications.")
-
-            update_status("Fetching federated timeline...")
-            federated_timeline = self.api.timeline_public()
-            log.info(f"Fetched {len(federated_timeline)} posts for federated timeline.")
-
-            self.initial_data = {
-                "home": home_timeline,
-                "notifications": notifications,
-                "federated": federated_timeline,
-            }
-            log.info("Initial data load complete.")
-            self.call_from_thread(self.show_timelines)
-        except Exception as e:
-            log.error(f"Error loading initial data: {e}", exc_info=True)
-            self.notify(f"Error loading initial data: {e}", severity="error")
-            self.call_from_thread(self.show_login_screen)
-
     def on_login(self, api) -> None:
         """Called when the login screen is dismissed."""
         log.info("Login successful.")
         self.api = api
-        self.push_screen(SplashScreen())
-        self.load_initial_data()
+        self.show_timelines()
 
     def show_timelines(self):
         if isinstance(self.screen, SplashScreen):
             self.pop_screen()
         log.info("Showing timelines...")
-        self.mount(Timelines(initial_data=self.initial_data))
+        self.mount(Timelines())
         try:
             self.query_one("#home", Timeline).focus()
         except Exception:
