@@ -125,8 +125,16 @@ class Timeline(Static, can_focus=True):
 
         new_widgets = []
         for post in posts_data:
-            if post["id"] not in self.post_ids:
-                self.post_ids.add(post["id"])
+            # Create a unique ID for each notification
+            if self.id == "notifications":
+                status = post.get("status") or {}
+                status_id = status.get("id", "")
+                post_id = f"{post['type']}-{post['account']['id']}-{status_id}"
+            else:
+                post_id = post["id"]
+
+            if post_id not in self.post_ids:
+                self.post_ids.add(post_id)
                 if self.id == "home" or self.id == "federated":
                     new_widgets.append(Post(post))
                 elif self.id == "notifications":
@@ -137,7 +145,7 @@ class Timeline(Static, can_focus=True):
             if max_id: # older posts
                 self.content_container.mount_all(new_widgets)
             else: # newer posts or initial load
-                self.content_container.mount_all(reversed(new_widgets), before=0)
+                self.content_container.mount_all(new_widgets, before=0)
         
         if new_widgets and is_initial_load:
             self.select_first_item()

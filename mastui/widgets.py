@@ -7,7 +7,7 @@ from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
 from textual.events import Key
 from textual.message import Message
-from mastui.utils import get_full_content_md
+from mastui.utils import get_full_content_md, format_datetime
 from mastui.reply import ReplyScreen
 import logging
 
@@ -41,6 +41,8 @@ class Post(Widget):
         super().__init__(**kwargs)
         self.post = post
         self.add_class("timeline-item")
+        status_to_display = self.post.get("reblog") or self.post
+        self.created_at_str = format_datetime(status_to_display['created_at'])
 
     def on_mount(self):
         status_to_display = self.post.get("reblog") or self.post
@@ -85,6 +87,7 @@ class Post(Widget):
             yield Static(
                 f"Likes: {status_to_display.get('favourites_count', 0)}", id="like-count"
             )
+            yield Static(self.created_at_str, classes="timestamp")
 
     def show_spinner(self):
         self.query_one(".action-spinner").display = True
@@ -120,6 +123,13 @@ class Notification(Widget):
         super().__init__(**kwargs)
         self.notif = notif
         self.add_class("timeline-item")
+        
+        created_at = None
+        if self.notif['type'] == 'mention':
+            created_at = self.notif['status']['created_at']
+        else:
+            created_at = self.notif['created_at']
+        self.created_at_str = format_datetime(created_at)
 
     def compose(self):
         notif_type = self.notif["type"]
@@ -151,6 +161,7 @@ class Notification(Widget):
                 yield Static(
                     f"Likes: {status.get('favourites_count', 0)}", id="like-count"
                 )
+                yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "favourite":
             status = self.notif["status"]
@@ -162,6 +173,8 @@ class Notification(Widget):
                     padding=(0, 1),
                 )
             )
+            with Horizontal(classes="post-footer"):
+                yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "reblog":
             status = self.notif["status"]
@@ -173,9 +186,13 @@ class Notification(Widget):
                     padding=(0, 1),
                 )
             )
+            with Horizontal(classes="post-footer"):
+                yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "follow":
             yield Static(f"👋 {author_acct} followed you.")
+            with Horizontal(classes="post-footer"):
+                yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "poll":
             status = self.notif["status"]
@@ -190,6 +207,8 @@ class Notification(Widget):
                 votes = option.get('votes_count', 0)
                 percentage = (votes / total_votes * 100) if total_votes > 0 else 0
                 yield Static(f"  - {title}: {votes} votes ({percentage:.2f}%)")
+            with Horizontal(classes="post-footer"):
+                yield Static(self.created_at_str, classes="timestamp")
 
         else:
             yield Static(f"Unsupported notification type: {notif_type}")

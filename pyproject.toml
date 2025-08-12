@@ -14,6 +14,7 @@ pyperclip = "^1.8.2"
 html2text = "^2024.2.26"
 requests = "^2.32.4"
 toml = "^0.10.2"
+python-dateutil = "^2.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

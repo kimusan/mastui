@@ -94,6 +94,11 @@ SplashScreen > Vertical {
     text-align: center;
 }
 
+.timestamp {
+    color: $text-muted;
+    text-align: right;
+}
+
 .status-message {
     margin-top: 1;
     text-align: center;

@@ -1,5 +1,7 @@
 import html2text
 import pprint
+from datetime import datetime, timezone
+from dateutil.parser import parse
 
 LANGUAGE_OPTIONS = [
     ("Chinese", "zh"),
@@ -48,3 +50,15 @@ def get_full_content_md(status):
         return f"**Empty Post Detected! Raw data:**\n```json\n{pretty_status}\n```"
 
     return content_md
+
+def format_datetime(dt_obj):
+    """Formats a datetime string or object into YYYY-MM-DD HH:MM."""
+    if isinstance(dt_obj, str):
+        dt = parse(dt_obj)
+    else:
+        dt = dt_obj
+
+    # Convert to local timezone for display
+    local_dt = dt.astimezone()
+    
+    return local_dt.strftime("%Y-%m-%d %H:%M")
