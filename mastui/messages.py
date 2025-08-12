@@ -34,8 +34,10 @@ class FocusPreviousTimeline(Message):
 
 class TimelineUpdate(Message):
     """A message to update the timeline with new posts."""
-    def __init__(self, posts: list) -> None:
+    def __init__(self, posts: list, since_id: str = None, max_id: str = None) -> None:
         self.posts = posts
+        self.since_id = since_id
+        self.max_id = max_id
         super().__init__()
 
 

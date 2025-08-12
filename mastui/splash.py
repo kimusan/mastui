@@ -2,10 +2,29 @@ from textual.screen import Screen
 from textual.widgets import Static
 from textual.containers import Vertical
 from rich.panel import Panel
-
+from importlib import metadata
+import os
+import toml
 
 class SplashScreen(Screen):
     """A splash screen with the app name, version, and logo."""
+
+    def get_version(self):
+        """
+        Reads the version from the installed package metadata,
+        falling back to pyproject.toml for development.
+        """
+        try:
+            # For installed package
+            return metadata.version("mastui")
+        except metadata.PackageNotFoundError:
+            # For development environment
+            pyproject_path = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
+            if os.path.exists(pyproject_path):
+                with open(pyproject_path) as f:
+                    pyproject_data = toml.load(f)
+                return pyproject_data["tool"]["poetry"]["version"]
+        return "unknown"
 
     def compose(self) -> None:
         logo = r"""
@@ -21,9 +40,10 @@ class SplashScreen(Screen):
  888       888 "Y888888  88888P'  "Y888  "Y88888 888 
             [/bold cyan]
             """
+        version = self.get_version()
         yield Vertical(
             Static(Panel(logo, border_style="dim"), id="logo"),
-            Static("Mastui v0.2.0", id="version"),
+            Static(f"Mastui v{version}", id="version"),
             Static("Loading...", id="splash-status"),
             id="splash-container",
         )

@@ -1,10 +1,16 @@
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
+from pathlib import Path
 
 class Config:
     def __init__(self):
+        self.config_dir = Path.home() / ".config" / "mastui"
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.env_file = self.config_dir / ".env"
+        
+        if self.env_file.exists():
+            load_dotenv(self.env_file)
+
         self.mastodon_host = os.getenv("MASTODON_HOST")
         self.mastodon_client_id = os.getenv("MASTODON_CLIENT_ID")
         self.mastodon_client_secret = os.getenv("MASTODON_CLIENT_SECRET")
@@ -13,7 +19,7 @@ class Config:
         self.theme = os.getenv("THEME", "dark")
 
     def save_config(self):
-        with open(".env", "w") as f:
+        with open(self.env_file, "w") as f:
             if self.mastodon_host:
                 f.write(f"MASTODON_HOST={self.mastodon_host}\n")
             if self.mastodon_client_id:

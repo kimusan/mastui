@@ -54,23 +54,15 @@ def create_app(host):
         client_id, client_secret = Mastodon.create_app(
             "mastui",
             api_base_url=f"https://{host}",
-            to_file="mastui_clientcred.secret",
             scopes=["read", "write", "follow", "push"],
             redirect_uris="urn:ietf:wg:oauth:2.0:oob",
             session=s,
-            
-            
         )
         # We need to save the client creds to the .env file for the login step
-        with open(".env", "w") as f:
-            f.write(f"MASTODON_HOST={host}\n")
-            f.write(f"MASTODON_CLIENT_ID={client_id}\n")
-            f.write(f"MASTODON_CLIENT_SECRET={client_secret}\n")
-
-        # We also need to update the config object in memory
         config.mastodon_host = host
         config.mastodon_client_id = client_id
         config.mastodon_client_secret = client_secret
+        config.save_config()
 
         mastodon = Mastodon(
             client_id=client_id,

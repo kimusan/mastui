@@ -1,13 +1,26 @@
 import pyperclip
 from textual.app import App, ComposeResult
 from textual.containers import Grid, Vertical
-from textual.widgets import Button, Label, Input, Static, TextArea
+from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator
 from textual.screen import ModalScreen
 
 from mastui.mastodon_api import login, create_app
 
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
+
+    DEFAULT_CSS = """
+    #dialog {
+        grid-size: 2;
+        grid-gutter: 1 2;
+        grid-rows: auto auto auto 1fr auto;
+        padding: 0 1;
+        width: 80;
+        height: 20;
+        border: thick $primary 80%;
+        background: $surface;
+    }
+    """
 
     def compose(self) -> ComposeResult:
         with Grid(id="dialog"):
@@ -17,6 +30,7 @@ class LoginScreen(ModalScreen):
             yield Static() # Spacer
             yield Button("Get Auth Link", variant="primary", id="get_auth")
 
+            yield LoadingIndicator(classes="hidden")
             yield Static(id="status", classes="hidden")
 
             with Vertical(id="auth_link_container", classes="hidden"):
@@ -33,6 +47,8 @@ class LoginScreen(ModalScreen):
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         status = self.query_one("#status")
+        spinner = self.query_one(LoadingIndicator)
+
         if event.button.id == "get_auth":
             host = self.query_one("#host").value
             if not host:
@@ -40,11 +56,16 @@ class LoginScreen(ModalScreen):
                 status.remove_class("hidden")
                 return
 
-            status.update("Generating authorization link...")
-            status.remove_class("hidden")
-            auth_url, error = create_app(host)
+            spinner.remove_class("hidden")
+            status.add_class("hidden")
+
+            auth_url, error = await self.run_worker(lambda: create_app(host), exclusive=True)
+            
+            spinner.add_class("hidden")
+
             if error:
                 status.update(f"[red]Error: {error}[/red]")
+                status.remove_class("hidden")
                 return
             
             pyperclip.set_clipboard("xclip")
@@ -57,7 +78,6 @@ class LoginScreen(ModalScreen):
             self.query_one("#get_auth").parent.add_class("hidden") # Hide the button's parent container
             self.query_one("#host").disabled = True
             self.query_one("#auth_code").focus()
-            status.add_class("hidden")
 
         elif event.button.id == "login":
             auth_code = self.query_one("#auth_code").value
@@ -67,10 +87,15 @@ class LoginScreen(ModalScreen):
                 status.remove_class("hidden")
                 return
 
-            status.update("Logging in...")
-            status.remove_class("hidden")
-            api, error = login(host, auth_code)
+            spinner.remove_class("hidden")
+            status.add_class("hidden")
+
+            api, error = await self.run_worker(lambda: login(host, auth_code), exclusive=True)
+
+            spinner.add_class("hidden")
+
             if api:
                 self.dismiss(api)
             else:
                 status.update(f"[red]Login failed: {error}[/red]")
+                status.remove_class("hidden")

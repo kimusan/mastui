@@ -21,6 +21,7 @@ class Timeline(Static, can_focus=True):
         self.selected_item = None
         self.post_ids = set()
         self.latest_post_id = None
+        self.oldest_post_id = None
 
     @property
     def content_container(self) -> VerticalScroll:
@@ -38,13 +39,13 @@ class Timeline(Static, can_focus=True):
 
     def on_timeline_update(self, message: TimelineUpdate) -> None:
         """Handle a timeline update message."""
-        self.render_posts(message.posts)
+        self.render_posts(message.posts, since_id=message.since_id, max_id=message.max_id)
 
     def refresh_posts(self):
         """Refresh the timeline with new posts."""
         log.info(f"Refreshing {self.id} timeline...")
         self.loading_indicator.display = True
-        self.run_worker(self.do_fetch_posts, exclusive=True, thread=True)
+        self.run_worker(lambda: self.do_fetch_posts(since_id=self.latest_post_id), exclusive=True, thread=True)
 
     def load_posts(self):
         if self.post_ids:
@@ -54,36 +55,42 @@ class Timeline(Static, can_focus=True):
         self.run_worker(self.do_fetch_posts, thread=True)
         log.info(f"Worker requested for {self.id} timeline.")
 
-    def do_fetch_posts(self):
+    def do_fetch_posts(self, since_id=None, max_id=None):
         """Worker method to fetch posts and post a message with the result."""
         log.info(f"Worker thread started for {self.id}")
         try:
-            posts = self.fetch_posts(since_id=self.latest_post_id)
+            posts = self.fetch_posts(since_id=since_id, max_id=max_id)
             log.info(f"Worker thread finished for {self.id}, got {len(posts)} posts.")
-            self.post_message(TimelineUpdate(posts))
+            self.post_message(TimelineUpdate(posts, since_id=since_id, max_id=max_id))
         except Exception as e:
             log.error(f"Worker for {self.id} failed in do_fetch_posts: {e}", exc_info=True)
             self.post_message(TimelineUpdate([]))
 
-    def fetch_posts(self, since_id=None):
+    def fetch_posts(self, since_id=None, max_id=None):
         api = self.app.api
         posts = []
         if api:
             try:
-                log.info(f"Fetching posts for {self.id} since id {self.latest_post_id}")
+                log.info(f"Fetching posts for {self.id} since id {since_id} max_id {max_id}")
                 if self.id == "home":
-                    posts = api.timeline_home(since_id=since_id)
+                    posts = api.timeline_home(since_id=since_id, max_id=max_id)
                 elif self.id == "notifications":
-                    posts = api.notifications(since_id=since_id)
+                    posts = api.notifications(since_id=since_id, max_id=max_id)
                 elif self.id == "federated":
-                    posts = api.timeline_public(since_id=since_id)
+                    posts = api.timeline_public(since_id=since_id, max_id=max_id)
                 log.info(f"Fetched {len(posts)} new posts for {self.id}")
             except Exception as e:
                 log.error(f"Error loading {self.id} timeline: {e}", exc_info=True)
                 self.app.notify(f"Error loading {self.id} timeline: {e}", severity="error")
         return posts
 
-    def render_posts(self, posts_data):
+    def load_older_posts(self):
+        """Load older posts."""
+        log.info(f"Loading older posts for {self.id} timeline...")
+        self.loading_indicator.display = True
+        self.run_worker(lambda: self.do_fetch_posts(max_id=self.oldest_post_id), exclusive=True, thread=True)
+
+    def render_posts(self, posts_data, since_id=None, max_id=None):
         """Renders the given posts data in the timeline."""
         log.info(f"render_posts called for {self.id} with {len(posts_data)} posts.")
         self.loading_indicator.display = False
@@ -106,6 +113,11 @@ class Timeline(Static, can_focus=True):
             if self.latest_post_id is None or new_latest_post_id > self.latest_post_id:
                 self.latest_post_id = new_latest_post_id
                 log.info(f"New latest post for {self.id} is {self.latest_post_id}")
+            
+            new_oldest_post_id = posts_data[-1]["id"]
+            if self.oldest_post_id is None or new_oldest_post_id < self.oldest_post_id:
+                self.oldest_post_id = new_oldest_post_id
+                log.info(f"New oldest post for {self.id} is {self.oldest_post_id}")
 
         if is_initial_load:
             for item in self.content_container.query(".status-message"):
@@ -122,9 +134,9 @@ class Timeline(Static, can_focus=True):
 
         if new_widgets:
             log.info(f"Mounting {len(new_widgets)} new posts in {self.id}")
-            if is_initial_load:
+            if max_id: # older posts
                 self.content_container.mount_all(new_widgets)
-            else:
+            else: # newer posts or initial load
                 self.content_container.mount_all(reversed(new_widgets), before=0)
         
         if new_widgets and is_initial_load:
@@ -236,6 +248,8 @@ class Timeline(Static, can_focus=True):
                     self.selected_item = items[idx - 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
+                else:
+                    self.refresh_posts()
             except ValueError:
                 self.select_first_item()
 
@@ -249,6 +263,8 @@ class Timeline(Static, can_focus=True):
                     self.selected_item = items[idx + 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
+                else:
+                    self.load_older_posts()
             except ValueError:
                 self.select_first_item()
 

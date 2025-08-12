@@ -1,59 +1,54 @@
 # Mastui - A Mastodon TUI Client Built with Python
 
-![A screenshot](mastui.png)
+![A screenshot](https://raw.githubusercontent.com/kimusan/mastui/main/mastui.png)
 
 Mastui is a Mastodon TUI client built with Python and Textual. It allows users to interact with their Mastodon instance in a terminal environment, providing a more efficient and intuitive way of managing their Mastodon experience. The UI is multi-column to get an easy overview of activities.
 
 ## Features
 
-* User Profile Management
-* Timeline Viewing
-* Post Creation
-* Reply Creation
-* Like/Unlike
-* Direct Messaging
-* Local Mastodon Server Support
-* Theming and Customization (via textual themes)
-* Content warning support (currently always shown)
+* Timeline Viewing in a multi-column layout
+* Post and Reply creation
+* "Infinite" scrolling of timelines
+* Like posts
+* View user profiles
+* Follow/Unfollow users
+* View post threads
+* Support for local Mastodon servers
+* Light/Dark mode theming
+* Content warning support
 
 ### TODO
 
-* Profile viewing
-* View threads
 * database backend
 * Bookmarking
-* Follow/Unfollow
 * Hashtag Searching
+* Unliking posts
+* Direct Messaging
 
 ## Installation
 
-To install Mastui, follow these steps:
+The recommended way to install Mastui is with `pipx`.
 
-1. Clone the repository to your local machine using `git clone https://github.com/kimusan/mastui`
-2. Install the dependencies listed in pyproject.toml using `poetry install`
-3. Create a new configuration file by copying the config-example.py file and renaming it to config.py, then fill in your Mastodon instance URL, and follow the onboarding steps described.
-4. Run the application using `poetry run mastui`
+1.  **Install pipx** (if you don't have it already):
+    ```bash
+    python3 -m pip install --user pipx
+    python3 -m pipx ensurepath
+    ```
+
+2.  **Install mastui using pipx**:
+    ```bash
+    pipx install mastui
+    ```
+
+After this, you can run the application from anywhere by simply typing `mastui`.
 
 ## Technology Stack
 
-* Python 3.x
-* Poetry for dependency management and packaging
-* Textual for TUI creation and management
-* Requests for HTTP requests to Mastodon instances
-* BeautifulSoup for HTML parsing
-* Pygments for syntax highlighting
-* Pytest for testing
-
-## Dependencies
-
-The following dependencies are required to run Mastui:
-
-* Poetry
-* Python 3.x
-* Requests
-* BeautifulSoup4
-* Pygments
-* Textual
+* [Python](https://www.python.org/)
+* [Poetry](https://python-poetry.org/) for dependency management
+* [Textual](https://textual.textualize.io/) for the TUI framework
+* [Mastodon.py](https://mastodonpy.readthedocs.io/) for interacting with the Mastodon API
+* [html2text](https://github.com/Alir3z4/html2text) for converting HTML to Markdown
 
 ## License
 
