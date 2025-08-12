@@ -8,11 +8,13 @@ from mastui.post import PostScreen
 from mastui.reply import ReplyScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
-from mastui.timeline import Timelines, Timeline, Post, LikePost, BoostPost
+from mastui.timeline import Timelines, Timeline
+from mastui.widgets import Post, LikePost, BoostPost
 from textual import on
 from mastui.logging_config import setup_logging
 import logging
 import argparse
+import os
 from mastui.config import config
 
 # Set up logging
@@ -34,6 +36,12 @@ class ActionFailed(Message):
         super().__init__()
 
 
+import os
+
+# Get the absolute path to the CSS file
+css_path = os.path.join(os.path.dirname(__file__), "app.css")
+
+
 class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
@@ -49,7 +57,7 @@ class Mastui(App):
         ("up", "scroll_up", "Scroll up"),
         ("down", "scroll_down", "Scroll down"),
     ]
-    CSS_PATH = "app.css"
+    CSS_PATH = css_path
     initial_data = None
 
     def on_mount(self) -> None:

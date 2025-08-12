@@ -1,25 +1,13 @@
-import html2text
 from textual.widgets import Static, LoadingIndicator
-from textual.widget import Widget
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich import box
-from textual.containers import VerticalScroll, Vertical, Horizontal
+from textual.containers import VerticalScroll, Horizontal
 from textual.events import Key
 from textual.message import Message
-from mastui.utils import get_full_content_md
+from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
+from mastui.thread import ThreadScreen
 import logging
 
 log = logging.getLogger(__name__)
-
-
-class PostMessage(Message):
-    """A message relating to a post."""
-
-    def __init__(self, post_id: str) -> None:
-        self.post_id = post_id
-        super().__init__()
 
 
 class TimelineUpdate(Message):
@@ -27,179 +15,6 @@ class TimelineUpdate(Message):
     def __init__(self, posts: list) -> None:
         self.posts = posts
         super().__init__()
-
-
-class LikePost(PostMessage):
-    """A message to like a post."""
-
-    pass
-
-
-class BoostPost(PostMessage):
-    """A message to boost a post."""
-
-    pass
-
-
-class Post(Widget):
-    """A widget to display a single post."""
-
-    def __init__(self, post, **kwargs):
-        super().__init__(**kwargs)
-        self.post = post
-        self.add_class("timeline-item")
-
-    def on_mount(self):
-        status_to_display = self.post.get("reblog") or self.post
-        if status_to_display.get("favourited"):
-            self.add_class("favourited")
-        if status_to_display.get("reblogged"):
-            self.add_class("reblogged")
-
-    def compose(self):
-        reblog = self.post.get("reblog")
-        is_reblog = reblog is not None
-        status_to_display = reblog or self.post
-
-        if is_reblog:
-            booster_name = self.post["account"]["acct"]
-            yield Static(f"🚀 Boosted by @{booster_name}", classes="boost-header")
-
-        spoiler_text = status_to_display.get("spoiler_text")
-        author = f"@{status_to_display['account']['acct']}"
-
-        panel_title = author
-        panel_subtitle = ""
-
-        if spoiler_text:
-            panel_title = spoiler_text
-            panel_subtitle = author
-
-        yield Static(
-            Panel(
-                Markdown(get_full_content_md(status_to_display)),
-                title=panel_title,
-                subtitle=panel_subtitle,
-                box=box.ROUNDED,
-                padding=(0, 1),
-            )
-        )
-        with Horizontal(classes="post-footer"):
-            yield LoadingIndicator(classes="action-spinner")
-            yield Static(
-                f"Boosts: {status_to_display.get('reblogs_count', 0)}", id="boost-count"
-            )
-            yield Static(
-                f"Likes: {status_to_display.get('favourites_count', 0)}", id="like-count"
-            )
-
-    def show_spinner(self):
-        self.query_one(".action-spinner").display = True
-
-    def hide_spinner(self):
-        self.query_one(".action-spinner").display = False
-
-    def update_from_post(self, post):
-        self.post = post
-        status_to_display = self.post.get("reblog") or self.post
-        
-        # Update classes
-        self.remove_class("favourited", "reblogged")
-        if status_to_display.get("favourited"):
-            self.add_class("favourited")
-        if status_to_display.get("reblogged"):
-            self.add_class("reblogged")
-
-        # Update stats
-        self.query_one("#boost-count").update(
-            f"Boosts: {status_to_display.get('reblogs_count', 0)}"
-        )
-        self.query_one("#like-count").update(
-            f"Likes: {status_to_display.get('favourites_count', 0)}"
-        )
-        self.hide_spinner()
-
-
-class Notification(Widget):
-    """A widget to display a single notification."""
-
-    def __init__(self, notif, **kwargs):
-        super().__init__(**kwargs)
-        self.notif = notif
-        self.add_class("timeline-item")
-
-    def compose(self):
-        notif_type = self.notif["type"]
-        author = self.notif["account"]
-        author_acct = f"@{author['acct']}"
-
-        if notif_type == "mention":
-            status = self.notif["status"]
-            spoiler_text = status.get("spoiler_text")
-            panel_title = f"Mention from {author_acct}"
-            panel_subtitle = ""
-            if spoiler_text:
-                panel_title = spoiler_text
-                panel_subtitle = f"Mention from {author_acct}"
-
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    title=panel_title,
-                    subtitle=panel_subtitle,
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
-            with Horizontal(classes="post-footer"):
-                yield Static(
-                    f"Boosts: {status.get('reblogs_count', 0)}", id="boost-count"
-                )
-                yield Static(
-                    f"Likes: {status.get('favourites_count', 0)}", id="like-count"
-                )
-
-        elif notif_type == "favourite":
-            status = self.notif["status"]
-            yield Static(f"❤️ {author_acct} favourited your post:")
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
-
-        elif notif_type == "reblog":
-            status = self.notif["status"]
-            yield Static(f"🚀 {author_acct} boosted your post:")
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
-
-        elif notif_type == "follow":
-            yield Static(f"👋 {author_acct} followed you.")
-
-        elif notif_type == "poll":
-            status = self.notif["status"]
-            poll = status.get("poll", {})
-            options = poll.get("options", [])
-            total_votes = poll.get("votes_count", 0)
-
-            yield Static("📊 A poll you participated in has ended:")
-            
-            for option in options:
-                title = option.get('title', 'N/A')
-                votes = option.get('votes_count', 0)
-                percentage = (votes / total_votes * 100) if total_votes > 0 else 0
-                yield Static(f"  - {title}: {votes} votes ({percentage:.2f}%)")
-
-        else:
-            yield Static(f"Unsupported notification type: {notif_type}")
 
 
 class Timeline(Static, can_focus=True):
@@ -342,6 +157,9 @@ class Timeline(Static, can_focus=True):
         elif event.key == "a":
             self.reply_to_post()
             event.stop()
+        elif event.key == "enter":
+            self.open_thread()
+            event.stop()
 
     def select_first_item(self):
         if self.selected_item:
@@ -356,6 +174,16 @@ class Timeline(Static, can_focus=True):
 
     def get_selected_item(self):
         return self.selected_item
+
+    def open_thread(self):
+        if isinstance(self.selected_item, Post):
+            status = self.selected_item.post.get("reblog") or self.selected_item.post
+            self.app.push_screen(ThreadScreen(status["id"], self.app.api))
+        elif isinstance(self.selected_item, Notification):
+            if self.selected_item.notif["type"] in ["mention", "favourite", "reblog"]:
+                status = self.selected_item.notif.get("status")
+                if status:
+                    self.app.push_screen(ThreadScreen(status["id"], self.app.api))
 
     def reply_to_post(self):
         post_to_reply_to = None

@@ -270,3 +270,23 @@ Post.selected {
 #reply_buttons > Button {
     margin-left: 1;
 }
+#thread-dialog {
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: thick $primary 80%;
+    padding: 1;
+}
+
+#thread-container {
+    padding: 1;
+}
+
+.main-post {
+    background: $accent 20%;
+}
+
+.reply-post {
+    margin-left: 4;
+}
+
