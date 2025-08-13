@@ -51,6 +51,7 @@ class Mastui(App):
     ]
     CSS_PATH = css_path
     initial_data = None
+    max_characters = 500 # Default value
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -65,9 +66,20 @@ class Mastui(App):
         self.push_screen(SplashScreen())
         self.api = get_api()
         if self.api:
+            self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
             self.set_timer(2, self.show_timelines)
         else:
             self.call_later(self.show_login_screen)
+
+    def fetch_instance_info(self):
+        """Fetches instance information from the API."""
+        try:
+            instance = self.api.instance()
+            self.max_characters = instance['configuration']['statuses']['max_characters']
+        except Exception as e:
+            log.error(f"Error fetching instance info: {e}", exc_info=True)
+            # Stick with the default
+            pass
 
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""
@@ -127,7 +139,7 @@ class Mastui(App):
         """An action to compose a new post."""
         if isinstance(self.screen, ModalScreen):
             return
-        self.push_screen(PostScreen(), self.on_post_screen_dismiss)
+        self.push_screen(PostScreen(max_characters=self.max_characters), self.on_post_screen_dismiss)
 
     def action_reply_to_post(self) -> None:
         focused = self.query("Timeline:focus")

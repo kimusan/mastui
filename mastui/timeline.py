@@ -242,7 +242,7 @@ class Timeline(Static, can_focus=True):
                 post_to_reply_to = self.selected_item.notif.get("status")
 
         if post_to_reply_to:
-            self.app.push_screen(ReplyScreen(post_to_reply_to), self.app.on_reply_screen_dismiss)
+            self.app.push_screen(ReplyScreen(post_to_reply_to, max_characters=self.app.max_characters), self.app.on_reply_screen_dismiss)
         else:
             self.app.notify("This item cannot be replied to.", severity="error")
 

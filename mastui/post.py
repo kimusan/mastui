@@ -1,61 +1,60 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea, Input, Switch, Select
-from textual.containers import Vertical, Horizontal, Grid
+from textual.widgets import Button, Label, Input, Static, TextArea, Select
+from textual.containers import Grid, Horizontal
+from textual import on
 from mastui.utils import LANGUAGE_OPTIONS
 
 class PostScreen(ModalScreen):
     """A modal screen for composing a new post."""
 
-    def compose(self) -> ComposeResult:
+    def __init__(self, max_characters: int = 500, **kwargs):
+        super().__init__(**kwargs)
+        self.max_characters = max_characters
+
+    def compose(self):
         with Grid(id="post_dialog"):
-            yield Static("Compose New Post", id="post_title")
-
+            yield Label("New Post", id="post_title")
             yield TextArea(id="post_content", language="markdown")
-
+            
             with Horizontal(id="post_options"):
-                yield Static("Content Warning:", classes="post_option_label")
-                yield Switch(id="cw_switch")
-                yield Input(id="cw_input", placeholder="Spoiler text...", disabled=True)
-
+                yield Label("CW:", classes="post_option_label")
+                yield Input(placeholder="Content warning", id="cw_input")
+            
             with Horizontal(id="post_language_container"):
-                yield Static("Language:", classes="post_option_label")
-                yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
+                yield Label("Language:", classes="post_option_label")
+                yield Select(LANGUAGE_OPTIONS, value="en", id="language_select")
 
             with Horizontal(id="post_buttons"):
-                yield Button("Post", variant="primary", id="post_button")
-                yield Button("Cancel", id="cancel_button")
+                yield Label(f"{self.max_characters}", id="character_limit")
+                yield Button("Post", variant="primary", id="post")
+                yield Button("Cancel", id="cancel")
 
-    def on_mount(self) -> None:
-        """Set initial focus."""
+    def on_mount(self):
         self.query_one("#post_content").focus()
+        self.update_character_limit()
 
-    def on_switch_changed(self, event: Switch.Changed) -> None:
-        """Toggle the content warning input."""
-        cw_input = self.query_one("#cw_input")
-        if event.value:
-            cw_input.disabled = False
-            cw_input.focus()
-        else:
-            cw_input.disabled = True
-            cw_input.value = ""
+    @on(Input.Changed)
+    @on(TextArea.Changed)
+    def update_character_limit(self):
+        """Updates the character limit."""
+        content_len = len(self.query_one("#post_content").text)
+        cw_len = len(self.query_one("#cw_input").value)
+        remaining = self.max_characters - content_len - cw_len
+        
+        limit_label = self.query_one("#character_limit")
+        limit_label.update(f"{remaining}")
+        limit_label.set_class(remaining < 0, "character-limit-error")
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button presses."""
-        if event.button.id == "post_button":
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "post":
             content = self.query_one("#post_content").text
-            cw_text = self.query_one("#cw_input").value
+            spoiler_text = self.query_one("#cw_input").value
             language = self.query_one("#language_select").value
-            
-            if content:
-                result = {
-                    "content": content,
-                    "spoiler_text": cw_text if self.query_one("#cw_switch").value else None,
-                    "language": language,
-                }
-                self.dismiss(result)
-            else:
-                self.app.notify("Post content cannot be empty.", severity="error")
-
-        elif event.button.id == "cancel_button":
+            self.dismiss({
+                "content": content,
+                "spoiler_text": spoiler_text,
+                "language": language
+            })
+        else:
             self.dismiss(None)

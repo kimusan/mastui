@@ -285,6 +285,18 @@ Notification.selected {
 #reply_buttons > Button {
     margin-left: 1;
 }
+
+#character_limit {
+    width: auto;
+    height: 100%;
+    content-align: left middle;
+    margin-right: 1;
+}
+
+.character-limit-error {
+    color: $error;
+}
+
 #thread-dialog {
     width: 80%;
     height: 80%;

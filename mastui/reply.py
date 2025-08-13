@@ -1,18 +1,20 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea, Input, Switch, Select
+from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label
 from textual.containers import Vertical, Horizontal, Grid
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
+from textual import on
 from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS
 
 class ReplyScreen(ModalScreen):
     """A modal screen for replying to a post."""
 
-    def __init__(self, post_to_reply_to, *args, **kwargs):
+    def __init__(self, post_to_reply_to, max_characters: int = 500, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.post_to_reply_to = post_to_reply_to
+        self.max_characters = max_characters
 
     def get_mentions(self):
         """Get mentions from the post being replied to."""
@@ -49,6 +51,7 @@ class ReplyScreen(ModalScreen):
                 yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
 
             with Horizontal(id="reply_buttons"):
+                yield Label(f"{self.max_characters}", id="character_limit")
                 yield Button("Post Reply", variant="primary", id="post_button")
                 yield Button("Cancel", id="cancel_button")
 
@@ -56,7 +59,19 @@ class ReplyScreen(ModalScreen):
         """Set initial focus."""
         self.query_one("#reply_content").focus()
         self.query_one("#reply_content").cursor_location = (0, len(self.query_one("#reply_content").text))
+        self.update_character_limit()
 
+    @on(Input.Changed)
+    @on(TextArea.Changed)
+    def update_character_limit(self):
+        """Updates the character limit."""
+        content_len = len(self.query_one("#reply_content").text)
+        cw_len = len(self.query_one("#cw_input").value)
+        remaining = self.max_characters - content_len - cw_len
+        
+        limit_label = self.query_one("#character_limit")
+        limit_label.update(f"{remaining}")
+        limit_label.set_class(remaining < 0, "character-limit-error")
 
     def on_switch_changed(self, event: Switch.Changed) -> None:
         """Toggle the content warning input."""
