@@ -1,6 +1,7 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import VerticalScroll, Horizontal
 from textual.events import Key
+from textual.screen import ModalScreen
 from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
@@ -198,6 +199,8 @@ class Timeline(Static, can_focus=True):
         return self.selected_item
 
     def open_thread(self):
+        if isinstance(self.app.screen, ModalScreen):
+            return
         if isinstance(self.selected_item, Post):
             status = self.selected_item.post.get("reblog") or self.selected_item.post
             self.app.push_screen(ThreadScreen(status["id"], self.app.api))
@@ -217,6 +220,8 @@ class Timeline(Static, can_focus=True):
             self.post_message(ViewProfile(account_id))
 
     def reply_to_post(self):
+        if isinstance(self.app.screen, ModalScreen):
+            return
         post_to_reply_to = None
         if isinstance(self.selected_item, Post):
             post_to_reply_to = self.selected_item.post.get("reblog") or self.selected_item.post

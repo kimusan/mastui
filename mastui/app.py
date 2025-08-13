@@ -1,6 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer
 from textual import on
+from textual.screen import ModalScreen
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
 from mastui.reply import ReplyScreen
@@ -56,14 +57,23 @@ class Mastui(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
-        self.dark = config.theme != "light"
         self.theme = config.theme
+        self.dark = config.theme != "light"
+        self.theme_changed_signal.subscribe(self, self.on_theme_changed)
         self.push_screen(SplashScreen())
         self.api = get_api()
         if self.api:
             self.set_timer(2, self.show_timelines)
         else:
             self.call_later(self.show_login_screen)
+
+    def on_theme_changed(self, event) -> None:
+        """Called when the app's theme is changed."""
+        new_theme = event.name
+        config.theme = new_theme
+        if new_theme != "light":
+            config.preferred_dark_theme = new_theme
+        config.save_config()
 
     def show_login_screen(self):
         if isinstance(self.screen, SplashScreen):
@@ -86,18 +96,12 @@ class Mastui(App):
         except Exception:
             pass
 
-    def watch_dark(self, dark: bool) -> None:
-        """Called when dark mode is toggled."""
-        if dark:
-            # Restore the preferred dark theme
-            config.theme = config.preferred_dark_theme
+    def action_toggle_dark(self) -> None:
+        """An action to toggle dark mode."""
+        if self.dark:
+            self.theme = "light"
         else:
-            # If we are currently on a dark theme, save it as preferred before switching to light
-            if config.theme != "light":
-                config.preferred_dark_theme = config.theme
-            config.theme = "light"
-        self.theme = config.theme
-        config.save_config()
+            self.theme = config.preferred_dark_theme
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""
@@ -107,6 +111,8 @@ class Mastui(App):
 
     def action_compose_post(self) -> None:
         """An action to compose a new post."""
+        if isinstance(self.screen, ModalScreen):
+            return
         self.push_screen(PostScreen(), self.on_post_screen_dismiss)
 
     def action_reply_to_post(self) -> None:
@@ -209,6 +215,8 @@ class Mastui(App):
 
     @on(ViewProfile)
     def on_view_profile(self, message: ViewProfile) -> None:
+        if isinstance(self.screen, ModalScreen):
+            return
         self.push_screen(ProfileScreen(message.account_id, self.api))
 
     def action_like_post(self) -> None:
