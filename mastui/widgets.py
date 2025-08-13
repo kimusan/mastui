@@ -57,11 +57,14 @@ class Post(Widget):
         status_to_display = reblog or self.post
 
         if is_reblog:
-            booster_name = self.post["account"]["acct"]
-            yield Static(f"🚀 Boosted by @{booster_name}", classes="boost-header")
+            booster_display_name = self.post["account"]["display_name"]
+            booster_acct = self.post["account"]["acct"]
+            yield Static(f"🚀 Boosted by {booster_display_name} (@{booster_acct})", classes="boost-header")
 
         spoiler_text = status_to_display.get("spoiler_text")
-        author = f"@{status_to_display['account']['acct']}"
+        author_display_name = status_to_display['account']['display_name']
+        author_acct = status_to_display['account']['acct']
+        author = f"{author_display_name} (@{author_acct})"
 
         panel_title = author
         panel_subtitle = ""
@@ -134,16 +137,18 @@ class Notification(Widget):
     def compose(self):
         notif_type = self.notif["type"]
         author = self.notif["account"]
+        author_display_name = author['display_name']
         author_acct = f"@{author['acct']}"
+        author_str = f"{author_display_name} ({author_acct})"
 
         if notif_type == "mention":
             status = self.notif["status"]
             spoiler_text = status.get("spoiler_text")
-            panel_title = f"Mention from {author_acct}"
+            panel_title = f"Mention from {author_str}"
             panel_subtitle = ""
             if spoiler_text:
                 panel_title = spoiler_text
-                panel_subtitle = f"Mention from {author_acct}"
+                panel_subtitle = f"Mention from {author_str}"
 
             yield Static(
                 Panel(
@@ -165,7 +170,7 @@ class Notification(Widget):
 
         elif notif_type == "favourite":
             status = self.notif["status"]
-            yield Static(f"❤️ {author_acct} favourited your post:")
+            yield Static(f"❤️ {author_str} favourited your post:")
             yield Static(
                 Panel(
                     Markdown(get_full_content_md(status)),
@@ -178,7 +183,7 @@ class Notification(Widget):
 
         elif notif_type == "reblog":
             status = self.notif["status"]
-            yield Static(f"🚀 {author_acct} boosted your post:")
+            yield Static(f"🚀 {author_str} boosted your post:")
             yield Static(
                 Panel(
                     Markdown(get_full_content_md(status)),
@@ -190,7 +195,7 @@ class Notification(Widget):
                 yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "follow":
-            yield Static(f"👋 {author_acct} followed you.")
+            yield Static(f"👋 {author_str} followed you.")
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
