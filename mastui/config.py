@@ -20,6 +20,15 @@ class Config:
         self.theme = os.getenv("THEME", "dark")
         self.preferred_dark_theme = os.getenv("PREFERRED_DARK_THEME", "dark")
 
+        # Auto-refresh settings
+        self.home_auto_refresh = os.getenv("HOME_AUTO_REFRESH", "on") == "on"
+        self.home_auto_refresh_interval = int(os.getenv("HOME_AUTO_REFRESH_INTERVAL", "2"))
+        self.notifications_auto_refresh = os.getenv("NOTIFICATIONS_AUTO_REFRESH", "on") == "on"
+        self.notifications_auto_refresh_interval = int(os.getenv("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
+        self.federated_auto_refresh = os.getenv("FEDERATED_AUTO_REFRESH", "on") == "on"
+        self.federated_auto_refresh_interval = int(os.getenv("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
+
+
     def save_config(self):
         with open(self.env_file, "w") as f:
             if self.mastodon_host:
@@ -34,6 +43,13 @@ class Config:
                 f.write(f"THEME={self.theme}\n")
             if self.preferred_dark_theme:
                 f.write(f"PREFERRED_DARK_THEME={self.preferred_dark_theme}\n")
+            
+            f.write(f"HOME_AUTO_REFRESH={'on' if self.home_auto_refresh else 'off'}\n")
+            f.write(f"HOME_AUTO_REFRESH_INTERVAL={self.home_auto_refresh_interval}\n")
+            f.write(f"NOTIFICATIONS_AUTO_REFRESH={'on' if self.notifications_auto_refresh else 'off'}\n")
+            f.write(f"NOTIFICATIONS_AUTO_REFRESH_INTERVAL={self.notifications_auto_refresh_interval}\n")
+            f.write(f"FEDERATED_AUTO_REFRESH={'on' if self.federated_auto_refresh else 'off'}\n")
+            f.write(f"FEDERATED_AUTO_REFRESH_INTERVAL={self.federated_auto_refresh_interval}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host

@@ -11,6 +11,7 @@ from mastui.timeline import Timelines, Timeline
 from mastui.widgets import Post, LikePost, BoostPost
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
+from mastui.config_screen import ConfigScreen
 from mastui.logging_config import setup_logging
 import logging
 import argparse
@@ -42,6 +43,7 @@ class Mastui(App):
         ("c", "compose_post", "Compose post"),
         ("p", "view_profile", "View profile"),
         ("a", "reply_to_post", "Reply to post"),
+        ("o", "open_options", "Options"),
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
         ("up", "scroll_up", "Scroll up"),
@@ -102,6 +104,18 @@ class Mastui(App):
             self.theme = "light"
         else:
             self.theme = config.preferred_dark_theme
+
+    def action_open_options(self) -> None:
+        """An action to open the options screen."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.push_screen(ConfigScreen(), self.on_config_screen_dismiss)
+
+    def on_config_screen_dismiss(self, result: bool) -> None:
+        """Called when the config screen is dismissed."""
+        if result:
+            for timeline in self.query(Timeline):
+                timeline.update_auto_refresh_timer()
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""

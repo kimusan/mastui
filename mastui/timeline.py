@@ -7,6 +7,7 @@ from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile
+from mastui.config import config
 import logging
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,17 @@ class Timeline(Static, can_focus=True):
             self.render_posts(self.posts_data)
         else:
             self.load_posts()
+        self.update_auto_refresh_timer()
+
+    def update_auto_refresh_timer(self):
+        """Starts or stops the auto-refresh timer based on the config."""
+        if hasattr(self, "refresh_timer"):
+            self.refresh_timer.stop()
+
+        auto_refresh = getattr(config, f"{self.id}_auto_refresh", False)
+        if auto_refresh:
+            interval = getattr(config, f"{self.id}_auto_refresh_interval", 60)
+            self.refresh_timer = self.set_interval(interval * 60, self.refresh_posts)
 
     def on_timeline_update(self, message: TimelineUpdate) -> None:
         """Handle a timeline update message."""
