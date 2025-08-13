@@ -11,6 +11,16 @@ from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS
 class ReplyScreen(ModalScreen):
     """A modal screen for replying to a post."""
 
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Cancel Reply"),
+    ]
+
+    DEFAULT_CSS = """
+    ReplyScreen {
+        align: center middle;
+    }
+    """
+
     def __init__(self, post_to_reply_to, max_characters: int = 500, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.post_to_reply_to = post_to_reply_to

@@ -8,6 +8,16 @@ from mastui.utils import LANGUAGE_OPTIONS
 class PostScreen(ModalScreen):
     """A modal screen for composing a new post."""
 
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Cancel Post"),
+    ]
+
+    DEFAULT_CSS = """
+    PostScreen {
+        align: center middle;
+    }
+    """
+
     def __init__(self, max_characters: int = 500, **kwargs):
         super().__init__(**kwargs)
         self.max_characters = max_characters

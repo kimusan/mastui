@@ -7,6 +7,9 @@ class ConfigScreen(ModalScreen):
     """A modal screen for changing settings."""
 
     DEFAULT_CSS = """
+    ConfigScreen {
+        align: center middle;
+    }
     #config-dialog {
         grid-size: 3;
         grid-gutter: 1;
