@@ -58,26 +58,7 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
-
-            auth_url, error = await self.run_worker(lambda: create_app(host), exclusive=True)
-            
-            spinner.add_class("hidden")
-
-            if error:
-                status.update(f"[red]Error: {error}[/red]")
-                status.remove_class("hidden")
-                return
-            
-            pyperclip.set_clipboard("xclip")
-            pyperclip.copy(auth_url)
-
-            auth_link_input = self.query_one("#auth_link")
-            auth_link_input.text = auth_url
-            auth_link_input.read_only = True
-            self.query_one("#auth_link_container").remove_class("hidden")
-            self.query_one("#get_auth").parent.add_class("hidden") # Hide the button's parent container
-            self.query_one("#host").disabled = True
-            self.query_one("#auth_code").focus()
+            self.run_worker(lambda: create_app(host), self.on_auth_link_created, exclusive=True)
 
         elif event.button.id == "login":
             auth_code = self.query_one("#auth_code").value
@@ -89,13 +70,40 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
+            self.run_worker(lambda: login(host, auth_code), self.on_login_complete, exclusive=True)
 
-            api, error = await self.run_worker(lambda: login(host, auth_code), exclusive=True)
+    def on_auth_link_created(self, result) -> None:
+        """Callback for when the auth link is created."""
+        auth_url, error = result
+        status = self.query_one("#status")
+        spinner = self.query_one(LoadingIndicator)
+        spinner.add_class("hidden")
 
-            spinner.add_class("hidden")
+        if error:
+            status.update(f"[red]Error: {error}[/red]")
+            status.remove_class("hidden")
+            return
+        
+        pyperclip.set_clipboard("xclip")
+        pyperclip.copy(auth_url)
 
-            if api:
-                self.dismiss(api)
-            else:
-                status.update(f"[red]Login failed: {error}[/red]")
-                status.remove_class("hidden")
+        auth_link_input = self.query_one("#auth_link")
+        auth_link_input.text = auth_url
+        auth_link_input.read_only = True
+        self.query_one("#auth_link_container").remove_class("hidden")
+        self.query_one("#get_auth").parent.add_class("hidden") # Hide the button's parent container
+        self.query_one("#host").disabled = True
+        self.query_one("#auth_code").focus()
+
+    def on_login_complete(self, result) -> None:
+        """Callback for when the login is complete."""
+        api, error = result
+        status = self.query_one("#status")
+        spinner = self.query_one(LoadingIndicator)
+        spinner.add_class("hidden")
+
+        if api:
+            self.dismiss(api)
+        else:
+            status.update(f"[red]Login failed: {error}[/red]")
+            status.remove_class("hidden")
