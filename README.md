@@ -7,15 +7,17 @@ Mastui is a Mastodon TUI client built with Python and Textual. It allows users t
 ## Features
 
 * Timeline Viewing in a multi-column layout
-* Post and Reply creation
+* Post and Reply creation with character counter
 * "Infinite" scrolling of timelines
 * Like posts
 * View user profiles
 * Follow/Unfollow users
 * View post threads
 * Support for local Mastodon servers
-* Light/Dark mode theming
+* Configurable light/dark mode theming
 * Content warning support
+* Auto-refreshing timelines (configurable)
+* Rudimentary image viewing (ANSI, lazy-loaded)
 
 ### TODO
 
@@ -42,13 +44,24 @@ The recommended way to install Mastui is with `pipx`.
 
 After this, you can run the application from anywhere by simply typing `mastui`.
 
+## Upgrading
+
+To upgrade to the latest version of Mastui, run the following command:
+
+```bash
+pipx upgrade mastui
+```
+
 ## Technology Stack
 
 * [Python](https://www.python.org/)
 * [Poetry](https://python-poetry.org/) for dependency management
 * [Textual](https://textual.textualize.io/) for the TUI framework
 * [Mastodon.py](https://mastodonpy.readthedocs.io/) for interacting with the Mastodon API
+* [httpx](https://www.python-httpx.org/) for HTTP requests
+* [Pillow](https://python-pillow.org/) for image processing
 * [html2text](https://github.com/Alir3z4/html2text) for converting HTML to Markdown
+* [python-dateutil](https://dateutil.readthedocs.io/) for parsing datetimes
 
 ## License
 
