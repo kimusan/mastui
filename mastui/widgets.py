@@ -42,8 +42,9 @@ class Post(Widget):
     def __init__(self, post, **kwargs):
         super().__init__(**kwargs)
         self.post = post
-        self.add_class("timeline-item")
         status_to_display = self.post.get("reblog") or self.post
+        self.id = f"post-{status_to_display['id']}"
+        self.add_class("timeline-item")
         self.created_at_str = format_datetime(status_to_display['created_at'])
 
     def on_mount(self):

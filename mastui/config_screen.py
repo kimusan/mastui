@@ -41,7 +41,7 @@ class ConfigScreen(ModalScreen):
 
             yield Label("Show images?", classes="config-label")
             yield Switch(value=config.image_support, id="image_support")
-            yield Select([("ANSI", "ansi"), ("Sixel", "sixel")], value=config.image_renderer, id="image_renderer")
+            yield Select([("Auto", "auto"), ("ANSI", "ansi"), ("Sixel", "sixel"), ("TGP (iTerm2)", "tgp")], value=config.image_renderer, id="image_renderer")
 
             yield Static() # Spacer
             yield Button("Save", variant="primary", id="save")

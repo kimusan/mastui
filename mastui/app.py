@@ -201,10 +201,17 @@ class Mastui(App):
 
     def do_like_post(self, post_id: str):
         try:
-            post_data = self.api.status_favourite(post_id)
+            # Find the post to determine its current liked status
+            post_widget = self.query_one(f"#post-{post_id}", Post)
+            status_to_action = post_widget.post.get("reblog") or post_widget.post
+            
+            if status_to_action.get("favourited"):
+                post_data = self.api.status_unfavourite(post_id)
+            else:
+                post_data = self.api.status_favourite(post_id)
             self.post_message(PostStatusUpdate(post_data))
         except Exception as e:
-            log.error(f"Error liking post {post_id}: {e}", exc_info=True)
+            log.error(f"Error liking/unliking post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
 
     @on(BoostPost)
