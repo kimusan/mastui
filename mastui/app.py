@@ -12,6 +12,7 @@ from mastui.widgets import Post, LikePost, BoostPost
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
+from mastui.help_screen import HelpScreen
 from mastui.logging_config import setup_logging
 import logging
 import argparse
@@ -44,6 +45,8 @@ class Mastui(App):
         ("p", "view_profile", "View profile"),
         ("a", "reply_to_post", "Reply to post"),
         ("o", "open_options", "Options"),
+        ("?", "show_help", "Help"),
+        ("q", "quit", "Quit"),
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
         ("up", "scroll_up", "Scroll up"),
@@ -124,6 +127,12 @@ class Mastui(App):
         if isinstance(self.screen, ModalScreen):
             return
         self.push_screen(ConfigScreen(), self.on_config_screen_dismiss)
+
+    def action_show_help(self) -> None:
+        """An action to show the help screen."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.push_screen(HelpScreen())
 
     def on_config_screen_dismiss(self, result: bool) -> None:
         """Called when the config screen is dismissed."""
