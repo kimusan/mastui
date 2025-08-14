@@ -15,8 +15,9 @@ html2text = "^2024.2.26"
 requests = "^2.32.4"
 toml = "^0.10.2"
 python-dateutil = "^2.9.0"
-Pillow = "^10.3.0"
 httpx = "^0.27.0"
+textual-image = "^0.8.3"
+Pillow = "^10.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
