@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, Input, Switch, Static
+from textual.widgets import Button, Label, Input, Switch, Static, Select
 from textual.containers import Grid
 from mastui.config import config
 
@@ -39,6 +39,10 @@ class ConfigScreen(ModalScreen):
             yield Switch(value=config.federated_auto_refresh, id="federated_auto_refresh")
             yield Input(str(config.federated_auto_refresh_interval), id="federated_auto_refresh_interval")
 
+            yield Label("Show images?", classes="config-label")
+            yield Switch(value=config.image_support, id="image_support")
+            yield Select([("ANSI", "ansi"), ("Sixel", "sixel")], value=config.image_renderer, id="image_renderer")
+
             yield Static() # Spacer
             yield Button("Save", variant="primary", id="save")
             yield Button("Cancel", id="cancel")
@@ -51,6 +55,8 @@ class ConfigScreen(ModalScreen):
             config.notifications_auto_refresh_interval = int(self.query_one("#notifications_auto_refresh_interval").value)
             config.federated_auto_refresh = self.query_one("#federated_auto_refresh").value
             config.federated_auto_refresh_interval = int(self.query_one("#federated_auto_refresh_interval").value)
+            config.image_support = self.query_one("#image_support").value
+            config.image_renderer = self.query_one("#image_renderer").value
             config.save_config()
             self.dismiss(True)
         else:

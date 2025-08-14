@@ -9,6 +9,8 @@ from textual.events import Key
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime
 from mastui.reply import ReplyScreen
+from mastui.image import ImageWidget
+from mastui.config import config
 import logging
 
 log = logging.getLogger(__name__)
@@ -82,6 +84,11 @@ class Post(Widget):
                 padding=(0, 1),
             )
         )
+        if config.image_support and status_to_display.get("media_attachments"):
+            for media in status_to_display["media_attachments"]:
+                if media["type"] == "image":
+                    yield ImageWidget(media["url"], config.image_renderer)
+
         with Horizontal(classes="post-footer"):
             yield LoadingIndicator(classes="action-spinner")
             yield Static(

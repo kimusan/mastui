@@ -317,3 +317,8 @@ Notification.selected {
     margin-left: 4;
 }
 
+ImageWidget {
+    height: 10;
+    margin-top: 1;
+}
+

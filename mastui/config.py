@@ -28,6 +28,10 @@ class Config:
         self.federated_auto_refresh = os.getenv("FEDERATED_AUTO_REFRESH", "on") == "on"
         self.federated_auto_refresh_interval = int(os.getenv("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
 
+        # Image settings
+        self.image_support = os.getenv("IMAGE_SUPPORT", "off") == "on"
+        self.image_renderer = os.getenv("IMAGE_RENDERER", "ansi")
+
 
     def save_config(self):
         with open(self.env_file, "w") as f:
@@ -50,6 +54,8 @@ class Config:
             f.write(f"NOTIFICATIONS_AUTO_REFRESH_INTERVAL={self.notifications_auto_refresh_interval}\n")
             f.write(f"FEDERATED_AUTO_REFRESH={'on' if self.federated_auto_refresh else 'off'}\n")
             f.write(f"FEDERATED_AUTO_REFRESH_INTERVAL={self.federated_auto_refresh_interval}\n")
+            f.write(f"IMAGE_SUPPORT={'on' if self.image_support else 'off'}\n")
+            f.write(f"IMAGE_RENDERER={self.image_renderer}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host

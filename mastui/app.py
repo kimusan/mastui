@@ -61,7 +61,7 @@ class Mastui(App):
     def on_mount(self) -> None:
         """Called when the app is mounted."""
         self.theme = config.theme
-        self.dark = config.theme != "light"
+        self.dark = config.theme != "textual-light"
         self.theme_changed_signal.subscribe(self, self.on_theme_changed)
         self.push_screen(SplashScreen())
         self.api = get_api()
@@ -85,7 +85,7 @@ class Mastui(App):
         """Called when the app's theme is changed."""
         new_theme = event.name
         config.theme = new_theme
-        if new_theme != "light":
+        if new_theme != "textual-light":
             config.preferred_dark_theme = new_theme
         config.save_config()
 
@@ -113,7 +113,7 @@ class Mastui(App):
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         if self.dark:
-            self.theme = "light"
+            self.theme = "textual-light"
         else:
             self.theme = config.preferred_dark_theme
 
