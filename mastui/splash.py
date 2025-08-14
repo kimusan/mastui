@@ -5,6 +5,9 @@ from rich.panel import Panel
 from importlib import metadata
 import os
 import toml
+import logging
+
+log = logging.getLogger(__name__)
 
 class SplashScreen(Screen):
     """A splash screen with the app name, version, and logo."""
@@ -17,7 +20,8 @@ class SplashScreen(Screen):
         try:
             # For installed package
             return metadata.version("mastui")
-        except metadata.PackageNotFoundError:
+        except metadata.PackageNotFoundError as e:
+            log.error(f"Could not get version from metadata: {e}", exc_info=True)
             # For development environment
             pyproject_path = os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")
             if os.path.exists(pyproject_path):
@@ -63,7 +67,6 @@ class SplashScreen(Screen):
         """Update the status message on the splash screen."""
         try:
             self.query_one("#splash-status").update(message)
-        except Exception:
-            # The screen might be gone, which is fine.
-            pass
+        except Exception as e:
+            log.error(f"Could not update splash screen status: {e}", exc_info=True)
 

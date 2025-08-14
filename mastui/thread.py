@@ -86,7 +86,8 @@ class ThreadScreen(ModalScreen):
         try:
             self.selected_item = self.query(Post).first()
             self.selected_item.add_class("selected")
-        except Exception:
+        except Exception as e:
+            log.error(f"Could not select first item in thread: {e}", exc_info=True)
             self.selected_item = None
 
     def on_key(self, event: Key) -> None:
@@ -116,7 +117,8 @@ class ThreadScreen(ModalScreen):
                     self.selected_item = items[idx - 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
-            except ValueError:
+            except ValueError as e:
+                log.error(f"Could not scroll up in thread: {e}", exc_info=True)
                 self.select_first_item()
 
     def scroll_down(self):
@@ -129,7 +131,8 @@ class ThreadScreen(ModalScreen):
                     self.selected_item = items[idx + 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
-            except ValueError:
+            except ValueError as e:
+                log.error(f"Could not scroll down in thread: {e}", exc_info=True)
                 self.select_first_item()
 
     def action_like_post(self):

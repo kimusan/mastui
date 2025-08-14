@@ -200,11 +200,14 @@ class Timeline(Static, can_focus=True):
         if self.selected_item:
             self.selected_item.remove_class("selected")
         try:
-            self.selected_item = self.content_container.query(
-                "Post, Notification"
-            ).first()
-            self.selected_item.add_class("selected")
-        except Exception:
+            items = self.content_container.query("Post, Notification")
+            if items:
+                self.selected_item = items.first()
+                self.selected_item.add_class("selected")
+            else:
+                self.selected_item = None
+        except Exception as e:
+            log.error(f"Could not select first item in timeline: {e}", exc_info=True)
             self.selected_item = None
 
     def get_selected_item(self):
@@ -276,7 +279,8 @@ class Timeline(Static, can_focus=True):
                     self.selected_item.scroll_visible()
                 else:
                     self.refresh_posts()
-            except ValueError:
+            except ValueError as e:
+                log.error(f"Could not scroll up in timeline: {e}", exc_info=True)
                 self.select_first_item()
 
     def scroll_down(self):
@@ -291,7 +295,8 @@ class Timeline(Static, can_focus=True):
                     self.selected_item.scroll_visible()
                 else:
                     self.load_older_posts()
-            except ValueError:
+            except ValueError as e:
+                log.error(f"Could not scroll down in timeline: {e}", exc_info=True)
                 self.select_first_item()
 
     def compose(self):

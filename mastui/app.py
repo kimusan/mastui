@@ -81,8 +81,7 @@ class Mastui(App):
             self.max_characters = instance['configuration']['statuses']['max_characters']
         except Exception as e:
             log.error(f"Error fetching instance info: {e}", exc_info=True)
-            # Stick with the default
-            pass
+            self.notify("Could not fetch instance information.", severity="error")
 
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""
@@ -110,10 +109,14 @@ class Mastui(App):
             self.pop_screen()
         log.info("Showing timelines...")
         self.mount(Timelines())
+        self.call_later(self.focus_home_timeline)
+
+    def focus_home_timeline(self):
+        """Focuses the home timeline."""
         try:
             self.query_one("#home", Timeline).focus()
-        except Exception:
-            pass
+        except Exception as e:
+            log.error(f"Could not focus home timeline: {e}", exc_info=True)
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
