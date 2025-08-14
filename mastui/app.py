@@ -52,6 +52,7 @@ class Mastui(App):
     CSS_PATH = css_path
     initial_data = None
     max_characters = 500 # Default value
+    log_file_path: str | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -272,10 +273,18 @@ def main():
     parser.add_argument("--no-ssl-verify", action="store_false", dest="ssl_verify", help="Disable SSL verification.")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
     args = parser.parse_args()
-    setup_logging(debug=args.debug)
+    
+    log_file_path = setup_logging(debug=args.debug)
+    
     config.ssl_verify = args.ssl_verify
     app = Mastui()
-    app.run()
+    app.log_file_path = log_file_path
+    
+    try:
+        app.run()
+    finally:
+        if app.log_file_path:
+            print(f"Log file written to: {app.log_file_path}")
 
 
 if __name__ == "__main__":
