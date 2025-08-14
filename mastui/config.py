@@ -17,8 +17,9 @@ class Config:
         self.mastodon_access_token = os.getenv("MASTODON_ACCESS_TOKEN")
         self.ssl_verify = True
         
-        self.theme = os.getenv("THEME", "dark")
-        self.preferred_dark_theme = os.getenv("PREFERRED_DARK_THEME", "dark")
+        self.theme = os.getenv("THEME", "textual-dark")
+        self.preferred_dark_theme = os.getenv("PREFERRED_DARK_THEME", "textual-dark")
+        self.preferred_light_theme = os.getenv("PREFERRED_LIGHT_THEME", "textual-light")
 
         # Auto-refresh settings
         self.home_auto_refresh = os.getenv("HOME_AUTO_REFRESH", "on") == "on"
@@ -47,6 +48,8 @@ class Config:
                 f.write(f"THEME={self.theme}\n")
             if self.preferred_dark_theme:
                 f.write(f"PREFERRED_DARK_THEME={self.preferred_dark_theme}\n")
+            if self.preferred_light_theme:
+                f.write(f"PREFERRED_LIGHT_THEME={self.preferred_light_theme}\n")
             
             f.write(f"HOME_AUTO_REFRESH={'on' if self.home_auto_refresh else 'off'}\n")
             f.write(f"HOME_AUTO_REFRESH_INTERVAL={self.home_auto_refresh_interval}\n")
