@@ -197,15 +197,11 @@ class Mastui(App):
 
     @on(LikePost)
     def handle_like_post(self, message: LikePost):
-        self.run_worker(lambda: self.do_like_post(message.post_id), exclusive=True, thread=True)
+        self.run_worker(lambda: self.do_like_post(message.post_id, message.favourited), exclusive=True, thread=True)
 
-    def do_like_post(self, post_id: str):
+    def do_like_post(self, post_id: str, favourited: bool):
         try:
-            # Find the post to determine its current liked status
-            post_widget = self.query_one(f"#post-{post_id}", Post)
-            status_to_action = post_widget.post.get("reblog") or post_widget.post
-            
-            if status_to_action.get("favourited"):
+            if favourited:
                 post_data = self.api.status_unfavourite(post_id)
             else:
                 post_data = self.api.status_favourite(post_id)

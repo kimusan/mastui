@@ -40,7 +40,13 @@ class ImageWidget(Static):
             "tgp": TGPImage,
         }
         renderer_class = renderer_map.get(self.renderer, Image)
-        image = renderer_class(img, width=self.size.width, height="auto")
+
+        width = self.size.width - 4
+        if width <= 0:
+            self.show_error()
+            return
+
+        image = renderer_class(img, width=width)
 
         # Set the height of the widget to match the image
         self.styles.height = "auto"

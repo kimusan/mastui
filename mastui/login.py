@@ -58,7 +58,7 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
-            self.run_worker(lambda: create_app(host), self.on_auth_link_created, exclusive=True)
+            self.run_worker(lambda: create_app(host), self.on_auth_link_created, exclusive=True, thread=True)
 
         elif event.button.id == "login":
             auth_code = self.query_one("#auth_code").value
@@ -70,7 +70,7 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
-            self.run_worker(lambda: login(host, auth_code), self.on_login_complete, exclusive=True)
+            self.run_worker(lambda: login(host, auth_code), self.on_login_complete, exclusive=True, thread=True)
 
     def on_auth_link_created(self, result) -> None:
         """Callback for when the auth link is created."""

@@ -142,7 +142,7 @@ class ThreadScreen(ModalScreen):
                 self.app.notify("Cannot like a post that has been deleted.", severity="error")
                 return
             self.selected_item.show_spinner()
-            self.post_message(LikePost(status_to_action["id"]))
+            self.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
 
     def action_boost_post(self):
         if isinstance(self.selected_item, Post):

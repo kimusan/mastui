@@ -26,8 +26,9 @@ class PostMessage(Message):
 
 class LikePost(PostMessage):
     """A message to like a post."""
-
-    pass
+    def __init__(self, post_id: str, favourited: bool):
+        super().__init__(post_id)
+        self.favourited = favourited
 
 
 class BoostPost(PostMessage):
