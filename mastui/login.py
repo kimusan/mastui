@@ -6,6 +6,7 @@ from textual.screen import ModalScreen
 
 from mastui.mastodon_api import login, create_app
 
+
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
 
@@ -26,20 +27,24 @@ class LoginScreen(ModalScreen):
         with Grid(id="dialog"):
             yield Label("Mastodon Instance:")
             yield Input(placeholder="mastodon.social", id="host")
-            
-            yield Static() # Spacer
+
+            yield Static()  # Spacer
             yield Button("Get Auth Link", variant="primary", id="get_auth")
 
             yield LoadingIndicator(classes="hidden")
             yield Static(id="status", classes="hidden")
 
             with Vertical(id="auth_link_container", classes="hidden"):
-                yield Static("1. Link copied to clipboard! Open it in your browser to authorize.")
-                yield TextArea("", id="auth_link",)
+                yield Static(
+                    "1. Link copied to clipboard! Open it in your browser to authorize."
+                )
+                yield TextArea(
+                    "",
+                    id="auth_link",
+                )
                 yield Static("2. Paste the authorization code here:")
                 yield Input(placeholder="Authorization Code", id="auth_code")
                 yield Button("Login", variant="primary", id="login")
-
 
     def on_mount(self) -> None:
         """Called when the screen is mounted."""
@@ -58,7 +63,13 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
-            self.run_worker(lambda: create_app(host), self.on_auth_link_created, exclusive=True, thread=True)
+            self.run_worker(
+                lambda: self.app.call_from_thread(
+                    self.on_auth_link_created, create_app(host)
+                ),
+                exclusive=True,
+                thread=True,
+            )
 
         elif event.button.id == "login":
             auth_code = self.query_one("#auth_code").value
@@ -70,7 +81,13 @@ class LoginScreen(ModalScreen):
 
             spinner.remove_class("hidden")
             status.add_class("hidden")
-            self.run_worker(lambda: login(host, auth_code), self.on_login_complete, exclusive=True, thread=True)
+            self.run_worker(
+                lambda: self.app.call_from_thread(
+                    self.on_login_complete, login(host, auth_code)
+                ),
+                exclusive=True,
+                thread=True,
+            )
 
     def on_auth_link_created(self, result) -> None:
         """Callback for when the auth link is created."""
@@ -83,7 +100,7 @@ class LoginScreen(ModalScreen):
             status.update(f"[red]Error: {error}[/red]")
             status.remove_class("hidden")
             return
-        
+
         pyperclip.set_clipboard("xclip")
         pyperclip.copy(auth_url)
 
@@ -91,7 +108,9 @@ class LoginScreen(ModalScreen):
         auth_link_input.text = auth_url
         auth_link_input.read_only = True
         self.query_one("#auth_link_container").remove_class("hidden")
-        self.query_one("#get_auth").parent.add_class("hidden") # Hide the button's parent container
+        self.query_one("#get_auth").parent.add_class(
+            "hidden"
+        )  # Hide the button's parent container
         self.query_one("#host").disabled = True
         self.query_one("#auth_code").focus()
 
