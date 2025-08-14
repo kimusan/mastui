@@ -67,18 +67,14 @@ class ThreadScreen(ModalScreen):
         descendants = context.get("descendants", [])
         
         for post in ancestors:
-            post_widget = Post(post)
-            post_widget.id = f"thread-{post['id']}"
-            container.mount(post_widget)
+            container.mount(Post(post, id=f"thread-{post['id']}"))
 
-        main_post = Post(main_post_data)
-        main_post.id = f"thread-{main_post_data['id']}"
+        main_post = Post(main_post_data, id=f"thread-{main_post_data['id']}")
         main_post.add_class("main-post")
         container.mount(main_post)
 
         for post in descendants:
-            reply_post = Post(post)
-            reply_post.id = f"thread-{post['id']}"
+            reply_post = Post(post, id=f"thread-{post['id']}")
             reply_post.add_class("reply-post")
             container.mount(reply_post)
             
