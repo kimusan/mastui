@@ -23,7 +23,7 @@ Mastui is a Mastodon TUI client built with Python and Textual. It allows users t
 
 * database backend
 * Bookmarking
-* Hashtag Searching
+* Hashtag/Profile Searching
 * Unliking posts
 * Direct Messaging
 
@@ -31,13 +31,15 @@ Mastui is a Mastodon TUI client built with Python and Textual. It allows users t
 
 The recommended way to install Mastui is with `pipx`.
 
-1.  **Install pipx** (if you don't have it already):
+1. **Install pipx** (if you don't have it already):
+
     ```bash
     python3 -m pip install --user pipx
     python3 -m pipx ensurepath
     ```
 
-2.  **Install mastui using pipx**:
+2. **Install mastui using pipx**:
+
     ```bash
     pipx install mastui
     ```
@@ -62,6 +64,12 @@ pipx upgrade mastui
 * [httpx](https://www.python-httpx.org/) for HTTP requests
 * [html2text](https://github.com/Alir3z4/html2text) for converting HTML to Markdown
 * [python-dateutil](https://dateutil.readthedocs.io/) for parsing datetimes
+
+## Known issues
+
+* The --no-verify-ssl argument is not reflected in image fetching
+* Sixel images seems to be generated correctly but not displayed correctly in some terminals (even ones with Sixel support)
+*
 
 ## License
 
