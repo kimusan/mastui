@@ -67,7 +67,7 @@ pipx upgrade mastui
 
 ## Known issues
 
-* The --no-verify-ssl argument is not reflected in image fetching
+* ~~The --no-verify-ssl argument is not reflected in image fetching~~
 * Sixel images seems to be generated correctly but not displayed correctly in some terminals (even ones with Sixel support)
 *
 

@@ -3,6 +3,7 @@ import httpx
 from io import BytesIO
 from textual_image.renderable import Image, SixelImage, HalfcellImage, TGPImage
 from PIL import Image as PILImage
+from mastui.config import config
 
 
 class ImageWidget(Static):
@@ -19,7 +20,7 @@ class ImageWidget(Static):
     def load_image(self):
         """Loads the image from the URL."""
         try:
-            with httpx.stream("GET", self.url, timeout=30) as response:
+            with httpx.stream("GET", self.url, timeout=30, verify=config.ssl_verify) as response:
                 response.raise_for_status()
                 image_data = response.read()
             img = PILImage.open(BytesIO(image_data))
