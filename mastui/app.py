@@ -102,7 +102,9 @@ class Mastui(App):
         """Called when the login screen is dismissed."""
         log.info("Login successful.")
         self.api = api
-        self.show_timelines()
+        self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
+        self.push_screen(SplashScreen())
+        self.set_timer(2, self.show_timelines)
 
     def show_timelines(self):
         if isinstance(self.screen, SplashScreen):

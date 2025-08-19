@@ -28,7 +28,6 @@ def login(host, auth_code):
             client_id=config.mastodon_client_id,
             client_secret=config.mastodon_client_secret,
             api_base_url=f"https://{host}",
-            
             session=s,
         )
         access_token = mastodon.log_in(
@@ -39,10 +38,13 @@ def login(host, auth_code):
         config.save_credentials(
             host, config.mastodon_client_id, config.mastodon_client_secret, access_token
         )
+        final_session = Session()
+        final_session.verify = config.ssl_verify
         # Re-initialize with the new access token
         api = Mastodon(
             access_token=access_token,
             api_base_url=f"https://{host}",
+            session=final_session,
         )
         return api, None
     except Exception as e:
@@ -78,18 +80,24 @@ def create_app(host):
         )
         return auth_url, None
     except MastodonError as e:
-        log.error(f"Mastodon API error during app creation for host '{host}': {e}", exc_info=True)
-        
+        log.error(
+            f"Mastodon API error during app creation for host '{host}': {e}",
+            exc_info=True,
+        )
+
         # Log the raw response if available on the exception
-        if hasattr(e, 'text') and e.text:
+        if hasattr(e, "text") and e.text:
             log.debug(f"Raw server response from '{host}':\n{e.text}")
 
         error_message = str(e)
         if "Expecting value" in error_message:
             error_message = f"Could not parse server response from '{host}'. The instance may be offline, misconfigured, or not a Mastodon instance."
-        
+
         return None, error_message
     except Exception as e:
         # Catch any other potential errors (e.g., network issues not caught by MastodonError)
-        log.error(f"Unexpected error during app creation for host '{host}': {e}", exc_info=True)
+        log.error(
+            f"Unexpected error during app creation for host '{host}': {e}",
+            exc_info=True,
+        )
         return None, str(e)
