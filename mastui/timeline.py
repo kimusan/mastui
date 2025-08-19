@@ -1,12 +1,12 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import VerticalScroll, Horizontal
-from textual.events import Key
+from textual import on, events
 from textual.screen import ModalScreen
 from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
-from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile
+from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile, SelectPost
 from mastui.config import config
 import logging
 
@@ -24,6 +24,7 @@ class Timeline(Static, can_focus=True):
         self.post_ids = set()
         self.latest_post_id = None
         self.oldest_post_id = None
+        self.loading_more = False
 
     @property
     def content_container(self) -> VerticalScroll:
@@ -56,6 +57,9 @@ class Timeline(Static, can_focus=True):
 
     def refresh_posts(self):
         """Refresh the timeline with new posts."""
+        if self.loading_more:
+            return
+        self.loading_more = True
         log.info(f"Refreshing {self.id} timeline...")
         self.loading_indicator.display = True
         self.run_worker(lambda: self.do_fetch_posts(since_id=self.latest_post_id), exclusive=True, thread=True)
@@ -100,6 +104,9 @@ class Timeline(Static, can_focus=True):
 
     def load_older_posts(self):
         """Load older posts."""
+        if self.loading_more:
+            return
+        self.loading_more = True
         log.info(f"Loading older posts for {self.id} timeline...")
         self.loading_indicator.display = True
         self.run_worker(lambda: self.do_fetch_posts(max_id=self.oldest_post_id), exclusive=True, thread=True)
@@ -108,6 +115,7 @@ class Timeline(Static, can_focus=True):
         """Renders the given posts data in the timeline."""
         log.info(f"render_posts called for {self.id} with {len(posts_data)} posts.")
         self.loading_indicator.display = False
+        self.loading_more = False
         is_initial_load = not self.post_ids
 
         if is_initial_load and not posts_data:
@@ -165,13 +173,32 @@ class Timeline(Static, can_focus=True):
             self.select_first_item()
 
     def on_focus(self):
-        self.select_first_item()
+        if not self.selected_item:
+            self.select_first_item()
 
     def on_blur(self):
         if self.selected_item:
             self.selected_item.remove_class("selected")
 
-    def on_key(self, event: Key) -> None:
+    @on(SelectPost)
+    def on_select_post(self, message: SelectPost) -> None:
+        if self.selected_item:
+            self.selected_item.remove_class("selected")
+        self.selected_item = message.post_widget
+        self.selected_item.add_class("selected")
+        self.focus()
+
+    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        if self.content_container.scroll_y >= self.content_container.max_scroll_y - 2:
+            if not self.loading_more:
+                self.load_older_posts()
+
+    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        if self.content_container.scroll_y == 0:
+            if not self.loading_more:
+                self.refresh_posts()
+
+    def on_key(self, event: events.Key) -> None:
         if event.key == "left":
             self.post_message(FocusPreviousTimeline())
             event.stop()

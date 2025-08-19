@@ -5,12 +5,13 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
-from textual.events import Key
+from textual import events
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
 from mastui.config import config
+from mastui.messages import SelectPost
 import logging
 
 log = logging.getLogger(__name__)
@@ -126,6 +127,10 @@ class Post(Widget):
         )
         self.hide_spinner()
 
+    def on_click(self, event: events.Click) -> None:
+        event.stop()
+        self.post_message(SelectPost(self))
+
 
 class Notification(Widget):
     """A widget to display a single notification."""
@@ -225,3 +230,7 @@ class Notification(Widget):
 
         else:
             yield Static(f"Unsupported notification type: {notif_type}")
+
+    def on_click(self, event: events.Click) -> None:
+        event.stop()
+        self.post_message(SelectPost(self))

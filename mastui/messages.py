@@ -1,4 +1,5 @@
 from textual.message import Message
+from textual.widget import Widget
 
 class PostStatusUpdate(Message):
     """A message to update a post's status."""
@@ -45,4 +46,11 @@ class ViewProfile(Message):
     """A message to view a user's profile."""
     def __init__(self, account_id: str) -> None:
         self.account_id = account_id
+        super().__init__()
+
+
+class SelectPost(Message):
+    """A message to select a post in a timeline."""
+    def __init__(self, post_widget: Widget) -> None:
+        self.post_widget = post_widget
         super().__init__()
