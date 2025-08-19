@@ -26,6 +26,7 @@ from mastui.messages import (
     FocusPreviousTimeline,
     ViewProfile,
 )
+from mastui.cache import cache
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -70,6 +71,8 @@ class Mastui(App):
         self.api = get_api()
         if self.api:
             self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
+            if config.auto_prune_cache:
+                self.run_worker(self.prune_cache, thread=True, exclusive=True)
             self.set_timer(2, self.show_timelines)
         else:
             self.call_later(self.show_login_screen)
@@ -82,6 +85,16 @@ class Mastui(App):
         except Exception as e:
             log.error(f"Error fetching instance info: {e}", exc_info=True)
             self.notify("Could not fetch instance information.", severity="error")
+
+    def prune_cache(self):
+        """Prunes the image cache."""
+        try:
+            count = cache.prune_image_cache()
+            if count > 0:
+                self.notify(f"Pruned {count} items from the image cache.")
+        except Exception as e:
+            log.error(f"Error pruning cache: {e}", exc_info=True)
+            self.notify("Error pruning image cache.", severity="error")
 
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""

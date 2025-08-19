@@ -2,15 +2,19 @@ from textual.widgets import Static, LoadingIndicator
 from textual.containers import VerticalScroll, Horizontal
 from textual import on, events
 from textual.screen import ModalScreen
-from mastui.widgets import Post, Notification, LikePost, BoostPost
+from mastui.widgets import Post, Notification, LikePost, BoostPost, GapIndicator
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile, SelectPost
 from mastui.config import config
+from mastui.cache import cache
 import logging
+from datetime import datetime, timezone, timedelta
 
 log = logging.getLogger(__name__)
+
+MAX_POSTS_IN_UI = 70
 
 
 class Timeline(Static, can_focus=True):
@@ -74,22 +78,69 @@ class Timeline(Static, can_focus=True):
 
     def do_fetch_posts(self, since_id=None, max_id=None):
         """Worker method to fetch posts and post a message with the result."""
-        log.info(f"Worker thread started for {self.id}")
+        log.info(f"Worker thread started for {self.id} with since_id={since_id}, max_id={max_id}")
         try:
-            posts = self.fetch_posts(since_id=since_id, max_id=max_id)
-            log.info(f"Worker thread finished for {self.id}, got {len(posts)} posts.")
-            self.post_message(TimelineUpdate(posts, since_id=since_id, max_id=max_id))
+            # Case 1: Refreshing for newer posts (always hits the server)
+            if since_id:
+                posts = self.fetch_posts(since_id=since_id)
+                if posts:
+                    cache.bulk_insert_posts(self.id, posts)
+                self.post_message(TimelineUpdate(posts, since_id=since_id))
+                return
+
+            # Case 2: Scrolling down for older posts
+            if max_id:
+                cached_posts = cache.get_posts(self.id, limit=20, max_id=max_id)
+                if cached_posts:
+                    log.info(f"Loaded {len(cached_posts)} older posts from cache for {self.id}")
+                    self.post_message(TimelineUpdate(cached_posts, max_id=max_id))
+                    return # We're done for now, wait for next scroll
+
+                # If cache is exhausted for this scroll, fetch from server
+                log.info(f"Cache exhausted for {self.id}, fetching older from server.")
+                server_posts = self.fetch_posts(max_id=max_id)
+                if server_posts:
+                    cache.bulk_insert_posts(self.id, server_posts)
+                self.post_message(TimelineUpdate(server_posts, max_id=max_id))
+                return
+
+            # Case 3: Initial load (no since_id or max_id)
+            latest_cached_ts = cache.get_latest_post_timestamp(self.id)
+            if latest_cached_ts and (datetime.now(timezone.utc) - latest_cached_ts) < timedelta(hours=2):
+                log.info(f"Gap is small for {self.id}, filling it.")
+                latest_cached_id = self.get_latest_post_id_from_cache()
+                gap_posts = self.fetch_posts(since_id=latest_cached_id)
+                if gap_posts:
+                    cache.bulk_insert_posts(self.id, gap_posts)
+                
+                all_posts = cache.get_posts(self.id, limit=20)
+                self.post_message(TimelineUpdate(all_posts))
+            else:
+                log.info(f"Gap is large or cache is empty for {self.id}, fetching latest.")
+                posts = self.fetch_posts(limit=10)
+                if posts:
+                    cache.bulk_insert_posts(self.id, posts)
+                self.post_message(TimelineUpdate(posts))
+
         except Exception as e:
             log.error(f"Worker for {self.id} failed in do_fetch_posts: {e}", exc_info=True)
             self.post_message(TimelineUpdate([]))
 
-    def fetch_posts(self, since_id=None, max_id=None):
+    def get_latest_post_id_from_cache(self):
+        """Helper to get the ID of the very latest post in the cache."""
+        latest_posts = cache.get_posts(self.id, limit=1)
+        if latest_posts:
+            return latest_posts[0]['id']
+        return None
+
+    def fetch_posts(self, since_id=None, max_id=None, limit=None):
         api = self.app.api
         posts = []
         if api:
             try:
-                log.info(f"Fetching posts for {self.id} since id {since_id} max_id {max_id}")
-                limit = 20 if since_id or max_id else 10  # Fetch more when paginating
+                if limit is None:
+                    limit = 20 if since_id or max_id else 10
+                log.info(f"Fetching posts for {self.id} since id {since_id} max_id {max_id} limit {limit}")
                 if self.id == "home":
                     posts = api.timeline_home(since_id=since_id, max_id=max_id, limit=limit)
                 elif self.id == "notifications":
@@ -128,6 +179,8 @@ class Timeline(Static, can_focus=True):
 
         if not posts_data and not is_initial_load:
             log.info(f"No new posts to render for {self.id}.")
+            if max_id: # This was a request for older posts
+                self.content_container.mount(Static("End of timeline", classes="end-of-timeline"))
             return
 
         if posts_data:
@@ -147,30 +200,60 @@ class Timeline(Static, can_focus=True):
 
         new_widgets = []
         for post in posts_data:
-            # Create a unique ID for each notification
+            widget_id = ""
             if self.id == "notifications":
                 status = post.get("status") or {}
                 status_id = status.get("id", "")
-                post_id = f"{post['type']}-{post['account']['id']}-{status_id}"
+                unique_part = f"{post['type']}-{post['account']['id']}-{status_id}"
+                widget_id = f"notif-{unique_part}"
             else:
-                post_id = post["id"]
+                widget_id = f"post-{post['id']}"
 
-            if post_id not in self.post_ids:
-                self.post_ids.add(post_id)
+            if widget_id not in self.post_ids:
+                self.post_ids.add(widget_id)
                 if self.id == "home" or self.id == "federated":
-                    new_widgets.append(Post(post, id=f"post-{post_id}"))
+                    new_widgets.append(Post(post, id=widget_id))
                 elif self.id == "notifications":
-                    new_widgets.append(Notification(post))
+                    new_widgets.append(Notification(post, id=widget_id))
 
         if new_widgets:
             log.info(f"Mounting {len(new_widgets)} new posts in {self.id}")
-            if max_id: # older posts
+            if max_id:  # older posts
+                # Check for gap
+                first_new_post_ts = new_widgets[0].get_created_at()
+                last_old_post = self.content_container.query("Post, Notification").last()
+
+                if last_old_post and first_new_post_ts:
+                    last_old_post_ts = last_old_post.get_created_at()
+                    if last_old_post_ts and first_new_post_ts < last_old_post_ts - timedelta(minutes=30):
+                        self.content_container.mount(GapIndicator())
+
                 self.content_container.mount_all(new_widgets)
-            else: # newer posts or initial load
+            else:  # newer posts or initial load
                 self.content_container.mount_all(new_widgets, before=0)
         
         if new_widgets and is_initial_load:
             self.select_first_item()
+
+        prune_direction = "top" if max_id else "bottom"
+        self.prune_posts(direction=prune_direction)
+
+    def prune_posts(self, direction: str = "bottom"):
+        """Removes posts from the UI if there are too many."""
+        all_posts = self.content_container.query("Post, Notification")
+        if len(all_posts) > MAX_POSTS_IN_UI:
+            log.info(f"Pruning posts in {self.id} from the {direction}. Have {len(all_posts)}, max {MAX_POSTS_IN_UI}")
+            
+            num_to_remove = len(all_posts) - MAX_POSTS_IN_UI
+            if direction == "bottom":
+                posts_to_remove = all_posts[-num_to_remove:]
+            else: # direction == "top"
+                posts_to_remove = all_posts[:num_to_remove]
+
+            for post in posts_to_remove:
+                if self.selected_item is not post:
+                    self.post_ids.discard(post.id)
+                    post.remove()
 
     def on_focus(self):
         if not self.selected_item:

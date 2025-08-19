@@ -12,10 +12,15 @@ def setup_logging(debug=False):
     config_dir.mkdir(parents=True, exist_ok=True)
     log_file = config_dir / "mastui.log"
 
+    # Configure root logger for the app
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         filename=log_file,
         filemode="w",  # Overwrite the log file on each run
     )
+
+    # Set logging level for noisy libraries to INFO to reduce noise
+    logging.getLogger("markdown_it").setLevel(logging.INFO)
+
     return str(log_file)

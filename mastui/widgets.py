@@ -13,6 +13,7 @@ from mastui.image import ImageWidget
 from mastui.config import config
 from mastui.messages import SelectPost
 import logging
+from datetime import datetime
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class PostMessage(Message):
 
 class LikePost(PostMessage):
     """A message to like a post."""
+
     def __init__(self, post_id: str, favourited: bool):
         super().__init__(post_id)
         self.favourited = favourited
@@ -46,7 +48,7 @@ class Post(Widget):
         self.post = post
         self.add_class("timeline-item")
         status_to_display = self.post.get("reblog") or self.post
-        self.created_at_str = format_datetime(status_to_display['created_at'])
+        self.created_at_str = format_datetime(status_to_display["created_at"])
 
     def on_mount(self):
         status_to_display = self.post.get("reblog") or self.post
@@ -63,11 +65,14 @@ class Post(Widget):
         if is_reblog:
             booster_display_name = self.post["account"]["display_name"]
             booster_acct = self.post["account"]["acct"]
-            yield Static(f"🚀 Boosted by {booster_display_name} (@{booster_acct})", classes="boost-header")
+            yield Static(
+                f"🚀 Boosted by {booster_display_name} (@{booster_acct})",
+                classes="boost-header",
+            )
 
         spoiler_text = status_to_display.get("spoiler_text")
-        author_display_name = status_to_display['account']['display_name']
-        author_acct = status_to_display['account']['acct']
+        author_display_name = status_to_display["account"]["display_name"]
+        author_acct = status_to_display["account"]["acct"]
         author = f"{author_display_name} (@{author_acct})"
 
         panel_title = author
@@ -97,7 +102,8 @@ class Post(Widget):
                 f"Boosts: {status_to_display.get('reblogs_count', 0)}", id="boost-count"
             )
             yield Static(
-                f"Likes: {status_to_display.get('favourites_count', 0)}", id="like-count"
+                f"Likes: {status_to_display.get('favourites_count', 0)}",
+                id="like-count",
             )
             yield Static(self.created_at_str, classes="timestamp")
 
@@ -110,7 +116,7 @@ class Post(Widget):
     def update_from_post(self, post):
         self.post = post
         status_to_display = self.post.get("reblog") or self.post
-        
+
         # Update classes
         self.remove_class("favourited", "reblogged")
         if status_to_display.get("favourited"):
@@ -131,6 +137,26 @@ class Post(Widget):
         event.stop()
         self.post_message(SelectPost(self))
 
+    def get_created_at(self) -> datetime | None:
+        status = self.post.get("reblog") or self.post
+        if status and "created_at" in status:
+            ts = status["created_at"]
+            if isinstance(ts, datetime):
+                return ts
+            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return None
+
+
+class GapIndicator(Widget):
+    """A widget to indicate a gap in the timeline."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_class("gap-indicator")
+
+    def compose(self):
+        yield Static("...")
+
 
 class Notification(Widget):
     """A widget to display a single notification."""
@@ -139,18 +165,18 @@ class Notification(Widget):
         super().__init__(**kwargs)
         self.notif = notif
         self.add_class("timeline-item")
-        
+
         created_at = None
-        if self.notif['type'] == 'mention':
-            created_at = self.notif['status']['created_at']
+        if self.notif["type"] == "mention":
+            created_at = self.notif["status"]["created_at"]
         else:
-            created_at = self.notif['created_at']
+            created_at = self.notif["created_at"]
         self.created_at_str = format_datetime(created_at)
 
     def compose(self):
         notif_type = self.notif["type"]
         author = self.notif["account"]
-        author_display_name = author['display_name']
+        author_display_name = author["display_name"]
         author_acct = f"@{author['acct']}"
         author_str = f"{author_display_name} ({author_acct})"
 
@@ -219,10 +245,10 @@ class Notification(Widget):
             total_votes = poll.get("votes_count", 0)
 
             yield Static("📊 A poll you participated in has ended:")
-            
+
             for option in options:
-                title = option.get('title', 'N/A')
-                votes = option.get('votes_count', 0)
+                title = option.get("title", "N/A")
+                votes = option.get("votes_count", 0)
                 percentage = (votes / total_votes * 100) if total_votes > 0 else 0
                 yield Static(f"  - {title}: {votes} votes ({percentage:.2f}%)")
             with Horizontal(classes="post-footer"):
@@ -234,3 +260,27 @@ class Notification(Widget):
     def on_click(self, event: events.Click) -> None:
         event.stop()
         self.post_message(SelectPost(self))
+
+    def get_created_at(self) -> datetime | None:
+        ts_str = None
+        if self.notif["type"] == "mention":
+            ts_str = self.notif.get("status", {}).get("created_at")
+        else:
+            ts_str = self.notif.get("created_at")
+
+        if ts_str:
+            if isinstance(ts_str, datetime):
+                return ts_str
+            return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        return None
+
+
+class GapIndicator(Widget):
+    """A widget to indicate a gap in the timeline."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_class("gap-indicator")
+
+    def compose(self):
+        yield Static("...")

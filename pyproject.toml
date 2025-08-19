@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mastui"
-version = "0.5.3"
+version = "0.6.0"
 description = "A Mastodon TUI client."
 authors = ["Kim Schulz"]
 readme = "README.md"
@@ -10,7 +10,7 @@ python = "^3.9"
 textual = ">=0.59.0"
 mastodon-py = "^2.0.1"
 python-dotenv = "^1.0.1"
-pyperclip = "^1.8.2"
+clipman = "^3.3.3"
 html2text = "^2024.2.26"
 requests = "^2.32.4"
 toml = "^0.10.2"

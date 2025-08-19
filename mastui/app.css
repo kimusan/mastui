@@ -57,6 +57,21 @@ Timeline:focus {
     height: 1;
 }
 
+.gap-indicator {
+    text-align: center;
+    color: $text-muted;
+    height: 1;
+    margin: 1 0;
+}
+
+.end-of-timeline {
+    text-align: center;
+    color: $text-muted;
+    height: 1;
+    margin: 1 0;
+}
+
+
 SplashScreen > Vertical {
     align: center middle;
     height: 100%;
