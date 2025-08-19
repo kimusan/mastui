@@ -1,4 +1,4 @@
-import pyperclip
+import clipman
 from textual.app import App, ComposeResult
 from textual.containers import Grid, Vertical
 from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator
@@ -11,13 +11,16 @@ class LoginScreen(ModalScreen):
     """Screen for user to login."""
 
     DEFAULT_CSS = """
+    LoginScreen {
+        align: center middle;
+    }
     #dialog {
         grid-size: 2;
         grid-gutter: 1 2;
-        grid-rows: auto auto auto 1fr auto;
         padding: 0 1;
         width: 80;
-        height: 20;
+        height: auto;
+        max-height: 90%;
         border: thick $primary 80%;
         background: $surface;
     }
@@ -101,8 +104,16 @@ class LoginScreen(ModalScreen):
             status.remove_class("hidden")
             return
 
-        pyperclip.set_clipboard("xclip")
-        pyperclip.copy(auth_url)
+        try:
+            clipman.init()
+            clipman.set(auth_url)
+            self.query_one("#auth_link_container > Static").update(
+                "1. Link copied to clipboard! Open it in your browser to authorize."
+            )
+        except clipman.ClipmanException:
+            self.query_one("#auth_link_container > Static").update(
+                "1. Could not copy to clipboard. Please copy the link below manually:"
+            )
 
         auth_link_input = self.query_one("#auth_link")
         auth_link_input.text = auth_url
