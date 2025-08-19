@@ -1,6 +1,9 @@
 from mastodon import Mastodon
 from mastui.config import config
 from requests import Session
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def get_api():
@@ -75,4 +78,10 @@ def create_app(host):
         )
         return auth_url, None
     except Exception as e:
-        return None, str(e)
+        log.error(f"Error during app creation for host '{host}': {e}", exc_info=True)
+        
+        error_message = str(e)
+        if "Expecting value" in error_message:
+            error_message = f"Could not parse server response from '{host}'. The instance may be offline, misconfigured, or not a Mastodon instance."
+        
+        return None, error_message
