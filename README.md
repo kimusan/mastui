@@ -1,33 +1,47 @@
-# Mastui - A Mastodon TUI Client Built with Python
+# Mastui - A Modern Mastodon TUI Client
 
-![A screenshot](https://raw.githubusercontent.com/kimusan/mastui/main/mastui.png)
-
-Mastui is a Mastodon TUI client built with Python and Textual. It allows users to interact with their Mastodon instance in a terminal environment, providing a more efficient and intuitive way of managing their Mastodon experience. The UI is multi-column to get an easy overview of activities.
+Mastui is a powerful, fast, and feature-rich Mastodon client for your terminal. Built with Python and the modern [Textual](https://textual.textualize.io/) framework, it provides a highly efficient, multi-column layout that lets you keep an eye on all the action at once. Whether you're a power user who wants to manage multiple timelines or someone who just loves the terminal, Mastui is designed to be your new favorite way to interact with Mastodon.
 
 :eight_pointed_black_star: :eight_pointed_black_star: [Follow Mastui on Mastodon](https://mastodon.social/@mastui) :eight_pointed_black_star: :eight_pointed_black_star:
 
 ## Features
 
-* Timeline Viewing in a multi-column layout
-* Post and Reply creation with character counter
-* "Infinite" scrolling of timelines
-* Like/Unlike posts
-* View user profiles
-* Follow/Unfollow users
-* View post threads
-* Support for local Mastodon servers
-* Configurable light/dark mode theming
-* Content warning support
-* Auto-refreshing timelines (configurable)
-* Image viewing with multiple renderers (Auto, ANSI, Sixel, TGP), lazy-loaded
+* **Multi-Column Layout:** View your Home, Notifications, and Federated timelines all at once.
+* **Timeline Caching:** A persistent SQLite cache makes loading posts fast and resilient to network issues.
+* **Compose and Reply:** A full-featured compose window for new posts and replies, with a character counter, content warnings, and language selection.
+* **"Infinite" Scrolling:** Scroll down to load older posts from your cache or the server.
+* **Interactive Posts:** Like, boost, and reply to posts with keyboard shortcuts.
+* **View Profiles and Threads:** Dive deeper into conversations by viewing post threads and user profiles.
+* **Image Support:** View images directly in your terminal with multiple renderers (Auto, ANSI, Sixel, TGP), with a persistent image cache.
+* **Highly Configurable:**
+  * Toggle the visibility of each timeline.
+  * Configure auto-refresh intervals for each timeline.
+  * Choose between light and dark mode themes.
+* **And much more...** including content warning support, SSL verification options, and a detailed help screen.
 
-### TODO
+## Screenshots
 
-* database backend
-* Bookmarking
-* Hashtag/Profile Searching
-* Unliking posts
-* Direct Messaging
+Here's a glimpse of what Mastui looks like in action.
+
+**Single-Column View**
+*The default three-column layout is showing the Home, Notifications, and Federated timelines (see top of this site). In narrow spaces it looks like this*
+![Multi-Column View](assets/screenshots/mastui-single-column-view.png)
+
+**Profile View**
+*Viewing a user's profile, with their bio, stats, and links.*
+![Profile View](assets/screenshots/mastui-profile-view.png)
+
+**Image Support**
+*Images can be displayed directly in the timeline.*
+![Image Support](assets/screenshots/mastui-image-support.png)
+
+**Light Theme**
+*Mastui supports both light and dark themes, which can be configured in the options.*
+![Light Theme](assets/screenshots/mastui-light-theme.png)
+
+**Options Window**
+*The options window, where you can configure everything from timeline visibility to image rendering.*
+![Options Window](assets/screenshots/mastui-options-window.png)
 
 ## Installation
 
@@ -69,9 +83,7 @@ pipx upgrade mastui
 
 ## Known issues
 
-* ~~The --no-verify-ssl argument is not reflected in image fetching~~
 * Sixel images seems to be generated correctly but not displayed correctly in some terminals (even ones with Sixel support)
-*
 
 ## License
 
@@ -98,3 +110,4 @@ See also the list of contributors who participated in this project.
 * Other projects that have inspired or influenced the design of Mastui
 
 Please feel free to reach out to me if you have any questions, comments, or concerns.
+
