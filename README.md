@@ -3,7 +3,8 @@
 ![A screenshot](https://raw.githubusercontent.com/kimusan/mastui/main/mastui.png)
 
 Mastui is a Mastodon TUI client built with Python and Textual. It allows users to interact with their Mastodon instance in a terminal environment, providing a more efficient and intuitive way of managing their Mastodon experience. The UI is multi-column to get an easy overview of activities.
-i:eight_pointed_black_star: :eight_pointed_black_star: [Follow Mastui on Mastodon](https://mastodon.social/@mastui) :eight_pointed_black_star: :eight_pointed_black_star:
+
+:eight_pointed_black_star: :eight_pointed_black_star: [Follow Mastui on Mastodon](https://mastodon.social/@mastui) :eight_pointed_black_star: :eight_pointed_black_star:
 
 ## Features
 
