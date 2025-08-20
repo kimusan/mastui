@@ -110,7 +110,7 @@ class LoginScreen(ModalScreen):
             self.query_one("#auth_link_container > Static").update(
                 "1. Link copied to clipboard! Open it in your browser to authorize."
             )
-        except clipman.ClipmanException:
+        except clipman.exceptions.ClipmanBaseException:
             self.query_one("#auth_link_container > Static").update(
                 "1. Could not copy to clipboard. Please copy the link below manually:"
             )
