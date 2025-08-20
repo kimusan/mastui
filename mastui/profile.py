@@ -17,16 +17,6 @@ class ProfileScreen(ModalScreen):
         ("escape", "dismiss", "Dismiss")
     ]
 
-    DEFAULT_CSS = """
-    ProfileScreen {
-        align: center middle;
-    }
-    #profile-dialog {
-        width: 80%;
-        height: 80%;
-    }
-    """
-
     def __init__(self, account_id: str, api, **kwargs) -> None:
         super().__init__(**kwargs)
         self.account_id = account_id

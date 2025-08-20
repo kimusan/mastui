@@ -9,23 +9,6 @@ class HelpScreen(ModalScreen):
         ("escape", "app.pop_screen", "Close Help"),
     ]
 
-    DEFAULT_CSS = """
-    HelpScreen {
-        align: center middle;
-    }
-    #help-dialog {
-        width: 80;
-        height: auto;
-        max-height: 80%;
-        border: thick $primary 80%;
-        background: $surface;
-        padding: 1;
-    }
-    DataTable {
-        margin-top: 1;
-    }
-    """
-
     def compose(self):
         with Vertical(id="help-dialog"):
             yield Static("Key Bindings", classes="title")

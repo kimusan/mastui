@@ -1,7 +1,7 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, Input, Static, TextArea, Select
-from textual.containers import Grid, Horizontal
+from textual.widgets import Button, Label, Input, Static, TextArea, Select, Header
+from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual import on
 from mastui.utils import LANGUAGE_OPTIONS
 
@@ -12,29 +12,22 @@ class PostScreen(ModalScreen):
         ("escape", "app.pop_screen", "Cancel Post"),
     ]
 
-    DEFAULT_CSS = """
-    PostScreen {
-        align: center middle;
-    }
-    """
-
     def __init__(self, max_characters: int = 500, **kwargs):
         super().__init__(**kwargs)
         self.max_characters = max_characters
 
     def compose(self):
-        with Grid(id="post_dialog"):
-            yield Label("New Post", id="post_title")
-            yield TextArea(id="post_content", language="markdown")
-            
-            with Horizontal(id="post_options"):
-                yield Label("CW:", classes="post_option_label")
-                yield Input(placeholder="Content warning", id="cw_input")
-            
-            with Horizontal(id="post_language_container"):
-                yield Label("Language:", classes="post_option_label")
-                yield Select(LANGUAGE_OPTIONS, value="en", id="language_select")
-
+        self.title = "New Post"
+        with Vertical(id="post_dialog"):
+            yield Header(show_clock=False)
+            with VerticalScroll(id="post_content_container"):
+                yield TextArea(id="post_content", language="markdown")
+                with Horizontal(id="post_options"):
+                    yield Label("CW:", classes="post_option_label")
+                    yield Input(placeholder="Content warning", id="cw_input")
+                with Horizontal(id="post_language_container"):
+                    yield Label("Language:", classes="post_option_label")
+                    yield Select(LANGUAGE_OPTIONS, value="en", id="language_select")
             with Horizontal(id="post_buttons"):
                 yield Label(f"{self.max_characters}", id="character_limit")
                 yield Button("Post", variant="primary", id="post")

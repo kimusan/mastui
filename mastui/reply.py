@@ -1,7 +1,7 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label
-from textual.containers import Vertical, Horizontal, Grid
+from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header
+from textual.containers import Vertical, Horizontal, Grid, VerticalScroll
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
@@ -14,12 +14,6 @@ class ReplyScreen(ModalScreen):
     BINDINGS = [
         ("escape", "app.pop_screen", "Cancel Reply"),
     ]
-
-    DEFAULT_CSS = """
-    ReplyScreen {
-        align: center middle;
-    }
-    """
 
     def __init__(self, post_to_reply_to, max_characters: int = 500, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,32 +28,29 @@ class ReplyScreen(ModalScreen):
         return " ".join(sorted(list(mentions)))
 
     def compose(self) -> ComposeResult:
-        with Grid(id="reply_dialog"):
-            yield Static("Reply to Post", id="reply_title")
-
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(self.post_to_reply_to)),
-                    title=f"Replying to @{self.post_to_reply_to['account']['acct']}",
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                ),
-                id="original_post_preview"
-            )
-
-            reply_text_area = TextArea(id="reply_content", language="markdown")
-            reply_text_area.text = self.get_mentions() + " "
-            yield reply_text_area
-
-            with Horizontal(id="reply_options"):
-                yield Static("Content Warning:", classes="reply_option_label")
-                yield Switch(id="cw_switch")
-                yield Input(id="cw_input", placeholder="Spoiler text...", disabled=True)
-
-            with Horizontal(id="reply_language_container"):
-                yield Static("Language:", classes="reply_option_label")
-                yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
-
+        self.title = "Reply to Post"
+        with Vertical(id="reply_dialog"):
+            yield Header(show_clock=False)
+            with VerticalScroll(id="reply_content_container"):
+                yield Static(
+                    Panel(
+                        Markdown(get_full_content_md(self.post_to_reply_to)),
+                        title=f"Replying to @{self.post_to_reply_to['account']['acct']}",
+                        box=box.ROUNDED,
+                        padding=(0, 1),
+                    ),
+                    id="original_post_preview"
+                )
+                reply_text_area = TextArea(id="reply_content", language="markdown")
+                reply_text_area.text = self.get_mentions() + " "
+                yield reply_text_area
+                with Horizontal(id="reply_options"):
+                    yield Static("Content Warning:", classes="reply_option_label")
+                    yield Switch(id="cw_switch")
+                    yield Input(id="cw_input", placeholder="Spoiler text...", disabled=True)
+                with Horizontal(id="reply_language_container"):
+                    yield Static("Language:", classes="reply_option_label")
+                    yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
             with Horizontal(id="reply_buttons"):
                 yield Label(f"{self.max_characters}", id="character_limit")
                 yield Button("Post Reply", variant="primary", id="post_button")

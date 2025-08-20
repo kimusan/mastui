@@ -11,12 +11,6 @@ log = logging.getLogger(__name__)
 class ThreadScreen(ModalScreen):
     """A modal screen to display a post thread."""
 
-    DEFAULT_CSS = """
-    ThreadScreen {
-        align: center middle;
-    }
-    """
-
     BINDINGS = [
         ("r", "refresh_thread", "Refresh thread"),
         ("escape", "dismiss", "Close thread"),

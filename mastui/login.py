@@ -1,7 +1,7 @@
 import clipman
 from textual.app import App, ComposeResult
 from textual.containers import Grid, Vertical
-from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator
+from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, Header
 from textual.screen import ModalScreen
 
 from mastui.mastodon_api import login, create_app
@@ -10,24 +10,10 @@ from mastui.mastodon_api import login, create_app
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
 
-    DEFAULT_CSS = """
-    LoginScreen {
-        align: center middle;
-    }
-    #dialog {
-        grid-size: 2;
-        grid-gutter: 1 2;
-        padding: 0 1;
-        width: 80;
-        height: auto;
-        max-height: 90%;
-        border: thick $primary 80%;
-        background: $surface;
-    }
-    """
-
     def compose(self) -> ComposeResult:
+        self.title = "Mastui Login"
         with Grid(id="dialog"):
+            yield Header(show_clock=False)
             yield Label("Mastodon Instance:")
             yield Input(placeholder="mastodon.social", id="host")
 

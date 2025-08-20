@@ -144,15 +144,22 @@ Notification.selected {
 
 #dialog {
     grid-size: 2;
-    grid-gutter: 1;
-    align: center middle;
-    width: 80%;
+    grid-gutter: 1 2;
+    padding: 0;
+    width: 80;
     height: auto;
-    max-height: 80%;
+    max-height: 90%;
+    border: solid $primary;
     background: $surface;
-    border: thick $primary 80%;
-    padding: 1;
+    overflow-y: auto;
 }
+#dialog > Label, #dialog > Input, #dialog > Button, #dialog > Static, #dialog > LoadingIndicator {
+    margin: 0 1;
+}
+#dialog > Header {
+    margin-bottom: 1;
+}
+
 
 #dialog > .hidden {
     display: none;
@@ -185,35 +192,30 @@ Notification.selected {
 }
 
 #post_dialog {
-    grid-size: 1;
-    grid-gutter: 1;
-    align: center middle;
+    layout: vertical;
     width: 80%;
     height: auto;
     max-height: 80%;
     background: $surface;
-    border: thick $primary 80%;
+    border: solid $primary;
+    padding: 0;
+}
+#post_content_container {
+    height: 1fr;
     padding: 1;
 }
-
-#post_title {
-    width: 100%;
-    text-align: center;
-    background: $primary;
-    color: $text;
-    padding: 0 1;
-}
-
 #post_content {
     height: 10;
 }
 
 #post_options {
     height: auto;
+    padding: 0 1;
 }
 
 #post_language_container {
     height: auto;
+    padding: 0 1;
 }
 
 .post_option_label {
@@ -234,6 +236,8 @@ Notification.selected {
     width: 100%;
     align-horizontal: right;
     height: auto;
+    margin-top: 1;
+    padding: 0 1 1 1;
 }
 
 #post_buttons > Button {
@@ -241,42 +245,36 @@ Notification.selected {
 }
 
 #reply_dialog {
-    grid-size: 1;
-    grid-gutter: 1;
-    align: center middle;
+    layout: vertical;
     width: 80%;
     height: auto;
     max-height: 90%;
     background: $surface;
-    border: thick $primary 80%;
+    border: solid $primary;
+    padding: 0;
+}
+#reply_content_container {
+    height: 1fr;
     padding: 1;
 }
-
-#reply_title {
-    width: 100%;
-    text-align: center;
-    background: $primary;
-    color: $text;
-    padding: 0 1;
-}
-
 #original_post_preview {
     height: auto;
     max-height: 10;
     overflow: auto;
     margin-bottom: 1;
 }
-
 #reply_content {
     height: 10;
 }
 
 #reply_options {
     height: auto;
+    padding: 0 1;
 }
 
 #reply_language_container {
     height: auto;
+    padding: 0 1;
 }
 
 .reply_option_label {
@@ -297,10 +295,48 @@ Notification.selected {
     width: 100%;
     align-horizontal: right;
     height: auto;
+    margin-top: 1;
+    padding: 0 1 1 1;
 }
 
 #reply_buttons > Button {
     margin-left: 1;
+}
+
+ConfigScreen {
+    align: center middle;
+}
+#config-dialog {
+    layout: vertical;
+    padding: 0;
+    width: 90;
+    height: auto;
+    max-height: 90%;
+    border: solid $primary;
+    background: $surface;
+    overflow-y: auto;
+}
+ConfigScreen Collapsible {
+    margin-top: 0;
+}
+ConfigScreen .collapsible--title {
+    background: $primary-darken-1;
+}
+.config-group-body {
+    grid-size: 3;
+    grid-gutter: 1;
+    height: auto;
+    padding: 1;
+}
+.config-label {
+    text-align: right;
+    width: 100%;
+}
+#config-buttons {
+    align-horizontal: right;
+    margin-top: 1;
+    height: auto;
+    padding: 0 1;
 }
 
 #character_limit {
@@ -318,8 +354,9 @@ Notification.selected {
     width: 80%;
     height: 80%;
     background: $surface;
-    border: thick $primary 80%;
+    border: solid $primary;
     padding: 1;
+    overflow-y: auto;
 }
 
 #thread-container {
@@ -336,6 +373,32 @@ Notification.selected {
 
 ImageWidget {
     height: 10;
+    margin-top: 1;
+}
+
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen {
+    align: center middle;
+}
+
+#profile-dialog {
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+    overflow-y: auto;
+}
+
+#help-dialog {
+    width: 80;
+    height: auto;
+    max-height: 80%;
+    border: solid $primary;
+    background: $surface;
+    padding: 1;
+    overflow-y: auto;
+}
+#help-dialog DataTable {
     margin-top: 1;
 }
 
