@@ -5,6 +5,7 @@ Screen {
 Timelines {
     layout: horizontal;
     height: 1fr;
+    overflow-x:auto;
 }
 
 Timeline {
@@ -13,6 +14,7 @@ Timeline {
     width: 1fr;
     height: 100%;
     margin: 1;
+    min-width: 20;
 }
 
 .timeline-content {
