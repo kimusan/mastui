@@ -155,8 +155,9 @@ class Mastui(App):
     def on_config_screen_dismiss(self, result: bool) -> None:
         """Called when the config screen is dismissed."""
         if result:
-            for timeline in self.query(Timeline):
-                timeline.update_auto_refresh_timer()
+            self.query_one(Timelines).remove()
+            self.mount(Timelines())
+            self.call_later(self.focus_home_timeline)
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""

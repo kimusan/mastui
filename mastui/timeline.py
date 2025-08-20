@@ -419,6 +419,9 @@ class Timeline(Static, can_focus=True):
 class Timelines(Static):
     """A widget to display the three timelines."""
     def compose(self):
-        yield Timeline("Home", id="home")
-        yield Timeline("Notifications", id="notifications")
-        yield Timeline("Federated", id="federated")
+        if config.home_timeline_enabled:
+            yield Timeline("Home", id="home")
+        if config.notifications_timeline_enabled:
+            yield Timeline("Notifications", id="notifications")
+        if config.federated_timeline_enabled:
+            yield Timeline("Federated", id="federated")

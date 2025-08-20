@@ -28,6 +28,18 @@ class ConfigScreen(ModalScreen):
 
     def compose(self):
         with Grid(id="config-dialog"):
+            yield Label("Enable Home timeline?", classes="config-label")
+            yield Switch(value=config.home_timeline_enabled, id="home_timeline_enabled")
+            yield Static() # Spacer
+
+            yield Label("Enable Notifications timeline?", classes="config-label")
+            yield Switch(value=config.notifications_timeline_enabled, id="notifications_timeline_enabled")
+            yield Static() # Spacer
+
+            yield Label("Enable Federated timeline?", classes="config-label")
+            yield Switch(value=config.federated_timeline_enabled, id="federated_timeline_enabled")
+            yield Static() # Spacer
+
             yield Label("Auto-refresh home?", classes="config-label")
             yield Switch(value=config.home_auto_refresh, id="home_auto_refresh")
             yield Input(str(config.home_auto_refresh_interval), id="home_auto_refresh_interval")
@@ -74,4 +86,7 @@ class ConfigScreen(ModalScreen):
         config.image_support = self.query_one("#image_support").value
         config.image_renderer = self.query_one("#image_renderer").value
         config.auto_prune_cache = self.query_one("#auto_prune_cache").value
+        config.home_timeline_enabled = self.query_one("#home_timeline_enabled").value
+        config.notifications_timeline_enabled = self.query_one("#notifications_timeline_enabled").value
+        config.federated_timeline_enabled = self.query_one("#federated_timeline_enabled").value
         config.save_config()

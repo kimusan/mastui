@@ -36,6 +36,11 @@ class Config:
         self.image_renderer = os.getenv("IMAGE_RENDERER", "ansi")
         self.auto_prune_cache = os.getenv("AUTO_PRUNE_CACHE", "on") == "on"
 
+        # Timeline settings
+        self.home_timeline_enabled = os.getenv("HOME_TIMELINE_ENABLED", "on") == "on"
+        self.notifications_timeline_enabled = os.getenv("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
+        self.federated_timeline_enabled = os.getenv("FEDERATED_TIMELINE_ENABLED", "on") == "on"
+
 
     def save_config(self):
         with open(self.env_file, "w") as f:
@@ -63,6 +68,9 @@ class Config:
             f.write(f"IMAGE_SUPPORT={'on' if self.image_support else 'off'}\n")
             f.write(f"IMAGE_RENDERER={self.image_renderer}\n")
             f.write(f"AUTO_PRUNE_CACHE={'on' if self.auto_prune_cache else 'off'}\n")
+            f.write(f"HOME_TIMELINE_ENABLED={'on' if self.home_timeline_enabled else 'off'}\n")
+            f.write(f"NOTIFICATIONS_TIMELINE_ENABLED={'on' if self.notifications_timeline_enabled else 'off'}\n")
+            f.write(f"FEDERATED_TIMELINE_ENABLED={'on' if self.federated_timeline_enabled else 'off'}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host
