@@ -14,7 +14,6 @@ Timeline {
     width: 1fr;
     height: 100%;
     margin: 1;
-    min-width: 20;
 }
 
 .timeline-content {
@@ -50,6 +49,11 @@ Timeline:focus {
 .timeline-item {
     height: auto;
     margin-bottom: 1;
+}
+
+.single-column-mode Timeline {
+    min-width: 100%;
+    width: 100%;
 }
 
 .boost-header {

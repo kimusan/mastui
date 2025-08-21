@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer
-from textual import on
+from textual import on, events
 from textual.screen import ModalScreen
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
@@ -125,6 +125,21 @@ class Mastui(App):
         log.info("Showing timelines...")
         self.mount(Timelines())
         self.call_later(self.focus_home_timeline)
+        self.call_later(self.check_layout_mode)
+
+    @on(events.Resize)
+    def on_resize(self, event: events.Resize) -> None:
+        """Called when the app is resized."""
+        self.check_layout_mode()
+
+    def check_layout_mode(self) -> None:
+        """Check and apply the layout mode based on screen size."""
+        is_narrow = self.size.width < self.size.height
+        try:
+            timelines = self.query_one(Timelines)
+            timelines.set_class(is_narrow, "single-column-mode")
+        except Exception:
+            pass # Timelines may not exist yet.
 
     def focus_home_timeline(self):
         """Focuses the home timeline."""
