@@ -14,6 +14,7 @@ from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
 from mastui.help_screen import HelpScreen
 from mastui.logging_config import setup_logging
+from mastui.retro import retro_theme
 import logging
 import argparse
 import os
@@ -66,6 +67,7 @@ class Mastui(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
+        self.register_theme(retro_theme)
         self.theme = config.theme
         self.theme_changed_signal.subscribe(self, self.on_theme_changed)
         self.push_screen(SplashScreen())
