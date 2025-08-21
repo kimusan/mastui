@@ -49,6 +49,16 @@ class ViewProfile(Message):
         super().__init__()
 
 
+class VoteOnPoll(Message):
+    """A message to vote on a poll."""
+    def __init__(self, poll_id: str, choice: int, timeline_id: str, post_id: str) -> None:
+        self.poll_id = poll_id
+        self.choice = choice
+        self.timeline_id = timeline_id
+        self.post_id = post_id
+        super().__init__()
+
+
 class SelectPost(Message):
     """A message to select a post in a timeline."""
     def __init__(self, post_widget: Widget) -> None:

@@ -8,7 +8,7 @@ from mastui.reply import ReplyScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
-from mastui.widgets import Post, LikePost, BoostPost
+from mastui.widgets import Post, LikePost, BoostPost, VoteOnPoll
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
@@ -28,6 +28,7 @@ from mastui.messages import (
 )
 from mastui.cache import cache
 from markdown_it import MarkdownIt
+from mastodon.errors import MastodonAPIError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -251,6 +252,40 @@ class Mastui(App):
         except Exception as e:
             log.error(f"Error boosting post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
+
+    @on(VoteOnPoll)
+    def handle_vote_on_poll(self, message: VoteOnPoll):
+        self.run_worker(lambda: self.do_vote_on_poll(message.poll_id, message.choice, message.timeline_id, message.post_id), exclusive=True, thread=True)
+
+    def do_vote_on_poll(self, poll_id: str, choice: int, timeline_id: str, post_id: str):
+        try:
+            # The API returns the updated post object after voting
+            updated_post_data = self.api.poll_vote(poll_id, [choice])
+            
+            # Update the cache with the new post data
+            cache.bulk_insert_posts(timeline_id, [updated_post_data])
+            
+            self.post_message(PostStatusUpdate(updated_post_data))
+            self.notify("Vote cast successfully!", severity="information")
+        except MastodonAPIError as e:
+            if "You have already voted on this poll" in str(e):
+                log.info(f"User already voted on poll {poll_id}. Fetching latest post state for post {post_id}.")
+                try:
+                    # Fetch the latest post data to get the correct poll state
+                    updated_post_data = self.api.status(post_id)
+                    cache.bulk_insert_posts(timeline_id, [updated_post_data])
+                    self.post_message(PostStatusUpdate(updated_post_data))
+                except Exception as fetch_e:
+                    log.error(f"Error fetching post {post_id} after 'already voted' error: {fetch_e}", exc_info=True)
+                    self.notify("Could not refresh poll state.", severity="error")
+            else:
+                log.error(f"Error voting on poll {poll_id}: {e}", exc_info=True)
+                self.notify(f"Error casting vote: {e}", severity="error")
+                self.action_refresh_timelines() # Fallback
+        except Exception as e:
+            log.error(f"Unexpected error voting on poll {poll_id}: {e}", exc_info=True)
+            self.notify(f"Error casting vote: {e}", severity="error")
+            self.action_refresh_timelines()
 
     def on_post_status_update(self, message: PostStatusUpdate) -> None:
         updated_post_data = message.post_data

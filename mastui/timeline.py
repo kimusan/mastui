@@ -212,7 +212,7 @@ class Timeline(Static, can_focus=True):
             if widget_id not in self.post_ids:
                 self.post_ids.add(widget_id)
                 if self.id == "home" or self.id == "federated":
-                    new_widgets.append(Post(post, id=widget_id))
+                    new_widgets.append(Post(post, timeline_id=self.id, id=widget_id))
                 elif self.id == "notifications":
                     new_widgets.append(Notification(post, id=widget_id))
 

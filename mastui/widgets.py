@@ -1,17 +1,17 @@
 import html2text
-from textual.widgets import Static, LoadingIndicator
+from textual.widgets import Static, LoadingIndicator, RadioSet, RadioButton
 from textual.widget import Widget
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
-from textual import events
+from textual import events, on
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
 from mastui.config import config
-from mastui.messages import SelectPost
+from mastui.messages import SelectPost, VoteOnPoll
 import logging
 from datetime import datetime
 
@@ -40,12 +40,75 @@ class BoostPost(PostMessage):
     pass
 
 
-class Post(Widget):
+class PollWidget(Vertical):
+    """A widget to display a poll."""
+
+    def __init__(self, poll: dict, timeline_id: str, post_id: str, **kwargs):
+        super().__init__(**kwargs)
+        self.poll = poll
+        self.timeline_id = timeline_id
+        self.post_id = post_id
+        self.add_class("poll-container")
+        self.styles.height = "auto"
+
+    def compose(self):
+        # The PollWidget itself acts as a vertical container for its children.
+        if self.poll.get("voted") or self.poll.get("expired"):
+            # Show results
+            total_votes = self.poll.get("votes_count", 0)
+            yield Static("Poll Results:", classes="poll-header")
+            for i, option in enumerate(self.poll["options"]):
+                votes = option.get("votes_count", 0)
+                percentage = (votes / total_votes * 100) if total_votes > 0 else 0
+                
+                is_own_vote = i in self.poll.get('own_votes', [])
+                
+                label_prefix = "✓ " if is_own_vote else "  "
+                label = f"{label_prefix}{option['title']} ({votes} votes, {percentage:.2f}%)"
+                
+                bar_color = "green" if is_own_vote else "blue"
+                result_bar = Static(f"[{bar_color}] {'█' * int(percentage / 2)} [/]")
+                
+                yield Static(label)
+                yield result_bar
+        else:
+            # Show radio buttons to vote
+            yield Static("Cast your vote:", classes="poll-header")
+            with RadioSet(id="poll-options") as rs:
+                for option in self.poll["options"]:
+                    yield RadioButton(option["title"])
+
+        # Add the footer with expiry and total votes
+        with Horizontal(classes="poll-footer") as h:
+            h.styles.height = "auto"
+            total_votes = self.poll.get("votes_count", 0)
+            yield Static(f"{total_votes} votes", classes="poll-total-votes")
+
+            expires_at = self.poll.get("expires_at")
+            if expires_at:
+                expiry_str = format_datetime(expires_at)
+                status_text = "Expired" if self.poll.get("expired") else "Expires"
+                yield Static(f"{status_text}: {expiry_str}", classes="poll-expiry")
+
+    @on(RadioSet.Changed)
+    def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
+        """Handle a vote."""
+        if event.radio_set.pressed_index is not None:
+            # Check if already voted, just in case
+            if self.poll.get("voted"):
+                return
+            self.post_message(VoteOnPoll(self.poll["id"], event.radio_set.pressed_index, self.timeline_id, self.post_id))
+            # Disable the radio set to prevent re-voting
+            event.radio_set.disabled = True
+
+
+class Post(Vertical):
     """A widget to display a single post."""
 
-    def __init__(self, post, **kwargs):
+    def __init__(self, post, timeline_id: str, **kwargs):
         super().__init__(**kwargs)
         self.post = post
+        self.timeline_id = timeline_id
         self.add_class("timeline-item")
         status_to_display = self.post.get("reblog") or self.post
         self.created_at_str = format_datetime(status_to_display["created_at"])
@@ -91,6 +154,9 @@ class Post(Widget):
                 padding=(0, 1),
             )
         )
+        if status_to_display.get("poll"):
+            yield PollWidget(status_to_display["poll"], timeline_id=self.timeline_id, post_id=status_to_display["id"])
+            
         if config.image_support and status_to_display.get("media_attachments"):
             for media in status_to_display["media_attachments"]:
                 if media["type"] == "image":
@@ -116,7 +182,7 @@ class Post(Widget):
     def update_from_post(self, post):
         self.post = post
         status_to_display = self.post.get("reblog") or self.post
-
+        
         # Update classes
         self.remove_class("favourited", "reblogged")
         if status_to_display.get("favourited"):
@@ -132,6 +198,12 @@ class Post(Widget):
             f"Likes: {status_to_display.get('favourites_count', 0)}"
         )
         self.hide_spinner()
+
+        # Re-render the poll if it exists
+        for poll_widget in self.query(PollWidget):
+            poll_widget.remove()
+        if status_to_display.get("poll"):
+            self.mount(PollWidget(status_to_display["poll"], timeline_id=self.timeline_id, post_id=status_to_display["id"]), after=self.query_one(".post-footer"))
 
     def on_click(self, event: events.Click) -> None:
         event.stop()
