@@ -26,6 +26,7 @@ from mastui.messages import (
     FocusNextTimeline,
     FocusPreviousTimeline,
     ViewProfile,
+    ResumeTimers,
 )
 from mastui.cache import cache
 from mastodon.errors import MastodonAPIError
@@ -156,16 +157,23 @@ class Mastui(App):
         """An action to open the options screen."""
         if isinstance(self.screen, ModalScreen):
             return
+        self.pause_timers()
         self.push_screen(ConfigScreen(), self.on_config_screen_dismiss)
 
     def action_show_help(self) -> None:
         """An action to show the help screen."""
         if isinstance(self.screen, ModalScreen):
             return
-        self.push_screen(HelpScreen())
+        self.pause_timers()
+        self.push_screen(HelpScreen(), self.on_help_screen_dismiss)
+
+    def on_help_screen_dismiss(self) -> None:
+        """Called when the help screen is dismissed."""
+        self.resume_timers()
 
     def on_config_screen_dismiss(self, result: bool) -> None:
         """Called when the config screen is dismissed."""
+        self.resume_timers()
         if result:
             self.query_one(Timelines).remove()
             self.mount(Timelines())
@@ -181,15 +189,18 @@ class Mastui(App):
         """An action to compose a new post."""
         if isinstance(self.screen, ModalScreen):
             return
+        self.pause_timers()
         self.push_screen(PostScreen(max_characters=self.max_characters), self.on_post_screen_dismiss)
 
     def action_reply_to_post(self) -> None:
         focused = self.query("Timeline:focus")
         if focused:
+            self.pause_timers()
             focused.first().reply_to_post()
 
     def on_post_screen_dismiss(self, result: dict) -> None:
         """Called when the post screen is dismissed."""
+        self.resume_timers()
         if result:
             try:
                 log.info("Sending post...")
@@ -208,6 +219,7 @@ class Mastui(App):
 
     def on_reply_screen_dismiss(self, result: dict) -> None:
         """Called when the reply screen is dismissed."""
+        self.resume_timers()
         if result:
             try:
                 log.info(f"Sending reply to post {result['in_reply_to_id']}...")
@@ -323,7 +335,22 @@ class Mastui(App):
     def on_view_profile(self, message: ViewProfile) -> None:
         if isinstance(self.screen, ModalScreen):
             return
-        self.push_screen(ProfileScreen(message.account_id, self.api))
+        self.pause_timers()
+        self.push_screen(ProfileScreen(message.account_id, self.api), self.on_profile_screen_dismiss)
+
+    def on_profile_screen_dismiss(self) -> None:
+        """Called when the profile screen is dismissed."""
+        self.resume_timers()
+
+    def pause_timers(self):
+        """Pauses all timeline timers."""
+        for timeline in self.query(Timeline):
+            timeline.pause_timers()
+
+    def resume_timers(self):
+        """Resumes all timeline timers."""
+        for timeline in self.query(Timeline):
+            timeline.resume_timers()
 
     def action_like_post(self) -> None:
         focused = self.query("Timeline:focus")

@@ -64,3 +64,8 @@ class SelectPost(Message):
     def __init__(self, post_widget: Widget) -> None:
         self.post_widget = post_widget
         super().__init__()
+
+
+class ResumeTimers(Message):
+    """A message to resume the timeline auto-refresh timers."""
+    pass

@@ -47,13 +47,26 @@ class Timeline(Static, can_focus=True):
 
     def update_auto_refresh_timer(self):
         """Starts or stops the auto-refresh timer based on the config."""
-        if hasattr(self, "refresh_timer"):
-            self.refresh_timer.stop()
+        self.pause_timers()
+        self.resume_timers()
 
+    def pause_timers(self):
+        """Pauses the auto-refresh timer."""
+        if hasattr(self, "refresh_timer"):
+            self.refresh_timer.pause()
+            log.debug(f"Paused auto-refresh timer for {self.id}")
+
+    def resume_timers(self):
+        """Resumes the auto-refresh timer."""
         auto_refresh = getattr(config, f"{self.id}_auto_refresh", False)
         if auto_refresh:
-            interval = getattr(config, f"{self.id}_auto_refresh_interval", 60)
-            self.refresh_timer = self.set_interval(interval * 60, self.refresh_posts)
+            if hasattr(self, "refresh_timer"):
+                self.refresh_timer.resume()
+                log.debug(f"Resumed auto-refresh timer for {self.id}")
+            else:
+                interval = getattr(config, f"{self.id}_auto_refresh_interval", 60)
+                self.refresh_timer = self.set_interval(interval * 60, self.refresh_posts)
+                log.debug(f"Started auto-refresh timer for {self.id}")
 
     def on_timeline_update(self, message: TimelineUpdate) -> None:
         """Handle a timeline update message."""
