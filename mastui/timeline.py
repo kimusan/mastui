@@ -272,11 +272,17 @@ class Timeline(Static, can_focus=True):
         self.focus()
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        if self.selected_item:
+            self.selected_item.remove_class("selected")
+            self.selected_item = None
         if self.content_container.scroll_y >= self.content_container.max_scroll_y - 2:
             if not self.loading_more:
                 self.load_older_posts()
 
     def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        if self.selected_item:
+            self.selected_item.remove_class("selected")
+            self.selected_item = None
         if self.content_container.scroll_y == 0:
             if not self.loading_more:
                 self.refresh_posts()
