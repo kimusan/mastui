@@ -140,8 +140,8 @@ class Mastui(App):
         try:
             timelines = self.query_one(Timelines)
             timelines.set_class(is_narrow, "single-column-mode")
-        except Exception:
-            pass # Timelines may not exist yet.
+        except Exception as e:
+            log.debug(f"Could not apply layout mode, Timelines widget not found: {e}")
 
     
 
