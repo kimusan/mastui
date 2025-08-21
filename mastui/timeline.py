@@ -425,3 +425,12 @@ class Timelines(Static):
             yield Timeline("Notifications", id="notifications")
         if config.federated_timeline_enabled:
             yield Timeline("Federated", id="federated")
+
+    def on_mount(self) -> None:
+        """Focus the first timeline when mounted."""
+        try:
+            first_timeline = self.query(Timeline).first()
+            if first_timeline:
+                first_timeline.focus()
+        except Exception as e:
+            log.error(f"Could not focus first timeline: {e}", exc_info=True)

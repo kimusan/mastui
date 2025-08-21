@@ -47,6 +47,12 @@ class ConfigScreen(ModalScreen):
                     )
                     yield Static()  # Spacer
 
+                    yield Label("Force single-column mode?", classes="config-label")
+                    yield Switch(
+                        value=config.force_single_column, id="force_single_column"
+                    )
+                    yield Static() # Spacer
+
             with Collapsible(title="Auto-Refresh (in minutes)"):
                 with Grid(classes="config-group-body"):
                     yield Label("Auto-refresh home?", classes="config-label")
@@ -145,4 +151,5 @@ class ConfigScreen(ModalScreen):
         config.federated_timeline_enabled = self.query_one(
             "#federated_timeline_enabled"
         ).value
+        config.force_single_column = self.query_one("#force_single_column").value
         config.save_config()

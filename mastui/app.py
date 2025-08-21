@@ -124,7 +124,6 @@ class Mastui(App):
             self.pop_screen()
         log.info("Showing timelines...")
         self.mount(Timelines())
-        self.call_later(self.focus_home_timeline)
         self.call_later(self.check_layout_mode)
 
     @on(events.Resize)
@@ -134,19 +133,14 @@ class Mastui(App):
 
     def check_layout_mode(self) -> None:
         """Check and apply the layout mode based on screen size."""
-        is_narrow = self.size.width < self.size.height
+        is_narrow = config.force_single_column or self.size.width < self.size.height
         try:
             timelines = self.query_one(Timelines)
             timelines.set_class(is_narrow, "single-column-mode")
         except Exception:
             pass # Timelines may not exist yet.
 
-    def focus_home_timeline(self):
-        """Focuses the home timeline."""
-        try:
-            self.query_one("#home", Timeline).focus()
-        except Exception as e:
-            log.error(f"Could not focus home timeline: {e}", exc_info=True)
+    
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
@@ -173,6 +167,7 @@ class Mastui(App):
             self.query_one(Timelines).remove()
             self.mount(Timelines())
             self.call_later(self.focus_home_timeline)
+            self.call_later(self.check_layout_mode)
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""

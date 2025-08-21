@@ -40,6 +40,7 @@ class Config:
         self.home_timeline_enabled = os.getenv("HOME_TIMELINE_ENABLED", "on") == "on"
         self.notifications_timeline_enabled = os.getenv("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
         self.federated_timeline_enabled = os.getenv("FEDERATED_TIMELINE_ENABLED", "on") == "on"
+        self.force_single_column = os.getenv("FORCE_SINGLE_COLUMN", "off") == "on"
 
 
     def save_config(self):
@@ -71,6 +72,7 @@ class Config:
             f.write(f"HOME_TIMELINE_ENABLED={'on' if self.home_timeline_enabled else 'off'}\n")
             f.write(f"NOTIFICATIONS_TIMELINE_ENABLED={'on' if self.notifications_timeline_enabled else 'off'}\n")
             f.write(f"FEDERATED_TIMELINE_ENABLED={'on' if self.federated_timeline_enabled else 'off'}\n")
+            f.write(f"FORCE_SINGLE_COLUMN={'on' if self.force_single_column else 'off'}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host
