@@ -222,6 +222,47 @@ Notification.selected {
     padding: 0 1;
 }
 
+#add_poll_container {
+    height: auto;
+    padding: 0 1;
+}
+
+#poll_creation_area {
+    border: round $primary;
+    padding: 1;
+    margin: 1;
+    height: auto;
+}
+
+#poll_choices_container {
+    height: auto;
+    max-height: 10;
+    overflow-y: auto;
+    margin-bottom: 1;
+}
+
+.poll-choice {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.poll-choice Input {
+    width: 1fr;
+}
+
+.poll-choice .remove-choice {
+    width: 5;
+    min-width: 5;
+    height: 1;
+    margin-left: 1;
+}
+
+#add_choice_button {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+
 .post_option_label {
     width: auto;
     height: 100%;
@@ -369,6 +410,10 @@ ConfigScreen .collapsible--title {
 
 .main-post {
     border: round $accent;
+}
+
+.hidden {
+    display: none;
 }
 
 .reply-post {

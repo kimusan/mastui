@@ -1,5 +1,5 @@
 import html2text
-from textual.widgets import Static, LoadingIndicator, RadioSet, RadioButton
+from textual.widgets import Static, LoadingIndicator, RadioSet, RadioButton, Button, Input
 from textual.widget import Widget
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -38,6 +38,37 @@ class BoostPost(PostMessage):
     """A message to boost a post."""
 
     pass
+
+
+class RemovePollChoice(Message):
+    """A message to remove a poll choice."""
+    def __init__(self, poll_choice_widget: Widget) -> None:
+        self.poll_choice_widget = poll_choice_widget
+        super().__init__()
+
+
+class PollChoiceMounted(Message):
+    """A message to indicate that a poll choice has been mounted."""
+    pass
+
+
+class PollChoice(Horizontal):
+    """A widget for a single poll choice."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_class("poll-choice")
+
+    def compose(self):
+        yield Input(placeholder="Choice...")
+        yield Button("X", variant="error", classes="remove-choice", disabled=True)
+
+    def on_mount(self) -> None:
+        """When the widget is mounted, tell the parent to check button states."""
+        self.post_message(PollChoiceMounted())
+
+    @on(Button.Pressed, ".remove-choice")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.post_message(RemovePollChoice(self))
 
 
 class PollWidget(Vertical):

@@ -27,7 +27,6 @@ from mastui.messages import (
     ViewProfile,
 )
 from mastui.cache import cache
-from markdown_it import MarkdownIt
 from mastodon.errors import MastodonAPIError
 
 # Set up logging
@@ -192,12 +191,11 @@ class Mastui(App):
         if result:
             try:
                 log.info("Sending post...")
-                md = MarkdownIt()
-                html_content = md.render(result["content"])
                 self.api.status_post(
-                    status=html_content,
+                    status=result["content"],
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
+                    poll=result["poll"],
                 )
                 log.info("Post sent successfully.")
                 self.notify("Post sent successfully!", severity="information")
@@ -211,10 +209,8 @@ class Mastui(App):
         if result:
             try:
                 log.info(f"Sending reply to post {result['in_reply_to_id']}...")
-                md = MarkdownIt()
-                html_content = md.render(result["content"])
                 self.api.status_post(
-                    status=html_content,
+                    status=result["content"],
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
                     in_reply_to_id=result["in_reply_to_id"],

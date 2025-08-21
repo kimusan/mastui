@@ -2,7 +2,7 @@ from textual.widgets import Static, LoadingIndicator
 from textual.containers import VerticalScroll, Horizontal
 from textual import on, events
 from textual.screen import ModalScreen
-from mastui.widgets import Post, Notification, LikePost, BoostPost, GapIndicator
+from mastui.widgets import Post, Notification, GapIndicator, LikePost, BoostPost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
