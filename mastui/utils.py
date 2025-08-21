@@ -1,5 +1,5 @@
 import html2text
-import pprint
+import re
 from datetime import datetime, timezone
 from dateutil.parser import parse
 from bs4 import BeautifulSoup
@@ -15,24 +15,43 @@ LANGUAGE_OPTIONS = [
     ("Spanish", "es"),
 ]
 
+MARKDOWN_LINK_REGEX = re.compile(r'\\[^\\]+\\]\(([^)]+)\\\)')
 
-def to_markdown(html):
-    """Converts HTML to markdown."""
+def markdown_links_to_html(text: str) -> str:
+    """Converts Markdown-style links in a string to HTML <a> tags."""
+    if not text:
+        return ""
+    return MARKDOWN_LINK_REGEX.sub(lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', text)
+
+def to_markdown(html: str) -> str:
+    """
+    Converts mixed HTML/Markdown content to terminal-friendly markdown.
+    """
     if not html:
         return ""
-    # Use BeautifulSoup to parse and clean the HTML
+
+    # First, parse with BeautifulSoup to handle HTML and decode entities.
     soup = BeautifulSoup(html, 'html.parser')
     
+    # Convert the parsed soup back to a string.
+    cleaned_html = str(soup)
+
+    # Now, convert any remaining Markdown-style links to HTML <a> tags.
+    html_with_links = markdown_links_to_html(cleaned_html)
+
+    # Finally, convert the fully-HTML content to terminal-friendly text.
     h = html2text.HTML2Text()
     h.ignore_links = False
-    return h.handle(str(soup))
+    h.body_width = 0 # Don't wrap lines
+    return h.handle(html_with_links)
 
-def get_full_content_md(status):
+def get_full_content_md(status: dict) -> str:
     """Gets the full markdown content for a status, including media."""
     if not status:
         return ""
-        
-    html_content = status.get('content') or status.get('note') or ''
+
+    html_content = status.get("content") or status.get("note") or ""
+    
     content_md = to_markdown(html_content)
 
     if status.get("media_attachments"):
@@ -51,11 +70,9 @@ def get_full_content_md(status):
         else:
             content_md = "\n".join(media_infos)
 
-    if not content_md.strip():
-        pretty_status = pprint.pformat(status)
-        return f"**Empty Post Detected! Raw data:**\n```json\n{pretty_status}\n```"
-
     return content_md
+
+
 
 def format_datetime(dt_obj):
     """Formats a datetime string or object into YYYY-MM-DD HH:MM."""
@@ -66,5 +83,5 @@ def format_datetime(dt_obj):
 
     # Convert to local timezone for display
     local_dt = dt.astimezone()
-    
+
     return local_dt.strftime("%Y-%m-%d %H:%M")
