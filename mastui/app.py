@@ -27,6 +27,7 @@ from mastui.messages import (
     ViewProfile,
 )
 from mastui.cache import cache
+from markdown_it import MarkdownIt
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -166,7 +167,6 @@ class Mastui(App):
         if result:
             self.query_one(Timelines).remove()
             self.mount(Timelines())
-            self.call_later(self.focus_home_timeline)
             self.call_later(self.check_layout_mode)
 
     def action_refresh_timelines(self) -> None:
@@ -191,8 +191,10 @@ class Mastui(App):
         if result:
             try:
                 log.info("Sending post...")
+                md = MarkdownIt()
+                html_content = md.render(result["content"])
                 self.api.status_post(
-                    status=result["content"],
+                    status=html_content,
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
                 )
@@ -208,8 +210,10 @@ class Mastui(App):
         if result:
             try:
                 log.info(f"Sending reply to post {result['in_reply_to_id']}...")
+                md = MarkdownIt()
+                html_content = md.render(result["content"])
                 self.api.status_post(
-                    status=result["content"],
+                    status=html_content,
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
                     in_reply_to_id=result["in_reply_to_id"],

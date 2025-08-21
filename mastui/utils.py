@@ -2,6 +2,7 @@ import html2text
 import pprint
 from datetime import datetime, timezone
 from dateutil.parser import parse
+from bs4 import BeautifulSoup
 
 LANGUAGE_OPTIONS = [
     ("Chinese", "zh"),
@@ -17,9 +18,14 @@ LANGUAGE_OPTIONS = [
 
 def to_markdown(html):
     """Converts HTML to markdown."""
+    if not html:
+        return ""
+    # Use BeautifulSoup to parse and clean the HTML
+    soup = BeautifulSoup(html, 'html.parser')
+    
     h = html2text.HTML2Text()
     h.ignore_links = False
-    return h.handle(html)
+    return h.handle(str(soup))
 
 def get_full_content_md(status):
     """Gets the full markdown content for a status, including media."""

@@ -47,6 +47,10 @@ class ImageWidget(Static):
 
     def render_image(self, img: PILImage):
         """Renders the image."""
+        if img.width == 0 or img.height == 0:
+            self.show_error()
+            return
+
         renderer_map = {
             "auto": Image,
             "sixel": SixelImage,
