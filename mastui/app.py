@@ -338,7 +338,7 @@ class Mastui(App):
         self.pause_timers()
         self.push_screen(ProfileScreen(message.account_id, self.api), self.on_profile_screen_dismiss)
 
-    def on_profile_screen_dismiss(self) -> None:
+    def on_profile_screen_dismiss(self, _) -> None:
         """Called when the profile screen is dismissed."""
         self.resume_timers()
 

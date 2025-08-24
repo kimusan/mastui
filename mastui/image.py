@@ -1,10 +1,14 @@
 from textual.widgets import Static
+from textual import events
 import httpx
 from io import BytesIO
 from textual_image.renderable import Image, SixelImage, HalfcellImage, TGPImage
 from PIL import Image as PILImage
 from mastui.config import config
 import hashlib
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class ImageWidget(Static):
@@ -14,6 +18,7 @@ class ImageWidget(Static):
         super().__init__("Loading image...", **kwargs)
         self.url = url
         self.renderer = renderer
+        self.pil_image = None
 
     def on_mount(self):
         self.run_worker(self.load_image, thread=True)
@@ -24,30 +29,38 @@ class ImageWidget(Static):
             # Create a unique filename from the URL
             filename = hashlib.sha256(self.url.encode()).hexdigest()
             cache_path = config.image_cache_dir / filename
+            log.debug(f"Image cache path: {cache_path}")
 
             if cache_path.exists():
-                # Load from cache
+                log.debug(f"Loading image from cache: {self.url}")
                 image_data = cache_path.read_bytes()
             else:
-                # Download from URL
+                log.debug(f"Image not in cache, downloading: {self.url}")
                 with httpx.stream("GET", self.url, timeout=30, verify=config.ssl_verify) as response:
                     response.raise_for_status()
                     image_data = response.read()
-                # Save to cache
                 cache_path.write_bytes(image_data)
 
-            img = PILImage.open(BytesIO(image_data))
-            self.app.call_from_thread(self.render_image, img)
+            self.pil_image = PILImage.open(BytesIO(image_data))
+            self.app.call_from_thread(self.render_image)
         except Exception as e:
+            log.error(f"Error loading image: {e}", exc_info=True)
             self.app.call_from_thread(self.show_error)
+
+    def on_resize(self, event: events.Resize) -> None:
+        """Re-render the image when the widget is resized."""
+        self.render_image()
 
     def show_error(self):
         """Displays an error message when the image fails to load."""
         self.update("[Image load failed]")
 
-    def render_image(self, img: PILImage):
+    def render_image(self):
         """Renders the image."""
-        if img.width == 0 or img.height == 0:
+        if not self.pil_image:
+            return # Image not loaded yet
+
+        if self.pil_image.width == 0 or self.pil_image.height == 0:
             self.show_error()
             return
 
@@ -61,12 +74,9 @@ class ImageWidget(Static):
 
         width = self.size.width - 4
         if width <= 0:
-            self.show_error()
+            self.update("...") # Too small to render
             return
 
-        image = renderer_class(img, width=width)
-
-        # Set the height of the widget to match the image
+        image = renderer_class(self.pil_image, width=width)
         self.styles.height = "auto"
-
         self.update(image)

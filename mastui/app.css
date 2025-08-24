@@ -468,6 +468,14 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen {
     overflow-y: auto;
 }
 
+#profile-avatar {
+    width: 50%;
+    max-width: 40;
+    min-height: 10;
+    margin-bottom: 1;
+    align-horizontal: center;
+}
+
 #help-dialog {
     width: 80;
     height: auto;
