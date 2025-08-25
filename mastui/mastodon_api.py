@@ -73,6 +73,7 @@ def create_app(host):
             client_id=client_id,
             client_secret=client_secret,
             api_base_url=f"https://{host}",
+            session=s,
         )
         auth_url = mastodon.auth_request_url(
             redirect_uris="urn:ietf:wg:oauth:2.0:oob",
