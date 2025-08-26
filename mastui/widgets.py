@@ -391,7 +391,7 @@ class AccountResult(SearchResult):
 
     def compose(self):
         yield Static(f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}")
-        yield Static(to_markdown(self.account['note']))
+        yield Static(Markdown(to_markdown(self.account['note'])))
 
 
 class HashtagResult(SearchResult):
