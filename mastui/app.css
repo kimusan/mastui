@@ -445,6 +445,7 @@ ImageWidget {
     margin-top: 1;
     border-top: solid $primary-lighten-2;
     padding-top: 1;
+    height: auto;
 }
 .poll-total-votes {
     width: 1fr;
@@ -455,7 +456,7 @@ ImageWidget {
     color: $text-muted;
 }
 
-LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen {
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen {
     align: center middle;
 }
 
@@ -487,5 +488,55 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen {
 }
 #help-dialog DataTable {
     margin-top: 1;
+}
+
+#hashtag-timeline-dialog {
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+}
+
+#hashtag-timeline-container {
+    padding: 1;
+}
+
+#search-dialog {
+    layout: vertical;
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+}
+
+#search-input {
+    dock: top;
+    margin-bottom: 1;
+}
+
+#search-results {
+    height: 1fr;
+}
+
+#search-dialog > LoadingIndicator {
+    height: 1;
+}
+
+.search-status {
+    margin-top: 1;
+    text-align: center;
+}
+
+.search-result {
+    border: round $primary;
+    padding: 1;
+    margin-bottom: 1;
+    height: auto;
+}
+
+.search-result:focus {
+    border: double $accent;
 }
 

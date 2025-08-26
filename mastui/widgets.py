@@ -7,7 +7,7 @@ from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
 from textual import events, on
 from textual.message import Message
-from mastui.utils import get_full_content_md, format_datetime
+from mastui.utils import get_full_content_md, format_datetime, to_markdown
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
 from mastui.config import config
@@ -105,13 +105,12 @@ class PollWidget(Vertical):
         else:
             # Show radio buttons to vote
             yield Static("Cast your vote:", classes="poll-header")
-            with RadioSet(id="poll-options") as rs:
+            with RadioSet(id="poll-options"):
                 for option in self.poll["options"]:
                     yield RadioButton(option["title"])
 
         # Add the footer with expiry and total votes
-        with Horizontal(classes="poll-footer") as h:
-            h.styles.height = "auto"
+        with Horizontal(classes="poll-footer"):
             total_votes = self.poll.get("votes_count", 0)
             yield Static(f"{total_votes} votes", classes="poll-total-votes")
 
@@ -378,12 +377,41 @@ class Notification(Widget):
         return None
 
 
-class GapIndicator(Widget):
-    """A widget to indicate a gap in the timeline."""
+class SearchResult(Widget, can_focus=True):
+    """A base class for search results."""
+    pass
 
-    def __init__(self, **kwargs):
+
+class AccountResult(SearchResult):
+    """A widget to display an account search result."""
+    def __init__(self, account: dict, **kwargs):
         super().__init__(**kwargs)
-        self.add_class("gap-indicator")
+        self.account = account
+        self.add_class("search-result")
 
     def compose(self):
-        yield Static("...")
+        yield Static(f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}")
+        yield Static(to_markdown(self.account['note']))
+
+
+class HashtagResult(SearchResult):
+    """A widget to display a hashtag search result."""
+    def __init__(self, hashtag: dict, **kwargs):
+        super().__init__(**kwargs)
+        self.hashtag = hashtag
+        self.add_class("search-result")
+
+    def compose(self):
+        yield Static(f"#{self.hashtag['name']}")
+        # You can add more info here, like recent usage stats if available
+
+
+class StatusResult(SearchResult):
+    """A widget to display a status search result."""
+    def __init__(self, status: dict, **kwargs):
+        super().__init__(**kwargs)
+        self.status = status
+        self.add_class("search-result")
+
+    def compose(self):
+        yield Post(self.status, timeline_id="search")

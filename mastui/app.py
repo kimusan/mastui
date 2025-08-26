@@ -13,6 +13,7 @@ from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
 from mastui.help_screen import HelpScreen
+from mastui.search_screen import SearchScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme
 import logging
@@ -49,6 +50,7 @@ class Mastui(App):
         ("p", "view_profile", "View profile"),
         ("a", "reply_to_post", "Reply to post"),
         ("o", "open_options", "Options"),
+        ("/", "search", "Search"),
         ("?", "show_help", "Help"),
         ("q", "quit", "Quit"),
         ("l", "like_post", "Like post"),
@@ -166,6 +168,17 @@ class Mastui(App):
             return
         self.pause_timers()
         self.push_screen(HelpScreen(), self.on_help_screen_dismiss)
+
+    def action_search(self) -> None:
+        """An action to open the search screen."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.pause_timers()
+        self.push_screen(SearchScreen(api=self.api), self.on_search_screen_dismiss)
+
+    def on_search_screen_dismiss(self, _) -> None:
+        """Called when the search screen is dismissed."""
+        self.resume_timers()
 
     def on_help_screen_dismiss(self) -> None:
         """Called when the help screen is dismissed."""
