@@ -10,7 +10,6 @@ from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime, to_markdown
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
-from mastui.config import config
 from mastui.messages import SelectPost, VoteOnPoll
 import logging
 from datetime import datetime
@@ -187,10 +186,10 @@ class Post(Vertical):
         if status_to_display.get("poll"):
             yield PollWidget(status_to_display["poll"], timeline_id=self.timeline_id, post_id=status_to_display["id"])
             
-        if config.image_support and status_to_display.get("media_attachments"):
+        if self.app.config.image_support and status_to_display.get("media_attachments"):
             for media in status_to_display["media_attachments"]:
                 if media["type"] == "image":
-                    yield ImageWidget(media["url"], config.image_renderer)
+                    yield ImageWidget(media["url"], self.app.config)
 
         with Horizontal(classes="post-footer"):
             yield LoadingIndicator(classes="action-spinner")

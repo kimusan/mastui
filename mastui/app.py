@@ -1,4 +1,5 @@
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.widgets import Header, Footer
 from textual import on, events
 from textual.screen import ModalScreen
@@ -16,10 +17,9 @@ from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme
-import logging
-import argparse
-import os
-from mastui.config import config
+from mastui.config import Config
+from mastui.profile_manager import profile_manager
+from mastui.profile_selection import ProfileSelectionScreen
 from mastui.messages import (
     PostStatusUpdate,
     ActionFailed,
@@ -29,8 +29,12 @@ from mastui.messages import (
     ViewProfile,
     ResumeTimers,
 )
-from mastui.cache import cache
+from mastui.cache import Cache
 from mastodon.errors import MastodonAPIError
+import logging
+import argparse
+import os
+from urllib.parse import urlparse
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -44,24 +48,33 @@ class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
     BINDINGS = [
-        ("d", "toggle_dark", "Toggle dark mode"),
-        ("r", "refresh_timelines", "Refresh timelines"),
-        ("c", "compose_post", "Compose post"),
-        ("p", "view_profile", "View profile"),
-        ("a", "reply_to_post", "Reply to post"),
-        ("o", "open_options", "Options"),
-        ("/", "search", "Search"),
-        ("?", "show_help", "Help"),
-        ("q", "quit", "Quit"),
-        ("l", "like_post", "Like post"),
-        ("b", "boost_post", "Boost post"),
-        ("up", "scroll_up", "Scroll up"),
-        ("down", "scroll_down", "Scroll down"),
+        Binding("d", "toggle_dark", "Toggle dark mode", show=False),
+        Binding("r", "refresh_timelines", "Refresh timelines", show=False),
+        Binding("c", "compose_post", "Compose post", show=False),
+        Binding("p", "view_profile", "View profile", show=False),
+        Binding("a", "reply_to_post", "Reply to post", show=False),
+        Binding("o", "open_options", "Options", show=False),
+        Binding("/", "search", "Search", show=False),
+        Binding("u", "switch_profile", "Switch user profile", show=False),
+        Binding("l", "like_post", "Like post", show=False),
+        Binding("b", "boost_post", "Boost post", show=False),
+        Binding("up", "scroll_up", "Scroll up", show=False),
+        Binding("down", "scroll_down", "Scroll down", show=False),
+        Binding("?", "show_help", "Help", show=True),
+        Binding("q", "quit", "Quit", show=True),
     ]
     CSS_PATH = css_path
     initial_data = None
-    max_characters = 500 # Default value
+    max_characters = 500  # Default value
     log_file_path: str | None = None
+    config: Config = None
+    cache: Cache = None
+
+    def __init__(self, action=None, ssl_verify=True):
+        super().__init__()
+        self.action = action
+        self.ssl_verify = ssl_verify
+        log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -70,24 +83,109 @@ class Mastui(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
+        log.debug("Mastui app mounted.")
         self.register_theme(retro_theme)
-        self.theme = config.theme
+        if self.action == "add_account":
+            log.debug(f"Action '{self.action}' specified, showing login screen.")
+            self.call_later(self.show_login_screen)
+        else:
+            log.debug("No 'add_account' action specified, selecting profile.")
+            self.select_profile()
+
+    def on_login(self, result: tuple) -> None:
+        """Called when the login screen is dismissed."""
+        api, env_content = result
+        log.info("Login successful.")
+        self.api = api
+
+        # Create a default profile name
+        me = api.me()
+        # Sanitize username for directory name
+        sanitized_username = "".join(
+            c for c in me["username"] if c.isalnum() or c in "-_"
+        )
+        host = urlparse(me["url"]).hostname
+        profile_name = f"{sanitized_username}@{host}"
+
+        # Create the new profile
+        profile_manager.create_profile(profile_name, env_content)
+
+        self.load_profile(profile_name)
+
+    def select_profile(self):
+        """Select a profile to use."""
+        migrated = profile_manager.migrate_old_profile()
+        if migrated:
+            self.notify(
+                "Your profile has been migrated to the new multi-profile system.",
+                title="Profile Migrated",
+            )
+
+        profiles = profile_manager.get_profiles()
+        if len(profiles) == 1:
+            self.load_profile(profiles[0])
+        elif len(profiles) > 1:
+            self.push_screen(ProfileSelectionScreen(profiles), self.on_profile_selected)
+        else:
+            self.show_login_screen()
+
+    def on_profile_selected(self, profile_name: str):
+        """Called when a profile is selected."""
+        if profile_name == "add_new_profile":
+            self.show_login_screen()
+        else:
+            self.load_profile(profile_name)
+
+    def load_profile(self, profile_name: str):
+        """Load a profile and start the app."""
+        log.debug(f"Loading profile: {profile_name}")
+        profile_path = profile_manager.get_profile_path(profile_name)
+        log.debug(f"Profile path: {profile_path}")
+        self.config = Config(profile_path)
+        self.config.ssl_verify = self.ssl_verify
+        log.debug(
+            f"Loaded access token: {'Yes' if self.config.mastodon_access_token else 'No'}"
+        )
+
+        # Check if the profile is incomplete (migrated without access token)
+        if not self.config.mastodon_access_token:
+            log.error(f"Profile '{profile_name}' is incomplete and missing access token.")
+            self.notify(
+                f"Profile '{profile_name}' must be re-authorized.",
+                title="Re-authorization Required",
+                severity="error",
+            )
+            # Get the host from the broken profile and go to the login screen
+            host = self.config.mastodon_host
+            self.call_later(lambda: self.show_login_screen(host=host))
+            return
+
+        self.cache = Cache(profile_path / "cache.db")
+
+        # Update the header with the profile name
+        self.sub_title = profile_name
+
+        self.theme = self.config.theme
         self.theme_changed_signal.subscribe(self, self.on_theme_changed)
+
         self.push_screen(SplashScreen())
-        self.api = get_api()
+        self.api = get_api(self.config)
         if self.api:
             self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
-            if config.auto_prune_cache:
+            if self.config.auto_prune_cache:
                 self.run_worker(self.prune_cache, thread=True, exclusive=True)
             self.set_timer(2, self.show_timelines)
         else:
+            log.error("API object could not be created. Forcing login.")
             self.call_later(self.show_login_screen)
 
     def fetch_instance_info(self):
         """Fetches instance information from the API."""
         try:
             instance = self.api.instance()
-            self.max_characters = instance['configuration']['statuses']['max_characters']
+            self.max_characters = instance["configuration"]["statuses"][
+                "max_characters"
+            ]
         except Exception as e:
             log.error(f"Error fetching instance info: {e}", exc_info=True)
             self.notify("Could not fetch instance information.", severity="error")
@@ -95,7 +193,7 @@ class Mastui(App):
     def prune_cache(self):
         """Prunes the image cache."""
         try:
-            count = cache.prune_image_cache()
+            count = self.cache.prune_image_cache()
             if count > 0:
                 self.notify(f"Pruned {count} items from the image cache.")
         except Exception as e:
@@ -105,25 +203,39 @@ class Mastui(App):
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""
         new_theme = event.name
-        config.theme = new_theme
+        self.config.theme = new_theme
         if "light" in new_theme:
-            config.preferred_light_theme = new_theme
+            self.config.preferred_light_theme = new_theme
         else:
-            config.preferred_dark_theme = new_theme
-        config.save_config()
+            self.config.preferred_dark_theme = new_theme
+        self.config.save_config()
 
-    def show_login_screen(self):
+    def show_login_screen(self, host: str = None):
+        log.debug(f"Attempting to show login screen for host: {host}")
         if isinstance(self.screen, SplashScreen):
             self.pop_screen()
-        self.push_screen(LoginScreen(), self.on_login)
+        self.push_screen(LoginScreen(host=host), self.on_login)
 
-    def on_login(self, api) -> None:
+    def on_login(self, result: tuple) -> None:
         """Called when the login screen is dismissed."""
+        api, env_content = result
         log.info("Login successful.")
         self.api = api
-        self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
-        self.push_screen(SplashScreen())
-        self.set_timer(2, self.show_timelines)
+
+        # Create a default profile name
+        me = api.me()
+        # Sanitize username for directory name
+        sanitized_username = "".join(
+            c for c in me["username"] if c.isalnum() or c in "-_"
+        ).rstrip()
+        host = urlparse(me["url"]).hostname
+        profile_name = f"{sanitized_username}@{host}"
+
+        # Create the new profile
+        log.debug(f"Creating profile '{profile_name}' with content:\n{env_content}")
+        profile_manager.create_profile(profile_name, env_content)
+
+        self.load_profile(profile_name)
 
     def show_timelines(self):
         if isinstance(self.screen, SplashScreen):
@@ -139,21 +251,23 @@ class Mastui(App):
 
     def check_layout_mode(self) -> None:
         """Check and apply the layout mode based on screen size."""
-        is_narrow = config.force_single_column or self.size.width < self.size.height
+        if not self.config:
+            return
+        is_narrow = (
+            self.config.force_single_column or self.size.width < self.size.height
+        )
         try:
             timelines = self.query_one(Timelines)
             timelines.set_class(is_narrow, "single-column-mode")
         except Exception as e:
             log.debug(f"Could not apply layout mode, Timelines widget not found: {e}")
 
-    
-
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         if "light" in self.theme:
-            self.theme = config.preferred_dark_theme
+            self.theme = self.config.preferred_dark_theme
         else:
-            self.theme = config.preferred_light_theme
+            self.theme = self.config.preferred_light_theme
 
     def action_open_options(self) -> None:
         """An action to open the options screen."""
@@ -203,7 +317,9 @@ class Mastui(App):
         if isinstance(self.screen, ModalScreen):
             return
         self.pause_timers()
-        self.push_screen(PostScreen(max_characters=self.max_characters), self.on_post_screen_dismiss)
+        self.push_screen(
+            PostScreen(max_characters=self.max_characters), self.on_post_screen_dismiss
+        )
 
     def action_reply_to_post(self) -> None:
         focused = self.query("Timeline:focus")
@@ -251,7 +367,11 @@ class Mastui(App):
 
     @on(LikePost)
     def handle_like_post(self, message: LikePost):
-        self.run_worker(lambda: self.do_like_post(message.post_id, message.favourited), exclusive=True, thread=True)
+        self.run_worker(
+            lambda: self.do_like_post(message.post_id, message.favourited),
+            exclusive=True,
+            thread=True,
+        )
 
     def do_like_post(self, post_id: str, favourited: bool):
         try:
@@ -266,7 +386,9 @@ class Mastui(App):
 
     @on(BoostPost)
     def handle_boost_post(self, message: BoostPost):
-        self.run_worker(lambda: self.do_boost_post(message.post_id), exclusive=True, thread=True)
+        self.run_worker(
+            lambda: self.do_boost_post(message.post_id), exclusive=True, thread=True
+        )
 
     def do_boost_post(self, post_id: str):
         try:
@@ -278,33 +400,46 @@ class Mastui(App):
 
     @on(VoteOnPoll)
     def handle_vote_on_poll(self, message: VoteOnPoll):
-        self.run_worker(lambda: self.do_vote_on_poll(message.poll_id, message.choice, message.timeline_id, message.post_id), exclusive=True, thread=True)
+        self.run_worker(
+            lambda: self.do_vote_on_poll(
+                message.poll_id, message.choice, message.timeline_id, message.post_id
+            ),
+            exclusive=True,
+            thread=True,
+        )
 
-    def do_vote_on_poll(self, poll_id: str, choice: int, timeline_id: str, post_id: str):
+    def do_vote_on_poll(
+        self, poll_id: str, choice: int, timeline_id: str, post_id: str
+    ):
         try:
             # The API returns the updated post object after voting
             updated_post_data = self.api.poll_vote(poll_id, [choice])
-            
+
             # Update the cache with the new post data
-            cache.bulk_insert_posts(timeline_id, [updated_post_data])
-            
+            self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
+
             self.post_message(PostStatusUpdate(updated_post_data))
             self.notify("Vote cast successfully!", severity="information")
         except MastodonAPIError as e:
             if "You have already voted on this poll" in str(e):
-                log.info(f"User already voted on poll {poll_id}. Fetching latest post state for post {post_id}.")
+                log.info(
+                    f"User already voted on poll {poll_id}. Fetching latest post state for post {post_id}."
+                )
                 try:
                     # Fetch the latest post data to get the correct poll state
                     updated_post_data = self.api.status(post_id)
-                    cache.bulk_insert_posts(timeline_id, [updated_post_data])
+                    self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
                     self.post_message(PostStatusUpdate(updated_post_data))
                 except Exception as fetch_e:
-                    log.error(f"Error fetching post {post_id} after 'already voted' error: {fetch_e}", exc_info=True)
+                    log.error(
+                        f"Error fetching post {post_id} after 'already voted' error: {fetch_e}",
+                        exc_info=True,
+                    )
                     self.notify("Could not refresh poll state.", severity="error")
             else:
                 log.error(f"Error voting on poll {poll_id}: {e}", exc_info=True)
                 self.notify(f"Error casting vote: {e}", severity="error")
-                self.action_refresh_timelines() # Fallback
+                self.action_refresh_timelines()  # Fallback
         except Exception as e:
             log.error(f"Unexpected error voting on poll {poll_id}: {e}", exc_info=True)
             self.notify(f"Error casting vote: {e}", severity="error")
@@ -349,11 +484,53 @@ class Mastui(App):
         if isinstance(self.screen, ModalScreen):
             return
         self.pause_timers()
-        self.push_screen(ProfileScreen(message.account_id, self.api), self.on_profile_screen_dismiss)
+        self.push_screen(
+            ProfileScreen(message.account_id, self.api), self.on_profile_screen_dismiss
+        )
 
     def on_profile_screen_dismiss(self, _) -> None:
         """Called when the profile screen is dismissed."""
         self.resume_timers()
+
+    def action_switch_profile(self) -> None:
+        """An action to switch the user profile."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.pause_timers()
+        profiles = profile_manager.get_profiles()
+        self.push_screen(
+            ProfileSelectionScreen(profiles), self.on_profile_selected_for_switch
+        )
+
+    def on_profile_selected_for_switch(self, profile_name: str) -> None:
+        """Called when a profile is selected from the switcher."""
+        if profile_name == "add_new_profile":
+            self._tear_down_profile()
+            self.show_login_screen()
+        elif profile_name and profile_name != self.config.profile_path.name:
+            self.switch_profile(profile_name)
+        else:
+            # If the same profile is chosen, or selection is cancelled, just resume
+            self.resume_timers()
+
+    def switch_profile(self, profile_name: str) -> None:
+        """Performs a soft restart to switch to a new profile."""
+        log.info(f"Switching profile to {profile_name}...")
+        self._tear_down_profile()
+        self.load_profile(profile_name)
+
+    def _tear_down_profile(self):
+        """Removes the current profile's UI and data."""
+        log.debug("Tearing down current profile.")
+        try:
+            self.query_one(Timelines).remove()
+        except Exception as e:
+            log.warning(f"Could not remove Timelines widget during tear down: {e}")
+
+        self.api = None
+        self.config = None
+        self.cache = None
+        self.sub_title = ""
 
     def pause_timers(self):
         """Pauses all timeline timers."""
@@ -387,23 +564,25 @@ class Mastui(App):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="A Textual app to interact with Mastodon.")
-    parser.add_argument("--no-ssl-verify", action="store_false", dest="ssl_verify", help="Disable SSL verification.")
+    parser = argparse.ArgumentParser(
+        description="A Textual app to interact with Mastodon."
+    )
+    parser.add_argument(
+        "--no-ssl-verify",
+        action="store_false",
+        dest="ssl_verify",
+        help="Disable SSL verification.",
+    )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
+    parser.add_argument("--add-account", action="store_true", help="Add a new account.")
     args = parser.parse_args()
-    
+
     log_file_path = setup_logging(debug=args.debug)
-    
-    config.ssl_verify = args.ssl_verify
-    app = Mastui()
+
+    action = "add_account" if args.add_account else None
+    app = Mastui(action=action, ssl_verify=args.ssl_verify)
     app.log_file_path = log_file_path
-    
-    try:
-        app.run()
-    finally:
-        if app.log_file_path:
-            print(f"Log file written to: {app.log_file_path}")
+    app.run()
 
-
-if __name__ == "__main__":
-    main()
+    if app.log_file_path:
+        print(f"Log file written to: {app.log_file_path}")

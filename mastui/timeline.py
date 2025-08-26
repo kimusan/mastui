@@ -7,8 +7,7 @@ from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile, SelectPost
-from mastui.config import config
-from mastui.cache import cache
+from mastui.widgets import Post, Notification, GapIndicator, LikePost, BoostPost
 import logging
 from datetime import datetime, timezone, timedelta
 
@@ -58,13 +57,13 @@ class Timeline(Static, can_focus=True):
 
     def resume_timers(self):
         """Resumes the auto-refresh timer."""
-        auto_refresh = getattr(config, f"{self.id}_auto_refresh", False)
+        auto_refresh = getattr(self.app.config, f"{self.id}_auto_refresh", False)
         if auto_refresh:
             if hasattr(self, "refresh_timer"):
                 self.refresh_timer.resume()
                 log.debug(f"Resumed auto-refresh timer for {self.id}")
             else:
-                interval = getattr(config, f"{self.id}_auto_refresh_interval", 60)
+                interval = getattr(self.app.config, f"{self.id}_auto_refresh_interval", 60)
                 self.refresh_timer = self.set_interval(interval * 60, self.refresh_posts)
                 log.debug(f"Started auto-refresh timer for {self.id}")
 
@@ -97,13 +96,13 @@ class Timeline(Static, can_focus=True):
             if since_id:
                 posts = self.fetch_posts(since_id=since_id)
                 if posts:
-                    cache.bulk_insert_posts(self.id, posts)
+                    self.app.cache.bulk_insert_posts(self.id, posts)
                 self.post_message(TimelineUpdate(posts, since_id=since_id))
                 return
 
             # Case 2: Scrolling down for older posts
             if max_id:
-                cached_posts = cache.get_posts(self.id, limit=20, max_id=max_id)
+                cached_posts = self.app.cache.get_posts(self.id, limit=20, max_id=max_id)
                 if cached_posts:
                     log.info(f"Loaded {len(cached_posts)} older posts from cache for {self.id}")
                     self.post_message(TimelineUpdate(cached_posts, max_id=max_id))
@@ -113,26 +112,26 @@ class Timeline(Static, can_focus=True):
                 log.info(f"Cache exhausted for {self.id}, fetching older from server.")
                 server_posts = self.fetch_posts(max_id=max_id)
                 if server_posts:
-                    cache.bulk_insert_posts(self.id, server_posts)
+                    self.app.cache.bulk_insert_posts(self.id, server_posts)
                 self.post_message(TimelineUpdate(server_posts, max_id=max_id))
                 return
 
             # Case 3: Initial load (no since_id or max_id)
-            latest_cached_ts = cache.get_latest_post_timestamp(self.id)
+            latest_cached_ts = self.app.cache.get_latest_post_timestamp(self.id)
             if latest_cached_ts and (datetime.now(timezone.utc) - latest_cached_ts) < timedelta(hours=2):
                 log.info(f"Gap is small for {self.id}, filling it.")
                 latest_cached_id = self.get_latest_post_id_from_cache()
                 gap_posts = self.fetch_posts(since_id=latest_cached_id)
                 if gap_posts:
-                    cache.bulk_insert_posts(self.id, gap_posts)
+                    self.app.cache.bulk_insert_posts(self.id, gap_posts)
                 
-                all_posts = cache.get_posts(self.id, limit=20)
+                all_posts = self.app.cache.get_posts(self.id, limit=20)
                 self.post_message(TimelineUpdate(all_posts))
             else:
                 log.info(f"Gap is large or cache is empty for {self.id}, fetching latest.")
                 posts = self.fetch_posts(limit=10)
                 if posts:
-                    cache.bulk_insert_posts(self.id, posts)
+                    self.app.cache.bulk_insert_posts(self.id, posts)
                 self.post_message(TimelineUpdate(posts))
 
         except Exception as e:
@@ -141,7 +140,7 @@ class Timeline(Static, can_focus=True):
 
     def get_latest_post_id_from_cache(self):
         """Helper to get the ID of the very latest post in the cache."""
-        latest_posts = cache.get_posts(self.id, limit=1)
+        latest_posts = self.app.cache.get_posts(self.id, limit=1)
         if latest_posts:
             return latest_posts[0]['id']
         return None
@@ -438,11 +437,11 @@ class Timeline(Static, can_focus=True):
 class Timelines(Static):
     """A widget to display the three timelines."""
     def compose(self):
-        if config.home_timeline_enabled:
+        if self.app.config.home_timeline_enabled:
             yield Timeline("Home", id="home")
-        if config.notifications_timeline_enabled:
+        if self.app.config.notifications_timeline_enabled:
             yield Timeline("Notifications", id="notifications")
-        if config.federated_timeline_enabled:
+        if self.app.config.federated_timeline_enabled:
             yield Timeline("Federated", id="federated")
 
     def on_mount(self) -> None:

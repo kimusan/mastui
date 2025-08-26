@@ -4,7 +4,6 @@ import httpx
 from io import BytesIO
 from textual_image.renderable import Image, SixelImage, HalfcellImage, TGPImage
 from PIL import Image as PILImage
-from mastui.config import config
 import hashlib
 import logging
 
@@ -14,10 +13,10 @@ log = logging.getLogger(__name__)
 class ImageWidget(Static):
     """A widget to display an image."""
 
-    def __init__(self, url: str, renderer: str, **kwargs):
+    def __init__(self, url: str, config, **kwargs):
         super().__init__("Loading image...", **kwargs)
         self.url = url
-        self.renderer = renderer
+        self.config = config
         self.pil_image = None
 
     def on_mount(self):
@@ -28,7 +27,7 @@ class ImageWidget(Static):
         try:
             # Create a unique filename from the URL
             filename = hashlib.sha256(self.url.encode()).hexdigest()
-            cache_path = config.image_cache_dir / filename
+            cache_path = self.config.image_cache_dir / filename
             log.debug(f"Image cache path: {cache_path}")
 
             if cache_path.exists():
@@ -37,7 +36,7 @@ class ImageWidget(Static):
             else:
                 log.debug(f"Image not in cache, downloading: {self.url}")
                 with httpx.stream(
-                    "GET", self.url, timeout=30, verify=config.ssl_verify
+                    "GET", self.url, timeout=30, verify=self.config.ssl_verify
                 ) as response:
                     response.raise_for_status()
                     image_data = response.read()
@@ -72,7 +71,7 @@ class ImageWidget(Static):
             "ansi": HalfcellImage,
             "tgp": TGPImage,
         }
-        renderer_class = renderer_map.get(self.renderer, Image)
+        renderer_class = renderer_map.get(self.config.image_renderer, Image)
 
         width = self.size.width - 4
         if width <= 0:

@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable, Static, Header
 from textual.containers import Vertical
 
 class HelpScreen(ModalScreen):
@@ -10,39 +10,45 @@ class HelpScreen(ModalScreen):
     ]
 
     def compose(self):
+        self.title = "Mastui Help"
         with Vertical(id="help-dialog"):
-            yield Static("Key Bindings", classes="title")
-            table = DataTable()
-            table.add_columns("Key", "Action", "Context")
+            yield Header(show_clock=False)
+            yield Static("[bold]Key Bindings[/bold]", classes="title")
+            table = DataTable(zebra_stripes=True)
+            table.add_columns("Key", "Action")
             
             # General App Bindings
-            table.add_row("[bold]Global[/bold]")
-            table.add_row("d", "Toggle dark/light mode", "Anywhere")
-            table.add_row("r", "Refresh all timelines", "Anywhere")
-            table.add_row("c", "Compose new post", "Anywhere")
-            table.add_row("o", "Open options screen", "Anywhere")
-            table.add_row("?", "Show this help screen", "Anywhere")
-            table.add_row("q", "Quit the application", "Anywhere")
+            table.add_row("[bold]General[/bold]", "")
+            table.add_row("q", "Quit the application")
+            table.add_row("d", "Toggle dark/light mode")
+            table.add_row("u", "Switch user profile")
+            table.add_row("o", "Open options screen")
+            table.add_row("/", "Open search screen")
+            table.add_row("?", "Show this help screen")
+            table.add_row("escape", "Close dialog/modal or go back")
 
             # Timeline Bindings
-            table.add_row("")
-            table.add_row("[bold]Timeline / Thread View[/bold]")
-            table.add_row("up/down", "Navigate posts", "Timeline/Thread")
-            table.add_row("left/right", "Switch between timelines", "Timeline")
-            table.add_row("enter", "View post thread", "Timeline")
-            table.add_row("a", "Reply to selected post", "Timeline/Thread")
-            table.add_row("l", "Like selected post", "Timeline/Thread")
-            table.add_row("b", "Boost selected post", "Timeline/Thread")
-            table.add_row("p", "View profile of post author", "Timeline/Thread")
+            table.add_row("", "") # Spacer
+            table.add_row("[bold]Timelines[/bold]", "")
+            table.add_row("up / k", "Scroll up / Move selection up")
+            table.add_row("down / j", "Scroll down / Move selection down")
+            table.add_row("left / h", "Focus timeline to the left")
+            table.add_row("right / l", "Focus timeline to the right")
+            table.add_row("r", "Refresh all timelines")
+            table.add_row("c", "Compose new post")
+
+            # Post Actions (when a post is selected)
+            table.add_row("", "") # Spacer
+            table.add_row("[bold]Post Actions[/bold]", "")
+            table.add_row("a", "Reply to post")
+            table.add_row("l", "Like / Unlike post")
+            table.add_row("b", "Boost / Reblog post")
+            table.add_row("p", "View author's profile")
+            table.add_row("enter", "View post thread")
 
             # Profile Screen Bindings
-            table.add_row("")
-            table.add_row("[bold]Profile View[/bold]")
-            table.add_row("f", "Follow/Unfollow user", "Profile")
-
-            # Modal Screen Bindings
-            table.add_row("")
-            table.add_row("[bold]Modals[/bold]")
-            table.add_row("escape", "Close the current modal/dialog", "Any Modal")
+            table.add_row("", "") # Spacer
+            table.add_row("[bold]Profile View[/bold]", "")
+            table.add_row("f", "Follow / Unfollow user")
 
             yield table

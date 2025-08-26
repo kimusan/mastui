@@ -11,15 +11,13 @@ from textual.widgets import (
 )
 from textual.containers import Grid, Vertical, Horizontal
 from textual import on
-from mastui.config import config
-from mastui.cache import cache
-
 
 class ConfigScreen(ModalScreen):
     """A modal screen for changing settings."""
 
     def compose(self):
         self.title = "Mastui Options"
+        config = self.app.config  # Use the app's config object
         with Vertical(id="config-dialog"):
             yield Header(show_clock=False)
 
@@ -127,6 +125,7 @@ class ConfigScreen(ModalScreen):
 
     def save_settings(self):
         """Saves the current settings to the config object."""
+        config = self.app.config
         config.home_auto_refresh = self.query_one("#home_auto_refresh").value
         config.home_auto_refresh_interval = int(
             self.query_one("#home_auto_refresh_interval").value

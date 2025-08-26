@@ -6,7 +6,6 @@ from rich.markdown import Markdown
 from rich.text import Text
 from mastui.utils import to_markdown
 from mastui.image import ImageWidget
-from mastui.config import config
 import logging
 
 log = logging.getLogger(__name__)
@@ -71,8 +70,8 @@ class ProfileScreen(ModalScreen):
             for field in profile['fields']:
                 fields_text += f"**{field['name']}:** {to_markdown(field['value'])}\n"
 
-        if config.image_support:
-            container.mount(ImageWidget(profile['avatar'], config.image_renderer, id="profile-avatar"))
+        if self.app.config.image_support:
+            container.mount(ImageWidget(profile['avatar'], self.app.config, id="profile-avatar"))
 
         container.mount(
             Static(Panel(header, border_style="dim")),

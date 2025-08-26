@@ -1,9 +1,10 @@
 import clipman
 from textual.app import App, ComposeResult
 from textual.containers import Grid, Vertical
-from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, Header
+from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, Header, ContentSwitcher
 from textual.screen import ModalScreen
 from urllib.parse import urlparse
+from rich.panel import Panel
 
 from mastui.mastodon_api import login, create_app
 import logging
@@ -14,35 +15,79 @@ log = logging.getLogger(__name__)
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
 
+    DEFAULT_CSS = """
+    LoginScreen {
+        align: center middle;
+    }
+
+    #login-dialog {
+        width: 80;
+        height: auto;
+        padding: 1;
+        background: $surface;
+        border: $primary;
+    }
+
+    #login-grid {
+        grid-size: 2;
+        grid-gutter: 1;
+        padding: 1;
+    }
+
+    #login-grid > Label {
+        text-align: right;
+        margin-top: 1;
+    }
+    
+    #login-status {
+        height: 3;
+        text-align: center;
+        color: $error;
+    }
+    """
+
+    def __init__(self, host: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.host = host
+        self.client_id = None
+        self.client_secret = None
+
     def compose(self) -> ComposeResult:
         self.title = "Mastui Login"
-        with Grid(id="dialog"):
+        with Vertical(id="login-dialog"):
             yield Header(show_clock=False)
-            yield Label("Mastodon Instance:", id="host_label")
-            yield Input(placeholder="mastodon.social", id="host")
+            with ContentSwitcher(initial="login-initial-view"):
+                with Vertical(id="login-initial-view"):
+                    yield Static("[bold]Welcome to Mastui![/bold]\n\nEnter your Mastodon instance to get started.")
+                    with Grid(id="login-grid"):
+                        yield Label("Mastodon Instance:")
+                        yield Input(placeholder="mastodon.social", id="host", value=self.host or "")
+                    yield Static() # Spacer
+                    yield Button("Get Auth Link", variant="primary", id="get_auth")
 
-            yield Static()  # Spacer
-            yield Button("Get Auth Link", variant="primary", id="get_auth")
+                with Vertical(id="login-auth-view"):
+                    yield Static("1. An authorization link has been copied to your clipboard (if possible).")
+                    yield Static("   Open it in your browser to grant Mastui access.")
+                    yield TextArea("", id="auth_link", read_only=True)
+                    yield Static("\n2. Paste the authorization code you received here:")
+                    yield Input(placeholder="Authorization Code", id="auth_code")
+                    yield Button("Login", variant="primary", id="login")
 
-            yield LoadingIndicator(classes="hidden")
-            yield Static(id="status", classes="hidden")
+                with Vertical(id="login-loading-view", classes="centered"):
+                     yield Static("Working...")
+                     yield LoadingIndicator()
 
-            with Vertical(id="auth_link_container", classes="hidden"):
-                yield Static(
-                    "1. Link copied to clipboard! Open it in your browser to authorize.",
-                    id="clipboard-status",
-                )
-                yield TextArea(
-                    "",
-                    id="auth_link",
-                )
-                yield Static("2. Paste the authorization code here:")
-                yield Input(placeholder="Authorization Code", id="auth_code")
-                yield Button("Login", variant="primary", id="login")
+            yield Static(id="login-status")
+
 
     def on_mount(self) -> None:
         """Called when the screen is mounted."""
-        self.query_one("#host").focus()
+        host_input = self.query_one("#host")
+        if self.host:
+            host_input.disabled = True
+            self.query_one("#get_auth").focus()
+        else:
+            host_input.focus()
 
     def clean_host(self, host_input: str) -> str:
         """Cleans the host input to be a valid domain."""
@@ -50,7 +95,7 @@ class LoginScreen(ModalScreen):
             return ""
         
         # Prepend a scheme if one isn't present, for urlparse to work correctly.
-        if not host_input.startswith(('http://', 'https://')):
+        if not host_input.startswith(('http://', 'https ')):
             host_input = 'https://' + host_input
             
         parsed_url = urlparse(host_input)
@@ -58,31 +103,29 @@ class LoginScreen(ModalScreen):
         return parsed_url.netloc
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
-        status = self.query_one("#status")
-        spinner = self.query_one(LoadingIndicator)
+        status = self.query_one("#login-status")
+        switcher = self.query_one(ContentSwitcher)
 
         if event.button.id == "get_auth":
             host_input_widget = self.query_one("#host")
             host_value = host_input_widget.value
             if not host_value:
-                status.update("[red]Please enter a Mastodon instance.[/red]")
-                status.remove_class("hidden")
+                status.update("Please enter a Mastodon instance.")
                 return
 
             cleaned_host = self.clean_host(host_value)
             if not cleaned_host:
-                status.update("[red]Invalid instance name.[/red]")
-                status.remove_class("hidden")
+                status.update("Invalid instance name.")
                 return
             
-            # Update the input field with the cleaned value for user feedback
             host_input_widget.value = cleaned_host
-
-            spinner.remove_class("hidden")
-            status.add_class("hidden")
+            switcher.current = "login-loading-view"
+            status.update("")
             self.run_worker(
-                lambda: self.app.call_from_thread(
-                    self.on_auth_link_created, create_app(cleaned_host)
+                lambda: (
+                    result := create_app(cleaned_host, self.app.ssl_verify),
+                    log.debug(f"create_app() returned: {result}"),
+                    self.app.call_from_thread(self.on_auth_link_created, result),
                 ),
                 exclusive=True,
                 thread=True,
@@ -92,15 +135,22 @@ class LoginScreen(ModalScreen):
             auth_code = self.query_one("#auth_code").value
             host = self.query_one("#host").value
             if not auth_code:
-                status.update("[red]Please enter the authorization code.[/red]")
-                status.remove_class("hidden")
+                status.update("Please enter the authorization code.")
                 return
 
-            spinner.remove_class("hidden")
-            status.add_class("hidden")
+            switcher.current = "login-loading-view"
+            status.update("")
             self.run_worker(
-                lambda: self.app.call_from_thread(
-                    self.on_login_complete, login(host, auth_code)
+                lambda: (
+                    result := login(
+                        host,
+                        self.client_id,
+                        self.client_secret,
+                        auth_code,
+                        self.app.ssl_verify,
+                    ),
+                    log.debug(f"login() returned: {result}"),
+                    self.app.call_from_thread(self.on_login_complete, result),
                 ),
                 exclusive=True,
                 thread=True,
@@ -108,52 +158,45 @@ class LoginScreen(ModalScreen):
 
     def on_auth_link_created(self, result) -> None:
         """Callback for when the auth link is created."""
-        status = self.query_one("#status")
-        spinner = self.query_one(LoadingIndicator)
-        spinner.add_class("hidden")
+        status = self.query_one("#login-status")
+        switcher = self.query_one(ContentSwitcher)
         
         try:
-            auth_url, error = result
+            auth_url, client_id, client_secret, error = result
+            self.client_id = client_id
+            self.client_secret = client_secret
 
             if error:
-                status.update(f"[red]Error: {error}[/red]")
-                status.remove_class("hidden")
+                status.update(f"Error: {error}")
+                switcher.current = "login-initial-view"
                 return
 
             try:
                 clipman.init()
                 clipman.set(auth_url)
-                self.query_one("#clipboard-status").update(
-                    "1. Link copied to clipboard! Open it in your browser to authorize."
-                )
             except clipman.exceptions.ClipmanBaseException as e:
                 log.warning(f"Could not copy to clipboard: {e}")
-                self.query_one("#clipboard-status").update(
-                    "1. Could not copy to clipboard. Please copy the link below manually:"
-                )
 
             auth_link_input = self.query_one("#auth_link")
             auth_link_input.text = auth_url
-            auth_link_input.read_only = True
-            self.query_one("#auth_link_container").remove_class("hidden")
-            self.query_one("#get_auth").add_class("hidden")
-            self.query_one("#host_label").add_class("hidden")
-            self.query_one("#host").disabled = True
+            switcher.current = "login-auth-view"
             self.query_one("#auth_code").focus()
         except Exception as e:
             log.error(f"Error in on_auth_link_created: {e}", exc_info=True)
-            status.update(f"[red]An unexpected error occurred. See log for details.[/red]")
-            status.remove_class("hidden")
+            status.update("An unexpected error occurred. See log for details.")
+            switcher.current = "login-initial-view"
 
     def on_login_complete(self, result) -> None:
         """Callback for when the login is complete."""
-        api, error = result
-        status = self.query_one("#status")
-        spinner = self.query_one(LoadingIndicator)
-        spinner.add_class("hidden")
+        log.debug(f"on_login_complete received result: {result}")
+        status = self.query_one("#login-status")
+        switcher = self.query_one(ContentSwitcher)
+
+        api, env_content, error = result
 
         if api:
-            self.dismiss(api)
+            self.dismiss((api, env_content))
+            return
         else:
-            status.update(f"[red]Login failed: {error}[/red]")
-            status.remove_class("hidden")
+            status.update(f"Login failed: {error}")
+            switcher.current = "login-auth-view"

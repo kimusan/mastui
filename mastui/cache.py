@@ -141,8 +141,12 @@ class Cache:
         count = 0
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         
-        for filename in os.listdir(config.image_cache_dir):
-            file_path = config.image_cache_dir / filename
+        image_cache_dir = self.db_path.parent / "image_cache"
+        if not image_cache_dir.exists():
+            return 0
+
+        for filename in os.listdir(image_cache_dir):
+            file_path = image_cache_dir / filename
             try:
                 if file_path.is_file():
                     modified_time = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
@@ -154,10 +158,3 @@ class Cache:
         
         log.info(f"Pruned {count} items from the image cache.")
         return count
-
-# Setup a global cache instance
-from mastui.config import config
-config_dir = Path.home() / ".config" / "mastui"
-config_dir.mkdir(parents=True, exist_ok=True)
-cache_db_path = config_dir / "cache.db"
-cache = Cache(cache_db_path)

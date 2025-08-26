@@ -1,46 +1,59 @@
-import os
-from dotenv import load_dotenv
 from pathlib import Path
+from dotenv import dotenv_values
+import logging
+
+log = logging.getLogger(__name__)
 
 class Config:
-    def __init__(self):
-        self.config_dir = Path.home() / ".config" / "mastui"
-        self.image_cache_dir = self.config_dir / "image_cache"
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.image_cache_dir.mkdir(exist_ok=True)
-        self.env_file = self.config_dir / ".env"
+    def __init__(self, profile_path: Path = None):
+        if profile_path:
+            self.profile_path = profile_path
+        else:
+            # Fallback for old single-profile structure
+            self.profile_path = Path.home() / ".config" / "mastui"
         
-        if self.env_file.exists():
-            load_dotenv(self.env_file)
+        self.profile_name = self.profile_path.name
 
-        self.mastodon_host = os.getenv("MASTODON_HOST")
-        self.mastodon_client_id = os.getenv("MASTODON_CLIENT_ID")
-        self.mastodon_client_secret = os.getenv("MASTODON_CLIENT_SECRET")
-        self.mastodon_access_token = os.getenv("MASTODON_ACCESS_TOKEN")
+        self.image_cache_dir = self.profile_path / "image_cache"
+        self.image_cache_dir.mkdir(exist_ok=True)
+        self.env_file = self.profile_path / ".env"
+        
+        config_values = {}
+        if self.env_file.exists():
+            config_values = dotenv_values(self.env_file)
+            log.debug(f"Loaded config from {self.env_file}: {config_values}")
+        else:
+            log.warning(f"Config file not found: {self.env_file}")
+
+
+        self.mastodon_host = config_values.get("MASTODON_HOST")
+        self.mastodon_client_id = config_values.get("MASTODON_CLIENT_ID")
+        self.mastodon_client_secret = config_values.get("MASTODON_CLIENT_SECRET")
+        self.mastodon_access_token = config_values.get("MASTODON_ACCESS_TOKEN")
         self.ssl_verify = True
         
-        self.theme = os.getenv("THEME", "textual-dark")
-        self.preferred_dark_theme = os.getenv("PREFERRED_DARK_THEME", "textual-dark")
-        self.preferred_light_theme = os.getenv("PREFERRED_LIGHT_THEME", "textual-light")
+        self.theme = config_values.get("THEME", "textual-dark")
+        self.preferred_dark_theme = config_values.get("PREFERRED_DARK_THEME", "textual-dark")
+        self.preferred_light_theme = config_values.get("PREFERRED_LIGHT_THEME", "textual-light")
 
         # Auto-refresh settings
-        self.home_auto_refresh = os.getenv("HOME_AUTO_REFRESH", "on") == "on"
-        self.home_auto_refresh_interval = int(os.getenv("HOME_AUTO_REFRESH_INTERVAL", "2"))
-        self.notifications_auto_refresh = os.getenv("NOTIFICATIONS_AUTO_REFRESH", "on") == "on"
-        self.notifications_auto_refresh_interval = int(os.getenv("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
-        self.federated_auto_refresh = os.getenv("FEDERATED_AUTO_REFRESH", "on") == "on"
-        self.federated_auto_refresh_interval = int(os.getenv("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
+        self.home_auto_refresh = config_values.get("HOME_AUTO_REFRESH", "on") == "on"
+        self.home_auto_refresh_interval = int(config_values.get("HOME_AUTO_REFRESH_INTERVAL", "2"))
+        self.notifications_auto_refresh = config_values.get("NOTIFICATIONS_AUTO_REFRESH", "on") == "on"
+        self.notifications_auto_refresh_interval = int(config_values.get("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
+        self.federated_auto_refresh = config_values.get("FEDERATED_AUTO_REFRESH", "on") == "on"
+        self.federated_auto_refresh_interval = int(config_values.get("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
 
         # Image settings
-        self.image_support = os.getenv("IMAGE_SUPPORT", "off") == "on"
-        self.image_renderer = os.getenv("IMAGE_RENDERER", "ansi")
-        self.auto_prune_cache = os.getenv("AUTO_PRUNE_CACHE", "on") == "on"
+        self.image_support = config_values.get("IMAGE_SUPPORT", "off") == "on"
+        self.image_renderer = config_values.get("IMAGE_RENDERER", "ansi")
+        self.auto_prune_cache = config_values.get("AUTO_PRUNE_CACHE", "on") == "on"
 
         # Timeline settings
-        self.home_timeline_enabled = os.getenv("HOME_TIMELINE_ENABLED", "on") == "on"
-        self.notifications_timeline_enabled = os.getenv("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
-        self.federated_timeline_enabled = os.getenv("FEDERATED_TIMELINE_ENABLED", "on") == "on"
-        self.force_single_column = os.getenv("FORCE_SINGLE_COLUMN", "off") == "on"
+        self.home_timeline_enabled = config_values.get("HOME_TIMELINE_ENABLED", "on") == "on"
+        self.notifications_timeline_enabled = config_values.get("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
+        self.federated_timeline_enabled = config_values.get("FEDERATED_TIMELINE_ENABLED", "on") == "on"
+        self.force_single_column = config_values.get("FORCE_SINGLE_COLUMN", "off") == "on"
 
 
     def save_config(self):
@@ -80,5 +93,3 @@ class Config:
         self.mastodon_client_secret = client_secret
         self.mastodon_access_token = access_token
         self.save_config()
-
-config = Config()
