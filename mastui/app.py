@@ -353,6 +353,7 @@ class Mastui(App):
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
                     poll=result["poll"],
+                    visibility=result["visibility"],
                 )
                 log.info("Post sent successfully.")
                 self.notify("Post sent successfully!", severity="information")
@@ -372,6 +373,7 @@ class Mastui(App):
                     spoiler_text=result["spoiler_text"],
                     language=result["language"],
                     in_reply_to_id=result["in_reply_to_id"],
+                    visibility=result["visibility"],
                 )
                 log.info("Reply sent successfully.")
                 self.notify("Reply sent successfully!", severity="information")

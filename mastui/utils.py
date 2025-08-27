@@ -19,6 +19,13 @@ LANGUAGE_OPTIONS = [
     ("Spanish", "es"),
 ]
 
+VISIBILITY_OPTIONS = [
+    ("🌐 Public", "public"),
+    ("🔑 Unlisted", "unlisted"),
+    ("👥 Followers-only", "private"),
+    ("🔒 Direct", "direct"),
+]
+
 MARKDOWN_LINK_REGEX = re.compile(r"\\[^\\]+\\]\(([^)]+)\\\)")
 
 

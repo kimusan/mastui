@@ -127,6 +127,12 @@ SplashScreen > Vertical {
     text-align: right;
 }
 
+.visibility-icon {
+    width: auto;
+    margin-left: 1;
+    color: $text-muted;
+}
+
 .status-message {
     margin-top: 1;
     text-align: center;
@@ -222,6 +228,11 @@ Post.reblogged {
 }
 
 #post_language_container {
+    height: auto;
+    padding: 0 1;
+}
+
+#post_visibility_container {
     height: auto;
     padding: 0 1;
 }
@@ -322,6 +333,11 @@ Post.reblogged {
 }
 
 #reply_language_container {
+    height: auto;
+    padding: 0 1;
+}
+
+#reply_visibility_container {
     height: auto;
     padding: 0 1;
 }

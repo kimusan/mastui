@@ -6,7 +6,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich import box
 from textual import on
-from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS
+from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS, VISIBILITY_OPTIONS
 
 class ReplyScreen(ModalScreen):
     """A modal screen for replying to a post."""
@@ -51,6 +51,14 @@ class ReplyScreen(ModalScreen):
                 with Horizontal(id="reply_language_container"):
                     yield Static("Language:", classes="reply_option_label")
                     yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
+
+                with Horizontal(id="reply_visibility_container"):
+                    yield Static("Visibility:", classes="reply_option_label")
+                    yield Select(
+                        VISIBILITY_OPTIONS,
+                        value="public",
+                        id="visibility_select",
+                    )
             with Horizontal(id="reply_buttons"):
                 yield Label(f"{self.max_characters}", id="character_limit")
                 yield Button("Post Reply", variant="primary", id="post_button")
@@ -90,12 +98,14 @@ class ReplyScreen(ModalScreen):
             content = self.query_one("#reply_content").text
             cw_text = self.query_one("#cw_input").value
             language = self.query_one("#language_select").value
+            visibility = self.query_one("#visibility_select").value
             
             if content:
                 result = {
                     "content": content,
                     "spoiler_text": cw_text if self.query_one("#cw_switch").value else None,
                     "language": language,
+                    "visibility": visibility,
                     "in_reply_to_id": self.post_to_reply_to['id']
                 }
                 self.dismiss(result)

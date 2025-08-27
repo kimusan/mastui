@@ -181,7 +181,6 @@ class Post(Vertical):
         author_display_name = status_to_display["account"]["display_name"]
         author_acct = status_to_display["account"]["acct"]
         author = f"{author_display_name} (@{author_acct})"
-
         self.border_title = author
         if spoiler_text:
             self.border_title = spoiler_text
@@ -211,6 +210,16 @@ class Post(Vertical):
                 id="like-count",
             )
             yield Static(self.created_at_str, classes="timestamp")
+
+            visibility_icons = {
+                "public": "🌐",
+                "unlisted": "🔑",
+                "private": "👥",
+                "direct": "🔒",
+            }
+            visibility = status_to_display.get("visibility")
+            vis_icon = visibility_icons.get(visibility, "")
+            yield Static(vis_icon, classes="visibility-icon")
 
     def show_spinner(self):
         self.query_one(".action-spinner").display = True

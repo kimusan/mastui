@@ -4,7 +4,7 @@ from textual.widgets import Button, Label, Input, Static, TextArea, Select, Head
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual import on
 from textual.css.query import NoMatches
-from mastui.utils import LANGUAGE_OPTIONS
+from mastui.utils import LANGUAGE_OPTIONS, VISIBILITY_OPTIONS
 from mastui.widgets import PollChoice, RemovePollChoice, PollChoiceMounted
 import logging
 
@@ -36,6 +36,14 @@ class PostScreen(ModalScreen):
                     yield Label("Language:", classes="post_option_label")
                     yield Select(LANGUAGE_OPTIONS, value="en", id="language_select")
                 
+                with Horizontal(id="post_visibility_container"):
+                    yield Label("Visibility:", classes="post_option_label")
+                    yield Select(
+                        VISIBILITY_OPTIONS,
+                        value="public",
+                        id="visibility_select",
+                    )
+
                 with Horizontal(id="add_poll_container"):
                     yield Label("Add Poll:", classes="post_option_label")
                     yield Switch(id="add_poll_switch")
@@ -130,11 +138,13 @@ class PostScreen(ModalScreen):
             content = self.query_one("#post_content").text
             spoiler_text = self.query_one("#cw_input").value
             language = self.query_one("#language_select").value
+            visibility = self.query_one("#visibility_select").value
             
             result = {
                 "content": content,
                 "spoiler_text": spoiler_text,
                 "language": language,
+                "visibility": visibility,
                 "poll": None,
             }
 
