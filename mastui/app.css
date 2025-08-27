@@ -15,7 +15,6 @@ Timeline {
     border: solid $panel;
     width: 1fr;
     height: 100%;
-    margin: 1;
 }
 
 .timeline-content {

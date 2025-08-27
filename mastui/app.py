@@ -106,19 +106,24 @@ class Mastui(App):
         log.info("Login successful.")
         self.api = api
 
-        # Create a default profile name
-        me = api.me()
-        # Sanitize username for directory name
-        sanitized_username = "".join(
-            c for c in me["username"] if c.isalnum() or c in "-_"
-        )
-        host = urlparse(me["url"]).hostname
-        profile_name = f"{sanitized_username}@{host}"
+        try:
+            # Create a default profile name
+            me = api.me()
+            # Sanitize username for directory name
+            sanitized_username = "".join(
+                c for c in me["username"] if c.isalnum() or c in "-_"
+            )
+            host = urlparse(me["url"]).hostname
+            profile_name = f"{sanitized_username}@{host}"
 
-        # Create the new profile
-        profile_manager.create_profile(profile_name, env_content)
+            # Create the new profile
+            profile_manager.create_profile(profile_name, env_content)
 
-        self.load_profile(profile_name)
+            self.load_profile(profile_name)
+        except Exception as e:
+            log.error(f"Error creating profile after login: {e}", exc_info=True)
+            self.notify("Failed to create profile. Please try again.", severity="error")
+            self.call_later(self.show_login_screen)
 
     def select_profile(self):
         """Select a profile to use."""
@@ -426,7 +431,8 @@ class Mastui(App):
             updated_post_data = self.api.poll_vote(poll_id, [choice])
 
             # Update the cache with the new post data
-            self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
+            if timeline_id not in ["thread", "search"]:
+                self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
 
             self.post_message(PostStatusUpdate(updated_post_data))
             self.notify("Vote cast successfully!", severity="information")
@@ -438,7 +444,8 @@ class Mastui(App):
                 try:
                     # Fetch the latest post data to get the correct poll state
                     updated_post_data = self.api.status(post_id)
-                    self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
+                    if timeline_id not in ["thread", "search"]:
+                        self.cache.bulk_insert_posts(timeline_id, [updated_post_data])
                     self.post_message(PostStatusUpdate(updated_post_data))
                 except Exception as fetch_e:
                     log.error(

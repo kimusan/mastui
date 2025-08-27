@@ -8,6 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class HashtagTimeline(ModalScreen):
     """A modal screen to display a hashtag timeline."""
 
@@ -32,8 +33,10 @@ class HashtagTimeline(ModalScreen):
         with Container(id="hashtag-timeline-dialog"):
             yield Header(show_clock=False)
             yield TimelineContent(
-                Static(f"Loading posts for #{self.hashtag}...", classes="status-message"),
-                id="hashtag-timeline-container"
+                Static(
+                    f"Loading posts for #{self.hashtag}...", classes="status-message"
+                ),
+                id="hashtag-timeline-container",
             )
 
     def on_mount(self):
@@ -55,12 +58,14 @@ class HashtagTimeline(ModalScreen):
         container.query("*").remove()
 
         if not posts:
-            container.mount(Static(f"No posts found for #{self.hashtag}.", classes="status-message"))
+            container.mount(
+                Static(f"No posts found for #{self.hashtag}.", classes="status-message")
+            )
             return
 
         for post in posts:
             container.mount(Post(post, timeline_id="hashtag"))
-        
+
         container.select_first_item()
 
     def action_scroll_up(self):

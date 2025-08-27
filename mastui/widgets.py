@@ -278,13 +278,6 @@ class Post(Vertical):
             return datetime.fromisoformat(ts.replace("Z", "+00:00"))
         return None
 
-    def action_hashtag_clicked(self, hashtag: str) -> None:
-        """Called when a hashtag is clicked."""
-        log.debug(f"Hashtag clicked: {hashtag}")
-        # Remove the leading '#' to get the raw tag
-        tag = hashtag.lstrip("#")
-        self.post_message(ViewHashtag(tag))
-
 
 class GapIndicator(Widget):
     """A widget to indicate a gap in the timeline."""
@@ -329,6 +322,10 @@ class Notification(Widget):
                 self.border_subtitle = f"Mention from {author_str}"
 
             yield Markdown(get_full_content_md(status), open_links=False)
+            if self.app.config.image_support and status.get("media_attachments"):
+                for media in status["media_attachments"]:
+                    if media["type"] == "image":
+                        yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
                 yield Static(
                     f"Boosts: {status.get('reblogs_count', 0)}", id="boost-count"
@@ -342,6 +339,10 @@ class Notification(Widget):
             status = self.notif["status"]
             self.border_title = f"❤️ {author_str} favourited your post:"
             yield Markdown(get_full_content_md(status), open_links=False)
+            if self.app.config.image_support and status.get("media_attachments"):
+                for media in status["media_attachments"]:
+                    if media["type"] == "image":
+                        yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
@@ -349,6 +350,10 @@ class Notification(Widget):
             status = self.notif["status"]
             self.border_title = f"🚀 {author_str} boosted your post:"
             yield Markdown(get_full_content_md(status), open_links=False)
+            if self.app.config.image_support and status.get("media_attachments"):
+                for media in status["media_attachments"]:
+                    if media["type"] == "image":
+                        yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
@@ -372,6 +377,10 @@ class Notification(Widget):
             )
             self.border_subtitle = f"{author_str}"
             yield Markdown(get_full_content_md(status))
+            if self.app.config.image_support and status.get("media_attachments"):
+                for media in status["media_attachments"]:
+                    if media["type"] == "image":
+                        yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
@@ -408,11 +417,6 @@ class Notification(Widget):
                 return ts_str
             return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         return None
-
-    def action_hashtag_clicked(self, hashtag: str) -> None:
-        """Called when a hashtag is clicked."""
-        tag = hashtag.lstrip("#")
-        self.post_message(ViewHashtag(tag))
 
 
 class SearchResult(Widget, can_focus=True):
