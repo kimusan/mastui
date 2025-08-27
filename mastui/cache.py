@@ -66,6 +66,10 @@ class Cache:
             posts_to_insert = []
             for post in posts:
                 created_at_str = (post.get('reblog') or post).get('created_at')
+                if not created_at_str:
+                    log.warning(f"Post {post.get('id')} has no created_at timestamp. Skipping.")
+                    continue
+
                 if isinstance(created_at_str, datetime):
                     created_at = created_at_str
                 else:

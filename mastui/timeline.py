@@ -1,13 +1,9 @@
 from textual.widgets import Static, LoadingIndicator
-from textual.containers import VerticalScroll, Horizontal
+from textual.containers import Horizontal
 from textual import on, events
-from textual.screen import ModalScreen
-from mastui.widgets import Post, Notification, GapIndicator, LikePost, BoostPost
-from mastui.reply import ReplyScreen
-from mastui.thread import ThreadScreen
-from mastui.profile import ProfileScreen
-from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewProfile, SelectPost
-from mastui.widgets import Post, Notification, GapIndicator, LikePost, BoostPost
+from mastui.widgets import Post, Notification, GapIndicator
+from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline
+from mastui.timeline_content import TimelineContent
 import logging
 from datetime import datetime, timezone, timedelta
 
@@ -23,15 +19,14 @@ class Timeline(Static, can_focus=True):
         super().__init__(**kwargs)
         self.title = title
         self.posts_data = posts_data
-        self.selected_item = None
         self.post_ids = set()
         self.latest_post_id = None
         self.oldest_post_id = None
         self.loading_more = False
 
     @property
-    def content_container(self) -> VerticalScroll:
-        return self.query_one(".timeline-content", VerticalScroll)
+    def content_container(self) -> TimelineContent:
+        return self.query_one(TimelineContent)
 
     @property
     def loading_indicator(self) -> LoadingIndicator:
@@ -245,7 +240,7 @@ class Timeline(Static, can_focus=True):
                 self.content_container.mount_all(new_widgets, before=0)
         
         if new_widgets and is_initial_load:
-            self.select_first_item()
+            self.content_container.select_first_item()
 
         prune_direction = "top" if max_id else "bottom"
         self.prune_posts(direction=prune_direction)
@@ -263,41 +258,9 @@ class Timeline(Static, can_focus=True):
                 posts_to_remove = all_posts[:num_to_remove]
 
             for post in posts_to_remove:
-                if self.selected_item is not post:
+                if self.content_container.selected_item is not post:
                     self.post_ids.discard(post.id)
                     post.remove()
-
-    def on_focus(self):
-        if not self.selected_item:
-            self.select_first_item()
-
-    def on_blur(self):
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
-
-    @on(SelectPost)
-    def on_select_post(self, message: SelectPost) -> None:
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
-        self.selected_item = message.post_widget
-        self.selected_item.add_class("selected")
-        self.focus()
-
-    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
-            self.selected_item = None
-        if self.content_container.scroll_y >= self.content_container.max_scroll_y - 2:
-            if not self.loading_more:
-                self.load_older_posts()
-
-    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
-            self.selected_item = None
-        if self.content_container.scroll_y == 0:
-            if not self.loading_more:
-                self.refresh_posts()
 
     def on_key(self, event: events.Key) -> None:
         if event.key == "left":
@@ -309,129 +272,25 @@ class Timeline(Static, can_focus=True):
         elif event.key in ("up", "down", "l", "b", "a", "enter", "p"):
             event.stop()
             if event.key == "up":
-                self.scroll_up()
+                self.content_container.scroll_up()
             elif event.key == "down":
-                self.scroll_down()
+                self.content_container.scroll_down()
             elif event.key == "l":
-                self.like_post()
+                self.content_container.like_post()
             elif event.key == "b":
-                self.boost_post()
+                self.content_container.boost_post()
             elif event.key == "a":
-                self.reply_to_post()
+                self.content_container.reply_to_post()
             elif event.key == "enter":
-                self.open_thread()
+                self.content_container.open_thread()
             elif event.key == "p":
-                self.view_profile()
-        # Let other keys bubble up to the app
-
-    def select_first_item(self):
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
-        try:
-            items = self.content_container.query("Post, Notification")
-            if items:
-                self.selected_item = items.first()
-                self.selected_item.add_class("selected")
-            else:
-                self.selected_item = None
-        except Exception as e:
-            log.error(f"Could not select first item in timeline: {e}", exc_info=True)
-            self.selected_item = None
-
-    def get_selected_item(self):
-        return self.selected_item
-
-    def open_thread(self):
-        if isinstance(self.app.screen, ModalScreen):
-            return
-        if isinstance(self.selected_item, Post):
-            status = self.selected_item.post.get("reblog") or self.selected_item.post
-            self.app.push_screen(ThreadScreen(status["id"], self.app.api))
-        elif isinstance(self.selected_item, Notification):
-            if self.selected_item.notif["type"] in ["mention", "favourite", "reblog"]:
-                status = self.selected_item.notif.get("status")
-                if status:
-                    self.app.push_screen(ThreadScreen(status["id"], self.app.api))
-
-    def view_profile(self):
-        if isinstance(self.selected_item, Post):
-            status = self.selected_item.post.get("reblog") or self.selected_item.post
-            account_id = status["account"]["id"]
-            self.post_message(ViewProfile(account_id))
-        elif isinstance(self.selected_item, Notification):
-            account_id = self.selected_item.notif["account"]["id"]
-            self.post_message(ViewProfile(account_id))
-
-    def reply_to_post(self):
-        if isinstance(self.app.screen, ModalScreen):
-            return
-        post_to_reply_to = None
-        if isinstance(self.selected_item, Post):
-            post_to_reply_to = self.selected_item.post.get("reblog") or self.selected_item.post
-        elif isinstance(self.selected_item, Notification):
-            if self.selected_item.notif["type"] == "mention":
-                post_to_reply_to = self.selected_item.notif.get("status")
-
-        if post_to_reply_to:
-            self.app.push_screen(ReplyScreen(post_to_reply_to, max_characters=self.app.max_characters), self.app.on_reply_screen_dismiss)
-        else:
-            self.app.notify("This item cannot be replied to.", severity="error")
-
-    def like_post(self):
-        if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
-            if not status_to_action:
-                self.app.notify("Cannot like a post that has been deleted.", severity="error")
-                return
-            self.selected_item.show_spinner()
-            self.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
-
-    def boost_post(self):
-        if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
-            if not status_to_action:
-                self.app.notify("Cannot boost a post that has been deleted.", severity="error")
-                return
-            self.selected_item.show_spinner()
-            self.post_message(BoostPost(status_to_action["id"]))
-
-    def scroll_up(self):
-        items = self.content_container.query("Post, Notification")
-        if self.selected_item and items:
-            try:
-                idx = items.nodes.index(self.selected_item)
-                if idx > 0:
-                    self.selected_item.remove_class("selected")
-                    self.selected_item = items[idx - 1]
-                    self.selected_item.add_class("selected")
-                    self.selected_item.scroll_visible()
-                else:
-                    self.refresh_posts()
-            except ValueError as e:
-                log.error(f"Could not scroll up in timeline: {e}", exc_info=True)
-                self.select_first_item()
-
-    def scroll_down(self):
-        items = self.content_container.query("Post, Notification")
-        if self.selected_item and items:
-            try:
-                idx = items.nodes.index(self.selected_item)
-                if idx < len(items) - 1:
-                    self.selected_item.remove_class("selected")
-                    self.selected_item = items[idx + 1]
-                    self.selected_item.add_class("selected")
-                    self.selected_item.scroll_visible()
-                else:
-                    self.load_older_posts()
-            except ValueError as e:
-                log.error(f"Could not scroll down in timeline: {e}", exc_info=True)
-                self.select_first_item()
+                self.content_container.view_profile()
 
     def compose(self):
         with Horizontal(classes="timeline-header"):
             yield Static(self.title, classes="timeline_title")
             yield LoadingIndicator(classes="timeline-refresh-spinner")
-        yield VerticalScroll(classes="timeline-content")
+        yield TimelineContent(classes="timeline-content")
 
 
 class Timelines(Static):

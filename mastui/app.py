@@ -15,8 +15,10 @@ from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
 from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
+from mastui.hashtag_timeline import HashtagTimeline
 from mastui.logging_config import setup_logging
-from mastui.retro import retro_theme
+from mastui.retro import retro_theme_builtin
+from mastui.theme_manager import load_custom_themes
 from mastui.config import Config
 from mastui.profile_manager import profile_manager
 from mastui.profile_selection import ProfileSelectionScreen
@@ -27,6 +29,7 @@ from mastui.messages import (
     FocusNextTimeline,
     FocusPreviousTimeline,
     ViewProfile,
+    ViewHashtag,
     ResumeTimers,
 )
 from mastui.cache import Cache
@@ -84,7 +87,12 @@ class Mastui(App):
     def on_mount(self) -> None:
         """Called when the app is mounted."""
         log.debug("Mastui app mounted.")
-        self.register_theme(retro_theme)
+
+        # Load and register all themes
+        for theme in load_custom_themes():
+            self.register_theme(theme)
+        self.register_theme(retro_theme_builtin)
+
         if self.action == "add_account":
             log.debug(f"Action '{self.action}' specified, showing login screen.")
             self.call_later(self.show_login_screen)
@@ -149,7 +157,9 @@ class Mastui(App):
 
         # Check if the profile is incomplete (migrated without access token)
         if not self.config.mastodon_access_token:
-            log.error(f"Profile '{profile_name}' is incomplete and missing access token.")
+            log.error(
+                f"Profile '{profile_name}' is incomplete and missing access token."
+            )
             self.notify(
                 f"Profile '{profile_name}' must be re-authorized.",
                 title="Re-authorization Required",
@@ -487,6 +497,27 @@ class Mastui(App):
         self.push_screen(
             ProfileScreen(message.account_id, self.api), self.on_profile_screen_dismiss
         )
+
+    @on(ViewHashtag)
+    def on_view_hashtag(self, message: ViewHashtag) -> None:
+        """Called when a hashtag is clicked."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.pause_timers()
+        self.push_screen(
+            HashtagTimeline(hashtag=message.hashtag, api=self.api),
+            self.on_hashtag_screen_dismiss,
+        )
+
+    def on_hashtag_screen_dismiss(self, _) -> None:
+        """Called when the hashtag timeline screen is dismissed."""
+        self.resume_timers()
+
+    def action_link_clicked(self, link: str) -> None:
+        """Called when a link is clicked."""
+        import webbrowser
+
+        webbrowser.open(link)
 
     def on_profile_screen_dismiss(self, _) -> None:
         """Called when the profile screen is dismissed."""

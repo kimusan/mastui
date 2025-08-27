@@ -1,16 +1,21 @@
 import html2text
-from textual.widgets import Static, LoadingIndicator, RadioSet, RadioButton, Button, Input
+from textual.widgets import (
+    Static,
+    LoadingIndicator,
+    RadioSet,
+    RadioButton,
+    Button,
+    Input,
+    Markdown,
+)
 from textual.widget import Widget
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich import box
 from textual.containers import VerticalScroll, Vertical, Horizontal
 from textual import events, on
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime, to_markdown
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
-from mastui.messages import SelectPost, VoteOnPoll
+from mastui.messages import SelectPost, VoteOnPoll, ViewHashtag
 import logging
 from datetime import datetime
 
@@ -41,6 +46,7 @@ class BoostPost(PostMessage):
 
 class RemovePollChoice(Message):
     """A message to remove a poll choice."""
+
     def __init__(self, poll_choice_widget: Widget) -> None:
         self.poll_choice_widget = poll_choice_widget
         super().__init__()
@@ -48,11 +54,13 @@ class RemovePollChoice(Message):
 
 class PollChoiceMounted(Message):
     """A message to indicate that a poll choice has been mounted."""
+
     pass
 
 
 class PollChoice(Horizontal):
     """A widget for a single poll choice."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_class("poll-choice")
@@ -90,15 +98,15 @@ class PollWidget(Vertical):
             for i, option in enumerate(self.poll["options"]):
                 votes = option.get("votes_count", 0)
                 percentage = (votes / total_votes * 100) if total_votes > 0 else 0
-                
-                is_own_vote = i in self.poll.get('own_votes', [])
-                
+
+                is_own_vote = i in self.poll.get("own_votes", [])
+
                 label_prefix = "✓ " if is_own_vote else "  "
                 label = f"{label_prefix}{option['title']} ({votes} votes, {percentage:.2f}%)"
-                
+
                 bar_color = "green" if is_own_vote else "blue"
                 result_bar = Static(f"[{bar_color}] {'█' * int(percentage / 2)} [/]")
-                
+
                 yield Static(label)
                 yield result_bar
         else:
@@ -126,7 +134,14 @@ class PollWidget(Vertical):
             # Check if already voted, just in case
             if self.poll.get("voted"):
                 return
-            self.post_message(VoteOnPoll(self.poll["id"], event.radio_set.pressed_index, self.timeline_id, self.post_id))
+            self.post_message(
+                VoteOnPoll(
+                    self.poll["id"],
+                    event.radio_set.pressed_index,
+                    self.timeline_id,
+                    self.post_id,
+                )
+            )
             # Disable the radio set to prevent re-voting
             event.radio_set.disabled = True
 
@@ -167,25 +182,20 @@ class Post(Vertical):
         author_acct = status_to_display["account"]["acct"]
         author = f"{author_display_name} (@{author_acct})"
 
-        panel_title = author
-        panel_subtitle = ""
-
+        self.border_title = author
         if spoiler_text:
-            panel_title = spoiler_text
-            panel_subtitle = author
+            self.border_title = spoiler_text
+            self.border_subtitle = author
 
-        yield Static(
-            Panel(
-                Markdown(get_full_content_md(status_to_display)),
-                title=panel_title,
-                subtitle=panel_subtitle,
-                box=box.ROUNDED,
-                padding=(0, 1),
-            )
-        )
+        yield Markdown(get_full_content_md(status_to_display), open_links=False)
+
         if status_to_display.get("poll"):
-            yield PollWidget(status_to_display["poll"], timeline_id=self.timeline_id, post_id=status_to_display["id"])
-            
+            yield PollWidget(
+                status_to_display["poll"],
+                timeline_id=self.timeline_id,
+                post_id=status_to_display["id"],
+            )
+
         if self.app.config.image_support and status_to_display.get("media_attachments"):
             for media in status_to_display["media_attachments"]:
                 if media["type"] == "image":
@@ -211,7 +221,7 @@ class Post(Vertical):
     def update_from_post(self, post):
         self.post = post
         status_to_display = self.post.get("reblog") or self.post
-        
+
         # Update classes
         self.remove_class("favourited", "reblogged")
         if status_to_display.get("favourited"):
@@ -232,11 +242,32 @@ class Post(Vertical):
         for poll_widget in self.query(PollWidget):
             poll_widget.remove()
         if status_to_display.get("poll"):
-            self.mount(PollWidget(status_to_display["poll"], timeline_id=self.timeline_id, post_id=status_to_display["id"]), after=self.query_one(".post-footer"))
+            self.mount(
+                PollWidget(
+                    status_to_display["poll"],
+                    timeline_id=self.timeline_id,
+                    post_id=status_to_display["id"],
+                ),
+                after=self.query_one(".post-footer"),
+            )
 
     def on_click(self, event: events.Click) -> None:
         event.stop()
         self.post_message(SelectPost(self))
+
+    @on(Markdown.LinkClicked)
+    def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        """Handle a link being clicked in the Markdown."""
+        event.stop()
+        href = event.href
+        # Heuristic to check if the link is a hashtag
+        if "/tags/" in href:
+            hashtag = href.split("/tags/")[-1].rstrip("/")
+            self.post_message(ViewHashtag(hashtag))
+            return  # Explicitly stop processing here
+
+        # If it's not a hashtag, open it in the browser
+        self.app.action_link_clicked(href)
 
     def get_created_at(self) -> datetime | None:
         status = self.post.get("reblog") or self.post
@@ -246,6 +277,13 @@ class Post(Vertical):
                 return ts
             return datetime.fromisoformat(ts.replace("Z", "+00:00"))
         return None
+
+    def action_hashtag_clicked(self, hashtag: str) -> None:
+        """Called when a hashtag is clicked."""
+        log.debug(f"Hashtag clicked: {hashtag}")
+        # Remove the leading '#' to get the raw tag
+        tag = hashtag.lstrip("#")
+        self.post_message(ViewHashtag(tag))
 
 
 class GapIndicator(Widget):
@@ -284,21 +322,13 @@ class Notification(Widget):
         if notif_type == "mention":
             status = self.notif["status"]
             spoiler_text = status.get("spoiler_text")
-            panel_title = f"Mention from {author_str}"
-            panel_subtitle = ""
-            if spoiler_text:
-                panel_title = spoiler_text
-                panel_subtitle = f"Mention from {author_str}"
 
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    title=panel_title,
-                    subtitle=panel_subtitle,
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
+            self.border_title = f"Mention from {author_str}"
+            if spoiler_text:
+                self.border_title = spoiler_text
+                self.border_subtitle = f"Mention from {author_str}"
+
+            yield Markdown(get_full_content_md(status), open_links=False)
             with Horizontal(classes="post-footer"):
                 yield Static(
                     f"Boosts: {status.get('reblogs_count', 0)}", id="boost-count"
@@ -310,48 +340,38 @@ class Notification(Widget):
 
         elif notif_type == "favourite":
             status = self.notif["status"]
-            yield Static(f"❤️ {author_str} favourited your post:")
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
+            self.border_title = f"❤️ {author_str} favourited your post:"
+            yield Markdown(get_full_content_md(status), open_links=False)
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "reblog":
             status = self.notif["status"]
-            yield Static(f"🚀 {author_str} boosted your post:")
-            yield Static(
-                Panel(
-                    Markdown(get_full_content_md(status)),
-                    box=box.ROUNDED,
-                    padding=(0, 1),
-                )
-            )
+            self.border_title = f"🚀 {author_str} boosted your post:"
+            yield Markdown(get_full_content_md(status), open_links=False)
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "follow":
-            yield Static(f"👋 {author_str} followed you.")
+            self.border_title = f"👋 {author_str} followed you."
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
         elif notif_type == "poll":
             status = self.notif["status"]
-            poll = status.get("poll", {})
-            options = poll.get("options", [])
-            total_votes = poll.get("votes_count", 0)
-
-            yield Static("📊 A poll you participated in has ended:")
-
-            for option in options:
-                title = option.get("title", "N/A")
-                votes = option.get("votes_count", 0)
-                percentage = (votes / total_votes * 100) if total_votes > 0 else 0
-                yield Static(f"  - {title}: {votes} votes ({percentage:.2f}%)")
+            self.border_title = "📊 A poll you participated in has ended:"
+            yield PollWidget(
+                status["poll"], timeline_id="notifications", post_id=status["id"]
+            )
+            with Horizontal(classes="post-footer"):
+                yield Static(self.created_at_str, classes="timestamp")
+        elif notif_type == "update":
+            status = self.notif["status"]
+            self.border_title = (
+                f"✍️ A post by {author_str} you interacted with was updated"
+            )
+            self.border_subtitle = f"{author_str}"
+            yield Markdown(get_full_content_md(status))
             with Horizontal(classes="post-footer"):
                 yield Static(self.created_at_str, classes="timestamp")
 
@@ -361,6 +381,20 @@ class Notification(Widget):
     def on_click(self, event: events.Click) -> None:
         event.stop()
         self.post_message(SelectPost(self))
+
+    @on(Markdown.LinkClicked)
+    def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        """Handle a link being clicked in the Markdown."""
+        event.stop()
+        href = event.href
+        # Heuristic to check if the link is a hashtag
+        if "/tags/" in href:
+            hashtag = href.split("/tags/")[-1].rstrip("/")
+            self.post_message(ViewHashtag(hashtag))
+            return  # Explicitly stop processing here
+
+        # If it's not a hashtag, open it in the browser
+        self.app.action_link_clicked(href)
 
     def get_created_at(self) -> datetime | None:
         ts_str = None
@@ -375,26 +409,36 @@ class Notification(Widget):
             return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         return None
 
+    def action_hashtag_clicked(self, hashtag: str) -> None:
+        """Called when a hashtag is clicked."""
+        tag = hashtag.lstrip("#")
+        self.post_message(ViewHashtag(tag))
+
 
 class SearchResult(Widget, can_focus=True):
     """A base class for search results."""
+
     pass
 
 
 class AccountResult(SearchResult):
     """A widget to display an account search result."""
+
     def __init__(self, account: dict, **kwargs):
         super().__init__(**kwargs)
         self.account = account
         self.add_class("search-result")
 
     def compose(self):
-        yield Static(f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}")
-        yield Static(Markdown(to_markdown(self.account['note'])))
+        yield Static(
+            f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}"
+        )
+        yield Static(Markdown(to_markdown(self.account["note"]), open_links=False))
 
 
 class HashtagResult(SearchResult):
     """A widget to display a hashtag search result."""
+
     def __init__(self, hashtag: dict, **kwargs):
         super().__init__(**kwargs)
         self.hashtag = hashtag
@@ -407,6 +451,7 @@ class HashtagResult(SearchResult):
 
 class StatusResult(SearchResult):
     """A widget to display a status search result."""
+
     def __init__(self, status: dict, **kwargs):
         super().__init__(**kwargs)
         self.status = status

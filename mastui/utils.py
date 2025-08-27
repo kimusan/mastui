@@ -15,13 +15,17 @@ LANGUAGE_OPTIONS = [
     ("Spanish", "es"),
 ]
 
-MARKDOWN_LINK_REGEX = re.compile(r'\\[^\\]+\\]\(([^)]+)\\\)')
+MARKDOWN_LINK_REGEX = re.compile(r"\\[^\\]+\\]\(([^)]+)\\\)")
+
 
 def markdown_links_to_html(text: str) -> str:
     """Converts Markdown-style links in a string to HTML <a> tags."""
     if not text:
         return ""
-    return MARKDOWN_LINK_REGEX.sub(lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', text)
+    return MARKDOWN_LINK_REGEX.sub(
+        lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', text
+    )
+
 
 def to_markdown(html: str) -> str:
     """
@@ -31,8 +35,8 @@ def to_markdown(html: str) -> str:
         return ""
 
     # First, parse with BeautifulSoup to handle HTML and decode entities.
-    soup = BeautifulSoup(html, 'html.parser')
-    
+    soup = BeautifulSoup(html, "html.parser")
+
     # Convert the parsed soup back to a string.
     cleaned_html = str(soup)
 
@@ -42,8 +46,9 @@ def to_markdown(html: str) -> str:
     # Finally, convert the fully-HTML content to terminal-friendly text.
     h = html2text.HTML2Text()
     h.ignore_links = False
-    h.body_width = 0 # Don't wrap lines
+    h.body_width = 0  # Don't wrap lines
     return h.handle(html_with_links)
+
 
 def get_full_content_md(status: dict) -> str:
     """Gets the full markdown content for a status, including media."""
@@ -51,7 +56,7 @@ def get_full_content_md(status: dict) -> str:
         return ""
 
     html_content = status.get("content") or status.get("note") or ""
-    
+
     content_md = to_markdown(html_content)
 
     if status.get("media_attachments"):
@@ -73,8 +78,7 @@ def get_full_content_md(status: dict) -> str:
     return content_md
 
 
-
-def format_datetime(dt_obj):
+def format_datetime(dt_obj) -> str:
     """Formats a datetime string or object into YYYY-MM-DD HH:MM."""
     if isinstance(dt_obj, str):
         dt = parse(dt_obj)

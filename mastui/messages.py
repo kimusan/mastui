@@ -49,6 +49,13 @@ class ViewProfile(Message):
         super().__init__()
 
 
+class ViewHashtag(Message):
+    """A message to view a hashtag timeline."""
+    def __init__(self, hashtag: str) -> None:
+        self.hashtag = hashtag
+        super().__init__()
+
+
 class VoteOnPoll(Message):
     """A message to vote on a poll."""
     def __init__(self, poll_id: str, choice: int, timeline_id: str, post_id: str) -> None:

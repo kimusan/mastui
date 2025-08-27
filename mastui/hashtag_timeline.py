@@ -1,7 +1,9 @@
 from textual.screen import ModalScreen
-from textual.widgets import Static
-from textual.containers import VerticalScroll, Container
+from textual.widgets import Static, Header
+from textual.containers import Container
+from textual.events import Key
 from mastui.widgets import Post
+from mastui.timeline_content import TimelineContent
 import logging
 
 log = logging.getLogger(__name__)
@@ -11,6 +13,13 @@ class HashtagTimeline(ModalScreen):
 
     BINDINGS = [
         ("escape", "dismiss", "Close Timeline"),
+        ("up", "scroll_up", "Scroll Up"),
+        ("down", "scroll_down", "Scroll Down"),
+        ("l", "like_post", "Like Post"),
+        ("b", "boost_post", "Boost Post"),
+        ("a", "reply_to_post", "Reply to Post"),
+        ("p", "view_profile", "View Profile"),
+        ("enter", "open_thread", "Open Thread"),
     ]
 
     def __init__(self, hashtag: str, api, **kwargs) -> None:
@@ -21,7 +30,8 @@ class HashtagTimeline(ModalScreen):
     def compose(self):
         self.title = f"#{self.hashtag}"
         with Container(id="hashtag-timeline-dialog"):
-            yield VerticalScroll(
+            yield Header(show_clock=False)
+            yield TimelineContent(
                 Static(f"Loading posts for #{self.hashtag}...", classes="status-message"),
                 id="hashtag-timeline-container"
             )
@@ -50,3 +60,26 @@ class HashtagTimeline(ModalScreen):
 
         for post in posts:
             container.mount(Post(post, timeline_id="hashtag"))
+        
+        container.select_first_item()
+
+    def action_scroll_up(self):
+        self.query_one(TimelineContent).scroll_up()
+
+    def action_scroll_down(self):
+        self.query_one(TimelineContent).scroll_down()
+
+    def action_like_post(self):
+        self.query_one(TimelineContent).like_post()
+
+    def action_boost_post(self):
+        self.query_one(TimelineContent).boost_post()
+
+    def action_reply_to_post(self):
+        self.query_one(TimelineContent).reply_to_post()
+
+    def action_view_profile(self):
+        self.query_one(TimelineContent).view_profile()
+
+    def action_open_thread(self):
+        self.query_one(TimelineContent).open_thread()

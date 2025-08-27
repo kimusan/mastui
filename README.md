@@ -7,6 +7,7 @@ Mastui is a powerful, fast, and feature-rich Mastodon client for your terminal. 
 ## Features
 
 * **Multi-Column Layout:** View your Home, Notifications, and Federated timelines all at once.
+* **Multi-Profile:** Log into multiple accounts and switch between them (each with individual cache, theme, settings).
 * **Timeline Caching:** A persistent SQLite cache makes loading posts fast and resilient to network issues.
 * **Compose and Reply:** A full-featured compose window for new posts and replies, with a character counter, content warnings, and language selection.
 * **"Infinite" Scrolling:** Scroll down to load older posts from your cache or the server.
@@ -16,7 +17,7 @@ Mastui is a powerful, fast, and feature-rich Mastodon client for your terminal. 
 * **Highly Configurable:**
   * Toggle the visibility of each timeline.
   * Configure auto-refresh intervals for each timeline.
-  * Choose between light and dark mode themes.
+  * Choose between light and dark mode and multiple themes - including support for custom themes.
 * **And much more...** including content warning support, SSL verification options, and a detailed help screen.
 
 ## Screenshots
@@ -110,4 +111,3 @@ See also the list of contributors who participated in this project.
 * Other projects that have inspired or influenced the design of Mastui
 
 Please feel free to reach out to me if you have any questions, comments, or concerns.
-

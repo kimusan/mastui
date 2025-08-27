@@ -1,5 +1,7 @@
 Screen {
     layout: vertical;
+    background: $background;
+    color: $foreground;
 }
 
 Timelines {
@@ -10,7 +12,7 @@ Timelines {
 
 Timeline {
     layout: vertical;
-    border: solid $accent;
+    border: solid $panel;
     width: 1fr;
     height: 100%;
     margin: 1;
@@ -21,13 +23,13 @@ Timeline {
 }
 
 Timeline:focus {
-    border: double $accent-darken-2;
+    border: double $primary;
 }
 
 .timeline-header {
     height: 1;
-    background: $accent;
-    color: $text;
+    background: $surface;
+    color: $foreground;
     dock: top;
 }
 
@@ -36,6 +38,8 @@ Timeline:focus {
     height: 1;
     text-align: center;
     padding: 0 1;
+    color: $primary;
+    text-style: bold;
 }
 
 .timeline-refresh-spinner {
@@ -49,7 +53,11 @@ Timeline:focus {
 .timeline-item {
     height: auto;
     margin-bottom: 1;
-}
+    border: round $primary;
+    padding: 0;
+    border-subtitle-align: center;
+    border-title-align: center;
+  }
 
 .single-column-mode Timeline {
     min-width: 100%;
@@ -57,9 +65,9 @@ Timeline:focus {
 }
 
 .boost-header {
-    padding: 0 1;
-    background: $primary-darken-2;
-    color: $text;
+    padding: 0 0;
+    background: $accent-darken-1;
+    color: $foreground;
     height: 1;
 }
 
@@ -124,27 +132,24 @@ SplashScreen > Vertical {
     margin-top: 1;
     text-align: center;
 }
-
-Post.favourited {
-    background: $success 20%;
+Post {
+    link-color: $accent;
 }
-
-Post.reblogged {
+Post:focus {
+    border: double $accent;
+    background: $accent 50%;
+}
+Post.favourited {
     background: $warning 20%;
 }
 
-.timeline-item.selected {
-    background: $primary 20%;
+Post.reblogged {
+    background: $success 20%;
 }
 
-Post.selected {
-    background: $primary 20%;
+.timeline-item.selected, Post.selected, Notification.selected {
+    background: $primary 10%;
 }
-
-Notification.selected {
-    background: $primary 20%;
-}
-
 
 #dialog {
     grid-size: 2;
@@ -456,7 +461,7 @@ ImageWidget {
     color: $text-muted;
 }
 
-LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen {
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline {
     align: center middle;
 }
 
@@ -538,5 +543,28 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
 
 .search-result:focus {
     border: double $accent;
+    background: $primary 20%;
 }
 
+Markdown {
+    link-color: $accent;
+}
+* {
+    scrollbar-size: 0 1;
+    scrollbar-background: $primary-darken-3;
+    scrollbar-color: $primary;
+
+    scrollbar-background-hover: $primary-lighten-2;
+    scrollbar-color-hover: $secondary;
+
+    scrollbar-background-active: $primary-darken-1;
+    scrollbar-color-active: $secondary;
+
+    link-color: $accent 80%;
+ 
+    link-background-hover: $primary 50%;
+    link-color-hover: $accent;
+
+    link-style: italic;
+    link-style-hover: italic underline;
+}
