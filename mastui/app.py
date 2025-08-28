@@ -303,6 +303,7 @@ class Mastui(App):
         if isinstance(self.screen, ModalScreen):
             return
         self.pause_timers()
+        log.debug(f"SEARCH: API object base URL is {self.api.api_base_url}")
         self.push_screen(SearchScreen(api=self.api), self.on_search_screen_dismiss)
 
     def on_search_screen_dismiss(self, _) -> None:

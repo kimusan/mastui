@@ -58,7 +58,7 @@ class SearchScreen(ModalScreen):
     def do_search(self, query: str):
         """Worker method to perform the search."""
         try:
-            results = self.api.search(query)
+            results = self.api.search_v2(query)
             self.app.call_from_thread(self.render_results, results)
         except Exception as e:
             self.app.notify(f"Error searching: {e}", severity="error")
@@ -100,11 +100,11 @@ class SearchScreen(ModalScreen):
 
     def action_cursor_up(self) -> None:
         """Move the cursor up."""
-        self.query_one(TabbedContent).focus_previous(SearchResult)
+        self.focus_previous(SearchResult)
 
     def action_cursor_down(self) -> None:
         """Move the cursor down."""
-        self.query_one(TabbedContent).focus_next(SearchResult)
+        self.focus_next(SearchResult)
 
     def action_select_result(self) -> None:
         """Select the currently focused result."""

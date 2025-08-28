@@ -15,37 +15,6 @@ log = logging.getLogger(__name__)
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
 
-    DEFAULT_CSS = """
-    LoginScreen {
-        align: center middle;
-    }
-
-    #login-dialog {
-        width: 80;
-        height: auto;
-        padding: 1;
-        background: $surface;
-        border: $primary;
-    }
-
-    #login-grid {
-        grid-size: 2;
-        grid-gutter: 1;
-        padding: 1;
-    }
-
-    #login-grid > Label {
-        text-align: right;
-        margin-top: 1;
-    }
-    
-    #login-status {
-        height: 3;
-        text-align: center;
-        color: $error;
-    }
-    """
-
     def __init__(self, host: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.host = host

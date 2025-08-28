@@ -6,24 +6,6 @@ from mastui.logo import LogoWidget
 class ProfileSelectionScreen(ModalScreen):
     """A modal screen for selecting a profile."""
 
-    DEFAULT_CSS = """
-    ProfileSelectionScreen {
-        align: center middle;
-    }
-
-    #profile-selection-dialog {
-        width: 60;
-        height: auto;
-        padding: 1;
-        background: $surface;
-        border: $primary;
-    }
-
-    #profile-selection-dialog > Button {
-        margin-top: 1;
-    }
-    """
-
     BINDINGS = [("escape", "dismiss", "Dismiss")]
 
     def __init__(self, profiles: list[str], **kwargs):

@@ -443,10 +443,11 @@ class AccountResult(SearchResult):
         self.add_class("search-result")
 
     def compose(self):
-        yield Static(
-            f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}"
-        )
-        yield Static(Markdown(to_markdown(self.account["note"]), open_links=False))
+        with Vertical():
+            yield Static(
+                f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}"
+            )
+            yield Markdown(to_markdown(self.account["note"]), open_links=False)
 
 
 class HashtagResult(SearchResult):

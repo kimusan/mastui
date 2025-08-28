@@ -540,6 +540,10 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
     height: 1fr;
 }
 
+#search-accounts, #search-hashtags, #search-statuses {
+    overflow-y: auto;
+}
+
 #search-dialog > LoadingIndicator {
     height: 1;
 }
@@ -582,4 +586,53 @@ Markdown {
 
     link-style: italic;
     link-style-hover: italic underline;
+}
+
+LoginScreen {
+    align: center middle;
+}
+
+#login-dialog {
+    width: 80;
+    height: auto;
+    padding: 1;
+    background: $surface;
+    border: $primary;
+}
+
+#login-grid {
+    grid-size: 2;
+    grid-gutter: 1;
+    padding: 1;
+}
+
+#login-grid > Label {
+    text-align: right;
+    margin-top: 1;
+}
+
+#login-status {
+    height: 3;
+    text-align: center;
+    color: $error;
+}
+
+ProfileSelectionScreen {
+    align: center middle;
+}
+
+#profile-selection-dialog {
+    width: 60;
+    height: auto;
+    padding: 1;
+    background: $surface;
+    border: $primary;
+}
+
+#profile-selection-dialog > Button {
+    margin-top: 1;
+}
+
+AccountResult {
+    height: auto;
 }
