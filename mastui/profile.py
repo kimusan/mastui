@@ -15,6 +15,8 @@ class ProfileScreen(ModalScreen):
 
     BINDINGS = [
         ("f", "follow", "Follow/Unfollow"),
+        ("m", "mute", "Mute/Unmute"),
+        ("x", "block", "Block/Unblock"),
         ("escape", "dismiss", "Dismiss")
     ]
 
@@ -56,9 +58,13 @@ class ProfileScreen(ModalScreen):
 
         header = f"[bold]{profile['display_name']}[/bold] (@{profile['acct']})"
         
-        # Add following status to header
+        # Add relationship statuses to header
         if profile.get('following'):
             header += " [green](Following)[/green]"
+        if profile.get('muting'):
+            header += " [yellow](Muted)[/yellow]"
+        if profile.get('blocking'):
+            header += " [red](Blocked)[/red]"
 
         note_html = profile.get('note', '')
         note = Markdown(to_markdown(note_html)) if note_html else "No bio."
@@ -98,4 +104,44 @@ class ProfileScreen(ModalScreen):
 
         except Exception as e:
             log.error(f"Error following/unfollowing: {e}", exc_info=True)
+            self.app.notify(f"Error: {e}", severity="error")
+
+    def action_mute(self):
+        """Mute or unmute the user."""
+        if not self.profile:
+            return
+
+        try:
+            if self.profile.get('muting'):
+                self.api.account_unmute(self.account_id)
+                self.app.notify(f"Unmuted @{self.profile['acct']}")
+            else:
+                self.api.account_mute(self.account_id)
+                self.app.notify(f"Muted @{self.profile['acct']}")
+            
+            # Reload profile to update status
+            self.run_worker(self.load_profile, thread=True)
+
+        except Exception as e:
+            log.error(f"Error muting/unmuting: {e}", exc_info=True)
+            self.app.notify(f"Error: {e}", severity="error")
+
+    def action_block(self):
+        """Block or unblock the user."""
+        if not self.profile:
+            return
+
+        try:
+            if self.profile.get('blocking'):
+                self.api.account_unblock(self.account_id)
+                self.app.notify(f"Unblocked @{self.profile['acct']}")
+            else:
+                self.api.account_block(self.account_id)
+                self.app.notify(f"Blocked @{self.profile['acct']}")
+            
+            # Reload profile to update status
+            self.run_worker(self.load_profile, thread=True)
+
+        except Exception as e:
+            log.error(f"Error blocking/unblocking: {e}", exc_info=True)
             self.app.notify(f"Error: {e}", severity="error")

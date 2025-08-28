@@ -50,5 +50,7 @@ class HelpScreen(ModalScreen):
             table.add_row("", "") # Spacer
             table.add_row("[bold]Profile View[/bold]", "")
             table.add_row("f", "Follow / Unfollow user")
+            table.add_row("m", "Mute / Unmute user")
+            table.add_row("x", "Block / Unblock user")
 
             yield table

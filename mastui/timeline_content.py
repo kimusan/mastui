@@ -13,9 +13,10 @@ log = logging.getLogger(__name__)
 class TimelineContent(VerticalScroll):
     """A container for timeline posts with shared navigation logic."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, timeline, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.selected_item = None
+        self.timeline = timeline
 
     def on_focus(self):
         if not self.selected_item:
@@ -82,7 +83,7 @@ class TimelineContent(VerticalScroll):
                 self.app.notify("Cannot like a post that has been deleted.", severity="error")
                 return
             self.selected_item.show_spinner()
-            self.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
+            self.timeline.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
 
     def boost_post(self):
         if isinstance(self.selected_item, Post):
@@ -91,7 +92,7 @@ class TimelineContent(VerticalScroll):
                 self.app.notify("Cannot boost a post that has been deleted.", severity="error")
                 return
             self.selected_item.show_spinner()
-            self.post_message(BoostPost(status_to_action["id"]))
+            self.timeline.post_message(BoostPost(status_to_action["id"]))
 
     def reply_to_post(self):
         if isinstance(self.app.screen, ModalScreen):
@@ -112,10 +113,10 @@ class TimelineContent(VerticalScroll):
         if isinstance(self.selected_item, Post):
             status = self.selected_item.post.get("reblog") or self.selected_item.post
             account_id = status["account"]["id"]
-            self.post_message(ViewProfile(account_id))
+            self.timeline.post_message(ViewProfile(account_id))
         elif isinstance(self.selected_item, Notification):
             account_id = self.selected_item.notif["account"]["id"]
-            self.post_message(ViewProfile(account_id))
+            self.timeline.post_message(ViewProfile(account_id))
 
     def open_thread(self):
         if isinstance(self.app.screen, ModalScreen):

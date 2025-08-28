@@ -18,6 +18,10 @@ class ProfileSelectionScreen(ModalScreen):
         background: $surface;
         border: $primary;
     }
+
+    #profile-selection-dialog > Button {
+        margin-top: 1;
+    }
     """
 
     BINDINGS = [("escape", "dismiss", "Dismiss")]

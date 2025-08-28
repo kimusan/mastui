@@ -468,19 +468,35 @@ class Mastui(App):
         updated_post_data = message.post_data
         target_post = updated_post_data.get("reblog") or updated_post_data
         target_id = target_post["id"]
+        log.debug(f"Received PostStatusUpdate for post ID {target_id}")
 
+        found_widget = False
         for container in [self.screen, *self.query(Timelines)]:
+            log.debug(f"Searching for post in container {container}")
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status["id"] == target_id:
+                if original_status and original_status["id"] == target_id:
+                    log.debug(f"Found matching post widget: {post_widget}")
                     post_widget.update_from_post(updated_post_data)
+                    found_widget = True
+        
+        if not found_widget:
+            log.warning(f"Could not find a Post widget to update for ID {target_id}")
 
     def on_action_failed(self, message: ActionFailed) -> None:
+        log.debug(f"Received ActionFailed for post ID {message.post_id}")
+        found_widget = False
         for container in [self.screen, *self.query(Timelines)]:
+            log.debug(f"Searching for post in container {container}")
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status["id"] == message.post_id:
+                if original_status and original_status["id"] == message.post_id:
+                    log.debug(f"Found matching post widget to hide spinner: {post_widget}")
                     post_widget.hide_spinner()
+                    found_widget = True
+        
+        if not found_widget:
+            log.warning(f"Could not find a Post widget to hide spinner for ID {message.post_id}")
 
     @on(FocusNextTimeline)
     def on_focus_next_timeline(self, message: FocusNextTimeline) -> None:
@@ -532,6 +548,36 @@ class Mastui(App):
         """Called when the profile screen is dismissed."""
         self.resume_timers()
 
+    def action_view_profile(self) -> None:
+        """An action to view the profile of the selected post's author."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().view_profile()
+
+    def action_like_post(self) -> None:
+        """An action to like the selected post."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().like_post()
+
+    def action_boost_post(self) -> None:
+        """An action to boost the selected post."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().boost_post()
+
+    def action_scroll_up(self) -> None:
+        """An action to scroll up the focused timeline."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().scroll_up()
+
+    def action_scroll_down(self) -> None:
+        """An action to scroll down the focused timeline."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().scroll_down()
+
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
         if isinstance(self.screen, ModalScreen):
@@ -581,26 +627,6 @@ class Mastui(App):
         """Resumes all timeline timers."""
         for timeline in self.query(Timeline):
             timeline.resume_timers()
-
-    def action_like_post(self) -> None:
-        focused = self.query("Timeline:focus")
-        if focused:
-            focused.first().like_post()
-
-    def action_boost_post(self) -> None:
-        focused = self.query("Timeline:focus")
-        if focused:
-            focused.first().boost_post()
-
-    def action_scroll_up(self) -> None:
-        focused = self.query("Timeline:focus")
-        if focused:
-            focused.first().scroll_up()
-
-    def action_scroll_down(self) -> None:
-        focused = self.query("Timeline:focus")
-        if focused:
-            focused.first().scroll_down()
 
 
 def main():
