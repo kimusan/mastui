@@ -1,8 +1,9 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Header, Footer
+from textual.widgets import Footer, Static
 from textual import on, events
 from textual.screen import ModalScreen
+from mastui.header import CustomHeader
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
 from mastui.reply import ReplyScreen
@@ -62,6 +63,7 @@ class Mastui(App):
         Binding("o", "open_options", "Options", show=False),
         Binding("/", "search", "Search", show=False),
         Binding("u", "switch_profile", "Switch user profile", show=False),
+        Binding("m", "toggle_dms", "Toggle DMs", show=True),
         Binding("l", "like_post", "Like post", show=False),
         Binding("b", "boost_post", "Boost post", show=False),
         Binding("up", "scroll_up", "Scroll up", show=False),
@@ -84,7 +86,7 @@ class Mastui(App):
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        yield Header()
+        yield CustomHeader()
         yield Footer()
 
     def on_mount(self) -> None:
@@ -193,15 +195,37 @@ class Mastui(App):
             if self.config.auto_prune_cache:
                 self.run_worker(self.prune_cache, thread=True, exclusive=True)
             self.set_timer(2, self.show_timelines)
+            self.set_interval(300, self.check_for_dms)  # Check for DMs every 5 minutes
+            self.call_later(self.check_for_dms)  # Also check right after startup
         else:
             log.error("API object could not be created. Forcing login.")
             self.call_later(self.show_login_screen)
+
+    def check_for_dms(self):
+        """Background worker to check for new direct messages."""
+        header = self.query_one(CustomHeader)
+        if not self.api or self.config.direct_timeline_enabled:
+            header.hide_dm_notification()
+            return
+
+        log.debug("Checking for new direct messages in the background...")
+        try:
+            latest_convos = self.api.conversations(limit=1)
+            if latest_convos and latest_convos[0].get("unread"):
+                header.show_dm_notification()
+                self.notify("You have a new Direct Message", title="New DM")
+            else:
+                header.hide_dm_notification()
+        except Exception as e:
+            log.error(f"Background DM check failed: {e}", exc_info=True)
 
     def fetch_instance_info(self):
         """Fetches instance information from the API."""
         try:
             instance = self.api.instance()
-            self.max_characters = instance["configuration"]["statuses"]["max_characters"]
+            self.max_characters = instance["configuration"]["statuses"][
+                "max_characters"
+            ]
         except Exception as e:
             log.error(f"Error fetching instance info: {e}", exc_info=True)
             self.notify("Could not fetch instance information.", severity="error")
@@ -481,7 +505,7 @@ class Mastui(App):
                     log.debug(f"Found matching post widget: {post_widget}")
                     post_widget.update_from_post(updated_post_data)
                     found_widget = True
-        
+
         if not found_widget:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")
 
@@ -493,12 +517,16 @@ class Mastui(App):
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
                 if original_status and original_status["id"] == message.post_id:
-                    log.debug(f"Found matching post widget to hide spinner: {post_widget}")
+                    log.debug(
+                        f"Found matching post widget to hide spinner: {post_widget}"
+                    )
                     post_widget.hide_spinner()
                     found_widget = True
-        
+
         if not found_widget:
-            log.warning(f"Could not find a Post widget to hide spinner for ID {message.post_id}")
+            log.warning(
+                f"Could not find a Post widget to hide spinner for ID {message.post_id}"
+            )
 
     @on(FocusNextTimeline)
     def on_focus_next_timeline(self, message: FocusNextTimeline) -> None:
@@ -546,7 +574,7 @@ class Mastui(App):
             ConversationScreen(
                 conversation_id=message.conversation_id,
                 last_status_id=message.last_status_id,
-                api=self.api
+                api=self.api,
             ),
             self.on_conversation_screen_dismiss,
         )
@@ -566,9 +594,13 @@ class Mastui(App):
             summary_widget = self.query_one(f"#conv-{message.conversation_id}")
             summary_widget.conversation["unread"] = False
             summary_widget.remove_class("unread")
-            summary_widget.border_title = summary_widget.border_title.replace("📩", "📭")
+            summary_widget.border_title = summary_widget.border_title.replace(
+                "📩", "📭"
+            )
         except Exception as e:
-            log.warning(f"Could not update conversation summary after marking as read: {e}")
+            log.warning(
+                f"Could not update conversation summary after marking as read: {e}"
+            )
 
     def on_conversation_screen_dismiss(self, conversation_id: str) -> None:
         """Called when the conversation screen is dismissed."""
@@ -577,7 +609,9 @@ class Mastui(App):
             # Trigger a refresh from the server to confirm
             self.query_one("#direct").refresh_posts()
         except Exception as e:
-            log.warning(f"Could not refresh DM timeline after closing conversation: {e}")
+            log.warning(
+                f"Could not refresh DM timeline after closing conversation: {e}"
+            )
 
     def action_link_clicked(self, link: str) -> None:
         """Called when a link is clicked."""
@@ -588,6 +622,24 @@ class Mastui(App):
     def on_profile_screen_dismiss(self, _) -> None:
         """Called when the profile screen is dismissed."""
         self.resume_timers()
+
+    def action_toggle_dms(self) -> None:
+        """Toggles the visibility of the Direct Messages timeline."""
+        self.config.direct_timeline_enabled = not self.config.direct_timeline_enabled
+        self.config.save_config()
+
+        # Hide the notification icon if we are showing the timeline
+        if self.config.direct_timeline_enabled:
+            self.query_one(CustomHeader).hide_dm_notification()
+
+        # Re-render the timelines
+        try:
+            self.query_one(Timelines).remove()
+            self.mount(Timelines())
+        except Exception as e:
+            log.error(
+                f"Error re-rendering timelines after DM toggle: {e}", exc_info=True
+            )
 
     def action_view_profile(self) -> None:
         """An action to view the profile of the selected post's author."""

@@ -1,8 +1,9 @@
 from textual.screen import ModalScreen
 from textual.widgets import Static
 from textual.containers import VerticalScroll, Container
-from mastui.widgets import Post
+from mastui.widgets import Post, LikePost, BoostPost
 from mastui.messages import ConversationRead
+from mastui.reply import ReplyScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -12,7 +13,11 @@ class ConversationScreen(ModalScreen):
 
     BINDINGS = [
         ("escape", "dismiss", "Close Conversation"),
-        # Add other bindings for replying, etc. later
+        ("up", "scroll_up", "Scroll up"),
+        ("down", "scroll_down", "Scroll down"),
+        ("l", "like_post", "Like post"),
+        ("b", "boost_post", "Boost post"),
+        ("a", "reply_to_post", "Reply to post"),
     ]
 
     def __init__(self, conversation_id: str, last_status_id: str, api, **kwargs) -> None:
@@ -20,6 +25,7 @@ class ConversationScreen(ModalScreen):
         self.conversation_id = conversation_id
         self.last_status_id = last_status_id
         self.api = api
+        self.selected_item = None
 
     def compose(self):
         with Container(id="conversation-dialog") as cd:
@@ -72,3 +78,76 @@ class ConversationScreen(ModalScreen):
             reply_post = Post(post, timeline_id="conversation")
             reply_post.add_class("reply-post")
             container.mount(reply_post)
+        
+        self.select_first_item()
+
+    def select_first_item(self):
+        if self.selected_item:
+            self.selected_item.remove_class("selected")
+        try:
+            self.selected_item = self.query(Post).first()
+            self.selected_item.add_class("selected")
+        except Exception as e:
+            log.error(f"Could not select first item in conversation: {e}", exc_info=True)
+            self.selected_item = None
+
+    def action_scroll_up(self):
+        items = self.query("Post")
+        if self.selected_item and items:
+            try:
+                idx = items.nodes.index(self.selected_item)
+                if idx > 0:
+                    self.selected_item.remove_class("selected")
+                    self.selected_item = items[idx - 1]
+                    self.selected_item.add_class("selected")
+                    self.selected_item.scroll_visible()
+            except ValueError as e:
+                log.error(f"Could not scroll up in conversation: {e}", exc_info=True)
+                self.select_first_item()
+
+    def action_scroll_down(self):
+        items = self.query("Post")
+        if self.selected_item and items:
+            try:
+                idx = items.nodes.index(self.selected_item)
+                if idx < len(items) - 1:
+                    self.selected_item.remove_class("selected")
+                    self.selected_item = items[idx + 1]
+                    self.selected_item.add_class("selected")
+                    self.selected_item.scroll_visible()
+            except ValueError as e:
+                log.error(f"Could not scroll down in conversation: {e}", exc_info=True)
+                self.select_first_item()
+
+    def action_like_post(self):
+        if isinstance(self.selected_item, Post):
+            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
+            if not status_to_action:
+                self.app.notify("Cannot like a post that has been deleted.", severity="error")
+                return
+            self.selected_item.show_spinner()
+            self.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
+
+    def action_boost_post(self):
+        if isinstance(self.selected_item, Post):
+            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
+            if not status_to_action:
+                self.app.notify("Cannot boost a post that has been deleted.", severity="error")
+                return
+            self.selected_item.show_spinner()
+            self.post_message(BoostPost(status_to_action["id"]))
+
+    def action_reply_to_post(self):
+        if isinstance(self.selected_item, Post):
+            post_to_reply_to = self.selected_item.post.get("reblog") or self.selected_item.post
+            if post_to_reply_to:
+                self.app.push_screen(
+                    ReplyScreen(
+                        post_to_reply_to,
+                        max_characters=self.app.max_characters,
+                        visibility=post_to_reply_to.get("visibility", "direct"),
+                    ),
+                    self.app.on_reply_screen_dismiss
+                )
+            else:
+                self.app.notify("This item cannot be replied to.", severity="error")

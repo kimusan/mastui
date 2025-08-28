@@ -4,6 +4,19 @@ Screen {
     color: $foreground;
 }
 
+#dm_notification_icon {
+    dock: right;
+    width: 3;
+    height: 1;
+    margin: 0 1;
+    color: $accent;
+    text-align: center;
+}
+
+#dm_notification_icon.hidden {
+    visibility: hidden;
+}
+
 Timelines {
     layout: horizontal;
     height: 1fr;

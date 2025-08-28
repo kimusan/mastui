@@ -48,6 +48,16 @@ class TimelineContent(VerticalScroll):
             log.error(f"Could not select first item in timeline: {e}", exc_info=True)
             self.selected_item = None
 
+    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        if self.scroll_y >= self.max_scroll_y - 2:
+            if not self.timeline.loading_more:
+                self.timeline.load_older_posts()
+
+    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        if self.scroll_y == 0:
+            if not self.timeline.loading_more:
+                self.timeline.refresh_posts()
+
     def scroll_up(self):
         items = self.query("Post, Notification, ConversationSummary")
         if self.selected_item and items:
@@ -58,6 +68,10 @@ class TimelineContent(VerticalScroll):
                     self.selected_item = items[idx - 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
+                else:
+                    # Reached the top, refresh for newer posts
+                    if not self.timeline.loading_more:
+                        self.timeline.refresh_posts()
             except ValueError as e:
                 log.error(f"Could not scroll up in timeline: {e}", exc_info=True)
                 self.select_first_item()
@@ -72,6 +86,10 @@ class TimelineContent(VerticalScroll):
                     self.selected_item = items[idx + 1]
                     self.selected_item.add_class("selected")
                     self.selected_item.scroll_visible()
+                else:
+                    # Reached the bottom, load older posts
+                    if not self.timeline.loading_more:
+                        self.timeline.load_older_posts()
             except ValueError as e:
                 log.error(f"Could not scroll down in timeline: {e}", exc_info=True)
                 self.select_first_item()
@@ -105,7 +123,14 @@ class TimelineContent(VerticalScroll):
                 post_to_reply_to = self.selected_item.notif.get("status")
 
         if post_to_reply_to:
-            self.app.push_screen(ReplyScreen(post_to_reply_to, max_characters=self.app.max_characters), self.app.on_reply_screen_dismiss)
+            self.app.push_screen(
+                ReplyScreen(
+                    post_to_reply_to,
+                    max_characters=self.app.max_characters,
+                    visibility=post_to_reply_to.get("visibility", "public"),
+                ),
+                self.app.on_reply_screen_dismiss
+            )
         else:
             self.app.notify("This item cannot be replied to.", severity="error")
 

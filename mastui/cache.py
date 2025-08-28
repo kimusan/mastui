@@ -76,6 +76,11 @@ class Cache:
             for row in rows:
                 conv = json.loads(row['data'])
                 conv['unread'] = bool(conv.get('unread'))
+                # Parse created_at back to datetime for consistency
+                if conv.get('last_status') and conv['last_status'].get('created_at'):
+                    ts_str = conv['last_status']['created_at']
+                    if isinstance(ts_str, str):
+                        conv['last_status']['created_at'] = datetime.fromisoformat(ts_str)
                 conversations.append(conv)
             return conversations
         except sqlite3.Error as e:

@@ -1,10 +1,7 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header
-from textual.containers import Vertical, Horizontal, Grid, VerticalScroll
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich import box
+from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header, Markdown
+from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual import on
 from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS, VISIBILITY_OPTIONS
 
@@ -15,10 +12,11 @@ class ReplyScreen(ModalScreen):
         ("escape", "app.pop_screen", "Cancel Reply"),
     ]
 
-    def __init__(self, post_to_reply_to, max_characters: int = 500, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, post_to_reply_to: dict, max_characters: int, visibility: str = "public", **kwargs):
+        super().__init__(**kwargs)
         self.post_to_reply_to = post_to_reply_to
         self.max_characters = max_characters
+        self.visibility = visibility
 
     def get_mentions(self):
         """Get mentions from the post being replied to."""
@@ -32,15 +30,9 @@ class ReplyScreen(ModalScreen):
         with Vertical(id="reply_dialog"):
             yield Header(show_clock=False)
             with VerticalScroll(id="reply_content_container"):
-                yield Static(
-                    Panel(
-                        Markdown(get_full_content_md(self.post_to_reply_to)),
-                        title=f"Replying to @{self.post_to_reply_to['account']['acct']}",
-                        box=box.ROUNDED,
-                        padding=(0, 1),
-                    ),
-                    id="original_post_preview"
-                )
+                with Vertical(id="original_post_preview") as v:
+                    v.border_title = f"Replying to @{self.post_to_reply_to['account']['acct']}"
+                    yield Markdown(get_full_content_md(self.post_to_reply_to))
                 reply_text_area = TextArea(id="reply_content", language="markdown")
                 reply_text_area.text = self.get_mentions() + " "
                 yield reply_text_area
@@ -51,12 +43,11 @@ class ReplyScreen(ModalScreen):
                 with Horizontal(id="reply_language_container"):
                     yield Static("Language:", classes="reply_option_label")
                     yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
-
                 with Horizontal(id="reply_visibility_container"):
                     yield Static("Visibility:", classes="reply_option_label")
                     yield Select(
                         VISIBILITY_OPTIONS,
-                        value="public",
+                        value=self.visibility,
                         id="visibility_select",
                     )
             with Horizontal(id="reply_buttons"):
@@ -68,12 +59,12 @@ class ReplyScreen(ModalScreen):
         """Set initial focus."""
         self.query_one("#reply_content").focus()
         self.query_one("#reply_content").cursor_location = (0, len(self.query_one("#reply_content").text))
-        self.update_character_limit()
+        self.on_text_area_changed(TextArea.Changed(self.query_one("#reply_content")))
 
-    @on(Input.Changed)
-    @on(TextArea.Changed)
-    def update_character_limit(self):
-        """Updates the character limit."""
+    @on(Input.Changed, "#cw_input")
+    @on(TextArea.Changed, "#reply_content")
+    def on_text_area_changed(self, event: TextArea.Changed | Input.Changed) -> None:
+        """Update the character count."""
         content_len = len(self.query_one("#reply_content").text)
         cw_len = len(self.query_one("#cw_input").value)
         remaining = self.max_characters - content_len - cw_len
@@ -81,7 +72,9 @@ class ReplyScreen(ModalScreen):
         limit_label = self.query_one("#character_limit")
         limit_label.update(f"{remaining}")
         limit_label.set_class(remaining < 0, "character-limit-error")
+        self.query_one("#post_button").disabled = remaining < 0 or remaining == self.max_characters
 
+    @on(Switch.Changed, "#cw_switch")
     def on_switch_changed(self, event: Switch.Changed) -> None:
         """Toggle the content warning input."""
         cw_input = self.query_one("#cw_input")
@@ -92,7 +85,8 @@ class ReplyScreen(ModalScreen):
             cw_input.disabled = True
             cw_input.value = ""
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
+    @on(Button.Pressed)
+    def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "post_button":
             content = self.query_one("#reply_content").text
