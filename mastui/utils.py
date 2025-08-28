@@ -89,14 +89,43 @@ def get_full_content_md(status: dict) -> str:
     return content_md
 
 
+def html_to_plain_text(html: str) -> str:
+    """
+    Converts HTML content from a status to plain text, handling mentions correctly.
+    """
+    if not html:
+        return ""
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Find all mention links and replace them with @user@host text
+    for mention in soup.find_all('a', class_='mention'):
+        # The text content is usually just the username, but we can get the full acct from the href
+        href = mention.get('href', '')
+        try:
+            # A bit of parsing to get the acct from a URL like https://instance.social/@username
+            acct = f"@{href.split('/@')[-1]}"
+            mention.replace_with(acct)
+        except Exception:
+            # Fallback to the text if parsing fails
+            mention.replace_with(mention.get_text(strip=True))
+
+    # Replace <p> tags with newlines for paragraph breaks
+    for p in soup.find_all('p'):
+        p.append('\n')
+
+    # Get the rest of the text, stripping other HTML tags
+    return soup.get_text().strip()
+
+
 def format_datetime(dt_obj) -> str:
     """Formats a datetime string or object into YYYY-MM-DD HH:MM."""
     if isinstance(dt_obj, str):
         dt = parse(dt_obj)
     else:
         dt = dt_obj
-
-    # Convert to local timezone for display
-    local_dt = dt.astimezone()
-
-    return local_dt.strftime("%Y-%m-%d %H:%M")
+    
+    if dt.tzinfo:
+        dt = dt.astimezone()
+    
+    return dt.strftime('%Y-%m-%d %H:%M')

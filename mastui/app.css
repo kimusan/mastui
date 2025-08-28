@@ -155,7 +155,7 @@ Post {
 }
 Post:focus {
     border: double $accent;
-    background: $accent 50%;
+    background: $accent 80%;
 }
 Post.favourited {
     background: $warning 20%;
@@ -166,7 +166,7 @@ Post.reblogged {
 }
 
 .timeline-item.selected, Post.selected, Notification.selected {
-    background: $primary 10%;
+    background: $accent 30%;
 }
 
 #dialog {

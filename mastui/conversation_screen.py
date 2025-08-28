@@ -4,6 +4,7 @@ from textual.containers import VerticalScroll, Container
 from mastui.widgets import Post, LikePost, BoostPost
 from mastui.messages import ConversationRead
 from mastui.reply import ReplyScreen
+from mastui.edit_post_screen import EditPostScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class ConversationScreen(ModalScreen):
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
         ("a", "reply_to_post", "Reply to post"),
+        ("e", "edit_post", "Edit post"),
     ]
 
     def __init__(self, conversation_id: str, last_status_id: str, api, **kwargs) -> None:
@@ -151,3 +153,17 @@ class ConversationScreen(ModalScreen):
                 )
             else:
                 self.app.notify("This item cannot be replied to.", severity="error")
+
+    def action_edit_post(self):
+        """Edit the selected post."""
+        if isinstance(self.selected_item, Post):
+            status = self.selected_item.post.get("reblog") or self.selected_item.post
+            if status["account"]["id"] == self.app.api.me()["id"]:
+                self.app.push_screen(
+                    EditPostScreen(status=status, max_characters=self.app.max_characters),
+                    lambda result: self.app.on_edit_post_screen_dismiss((result, status['id']))
+                )
+            else:
+                self.app.notify("You can only edit your own posts.", severity="error")
+        else:
+            self.app.notify("This item cannot be edited.", severity="warning")

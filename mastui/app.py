@@ -7,6 +7,7 @@ from mastui.header import CustomHeader
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
 from mastui.reply import ReplyScreen
+from mastui.edit_post_screen import EditPostScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
@@ -60,6 +61,7 @@ class Mastui(App):
         Binding("c", "compose_post", "Compose post", show=False),
         Binding("p", "view_profile", "View profile", show=False),
         Binding("a", "reply_to_post", "Reply to post", show=False),
+        Binding("e", "edit_post", "Edit post", show=False),
         Binding("o", "open_options", "Options", show=False),
         Binding("/", "search", "Search", show=False),
         Binding("u", "switch_profile", "Switch user profile", show=False),
@@ -368,6 +370,30 @@ class Mastui(App):
             self.pause_timers()
             focused.first().reply_to_post()
 
+    def action_edit_post(self) -> None:
+        """Action to edit the selected post."""
+        focused = self.query("Timeline:focus")
+        if not focused:
+            return
+        
+        selected_item = focused.first().content_container.selected_item
+        if not isinstance(selected_item, Post):
+            self.notify("Only your own posts can be edited.", severity="warning")
+            return
+
+        status = selected_item.post.get("reblog") or selected_item.post
+        
+        # Check if the post is by the current user
+        if status["account"]["id"] != self.api.me()["id"]:
+            self.notify("You can only edit your own posts.", severity="error")
+            return
+
+        self.pause_timers()
+        self.push_screen(
+            EditPostScreen(status=status, max_characters=self.max_characters),
+            lambda result: self.on_edit_post_screen_dismiss((result, status['id']))
+        )
+
     def on_post_screen_dismiss(self, result: dict) -> None:
         """Called when the post screen is dismissed."""
         self.resume_timers()
@@ -407,6 +433,30 @@ class Mastui(App):
             except Exception as e:
                 log.error(f"Error sending reply: {e}", exc_info=True)
                 self.notify(f"Error sending reply: {e}", severity="error")
+
+    def on_edit_post_screen_dismiss(self, result: tuple) -> None:
+        """Called when the edit post screen is dismissed."""
+        self.resume_timers()
+        if result and result[0] is not None:
+            new_content, post_id = result
+            try:
+                log.info(f"Updating post {post_id}...")
+                updated_post = self.api.status_update(
+                    id=post_id,
+                    status=new_content["content"],
+                    spoiler_text=new_content["spoiler_text"],
+                )
+                log.info(f"Post {post_id} updated successfully.")
+                self.notify("Post updated successfully!", severity="information")
+
+                # Update the post in the cache for all timelines it might be in
+                for timeline_id in ["home", "notifications"]: # Add other relevant timelines
+                    self.cache.bulk_insert_posts(timeline_id, [updated_post])
+
+                self.post_message(PostStatusUpdate(updated_post))
+            except Exception as e:
+                log.error(f"Error updating post: {e}", exc_info=True)
+                self.notify(f"Error updating post: {e}", severity="error")
 
     @on(LikePost)
     def handle_like_post(self, message: LikePost):
@@ -497,15 +547,13 @@ class Mastui(App):
         log.debug(f"Received PostStatusUpdate for post ID {target_id}")
 
         found_widget = False
-        for container in [self.screen, *self.query(Timelines)]:
-            log.debug(f"Searching for post in container {container}")
-            for post_widget in container.query(Post):
-                original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and original_status["id"] == target_id:
-                    log.debug(f"Found matching post widget: {post_widget}")
-                    post_widget.update_from_post(updated_post_data)
-                    found_widget = True
-
+        for post_widget in self.query(Post):
+            original_status = post_widget.post.get("reblog") or post_widget.post
+            if original_status and original_status["id"] == target_id:
+                log.debug(f"Found matching post widget: {post_widget}")
+                post_widget.update_from_post(updated_post_data)
+                found_widget = True
+        
         if not found_widget:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")
 

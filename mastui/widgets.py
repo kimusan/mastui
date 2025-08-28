@@ -247,6 +247,11 @@ class Post(Vertical):
         )
         self.hide_spinner()
 
+        # Force re-render of the content
+        for md in self.query(Markdown):
+            md.remove()
+        self.mount(Markdown(get_full_content_md(status_to_display), open_links=False), before=self.query_one(".post-footer"))
+
         # Re-render the poll if it exists
         for poll_widget in self.query(PollWidget):
             poll_widget.remove()

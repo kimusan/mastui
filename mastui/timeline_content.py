@@ -134,6 +134,17 @@ class TimelineContent(VerticalScroll):
         else:
             self.app.notify("This item cannot be replied to.", severity="error")
 
+    def edit_post(self):
+        """Edit the selected post."""
+        if isinstance(self.selected_item, Post):
+            status = self.selected_item.post.get("reblog") or self.selected_item.post
+            if status["account"]["id"] == self.app.api.me()["id"]:
+                self.app.action_edit_post()
+            else:
+                self.app.notify("You can only edit your own posts.", severity="error")
+        else:
+            self.app.notify("This item cannot be edited.", severity="warning")
+
     def view_profile(self):
         if isinstance(self.selected_item, Post):
             status = self.selected_item.post.get("reblog") or self.selected_item.post

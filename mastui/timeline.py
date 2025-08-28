@@ -353,7 +353,7 @@ class Timeline(Static, can_focus=True):
         elif event.key == "right":
             self.post_message(FocusNextTimeline())
             event.stop()
-        elif event.key in ("up", "down", "l", "b", "a", "enter", "p"):
+        elif event.key in ("up", "down", "l", "b", "a", "e", "enter", "p"):
             event.stop()
             if event.key == "up":
                 self.scroll_up()
@@ -365,6 +365,8 @@ class Timeline(Static, can_focus=True):
                 self.boost_post()
             elif event.key == "a":
                 self.reply_to_post()
+            elif event.key == "e":
+                self.edit_post()
             elif event.key == "enter":
                 self.open_thread()
             elif event.key == "p":
@@ -389,6 +391,10 @@ class Timeline(Static, can_focus=True):
     def reply_to_post(self) -> None:
         """Proxy reply_to_post to the content container."""
         self.content_container.reply_to_post()
+
+    def edit_post(self) -> None:
+        """Proxy edit_post to the content container."""
+        self.content_container.edit_post()
 
     def open_thread(self) -> None:
         """Proxy open_thread to the content container."""
