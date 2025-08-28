@@ -28,7 +28,8 @@ class ThreadScreen(ModalScreen):
         self.selected_item = None
 
     def compose(self):
-        with Container(id="thread-dialog"):
+        with Container(id="thread-dialog") as td:
+            td.border_title = "Thread View"
             yield VerticalScroll(
                 Static("Loading thread...", classes="status-message"),
                 id="thread-container"

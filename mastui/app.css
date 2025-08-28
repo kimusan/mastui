@@ -422,6 +422,7 @@ ConfigScreen .collapsible--title {
     border: solid $primary;
     padding: 1;
     overflow-y: auto;
+    border-title-align: center;
 }
 
 #thread-container {
@@ -529,6 +530,7 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
     background: $surface;
     border: solid $primary;
     padding: 1;
+    border-title-align: center;
 }
 
 #search-input {
@@ -538,10 +540,6 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
 
 #search-results {
     height: 1fr;
-}
-
-#search-accounts, #search-hashtags, #search-statuses {
-    overflow-y: auto;
 }
 
 #search-dialog > LoadingIndicator {
@@ -635,4 +633,6 @@ ProfileSelectionScreen {
 
 AccountResult {
     height: auto;
+    max-height: 8;
+    overflow-y: auto;
 }

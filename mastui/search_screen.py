@@ -1,6 +1,6 @@
 from textual.screen import ModalScreen
 from textual.widgets import Input, TabbedContent, TabPane, Static, LoadingIndicator
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual import on, events
 from textual.widget import Widget
 from mastui.widgets import AccountResult, HashtagResult, StatusResult, SearchResult
@@ -24,17 +24,20 @@ class SearchScreen(ModalScreen):
         self.api = api
 
     def compose(self):
-        self.title = "Search"
-        with Vertical(id="search-dialog"):
+        with Vertical(id="search-dialog") as sd:
+            sd.border_title = "Search"
             yield Input(placeholder="Search for users, hashtags, or posts...", id="search-input")
             yield LoadingIndicator(classes="hidden")
             with TabbedContent(id="search-results"):
                 with TabPane("Accounts", id="search-accounts"):
-                    yield Static("Press Enter to search.", classes="search-status")
+                    with VerticalScroll():
+                        yield Static("Press Enter to search.", classes="search-status")
                 with TabPane("Hashtags", id="search-hashtags"):
-                    yield Static("Press Enter to search.", classes="search-status")
+                    with VerticalScroll():
+                        yield Static("Press Enter to search.", classes="search-status")
                 with TabPane("Statuses", id="search-statuses"):
-                    yield Static("Press Enter to search.", classes="search-status")
+                    with VerticalScroll():
+                        yield Static("Press Enter to search.", classes="search-status")
 
     def on_mount(self):
         """Focus the search input when the screen is mounted."""
@@ -67,9 +70,9 @@ class SearchScreen(ModalScreen):
     def render_results(self, results: dict):
         """Render the search results."""
         self.query_one(LoadingIndicator).add_class("hidden")
-        accounts_pane = self.query_one("#search-accounts", TabPane)
-        hashtags_pane = self.query_one("#search-hashtags", TabPane)
-        statuses_pane = self.query_one("#search-statuses", TabPane)
+        accounts_pane = self.query_one("#search-accounts VerticalScroll")
+        hashtags_pane = self.query_one("#search-hashtags VerticalScroll")
+        statuses_pane = self.query_one("#search-statuses VerticalScroll")
 
         accounts_pane.query("*").remove()
         hashtags_pane.query("*").remove()
