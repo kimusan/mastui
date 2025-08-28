@@ -473,3 +473,48 @@ class StatusResult(SearchResult):
 
     def compose(self):
         yield Post(self.status, timeline_id="search")
+
+
+class ConversationSummary(Widget, can_focus=True):
+    """A widget to display a conversation summary."""
+
+    def __init__(self, conversation: dict, **kwargs):
+        super().__init__(**kwargs)
+        self.conversation = conversation
+        self.add_class("timeline-item")
+        if conversation.get("unread"):
+            self.add_class("unread")
+
+    def on_click(self, event: events.Click) -> None:
+        event.stop()
+        self.post_message(SelectPost(self))
+
+    def compose(self):
+        accounts = self.conversation.get("accounts", [])
+        last_status = self.conversation.get("last_status")
+        is_unread = self.conversation.get("unread")
+
+        # Filter out the current user's account to display others
+        other_accounts = [
+            acc for acc in accounts if acc["id"] != self.app.api.me()["id"]
+        ]
+        
+        participant_names = ", ".join(
+            [f"@{acc['acct']}" for acc in other_accounts]
+        )
+        
+        icon = "📩" if is_unread else "📭"
+        self.border_title = f"{icon} DM with {participant_names}"
+
+        if last_status:
+            snippet = to_markdown(last_status.get("content", ""))
+            # Truncate snippet to a reasonable length
+            if len(snippet) > 100:
+                snippet = snippet[:97] + "..."
+            yield Markdown(snippet, open_links=False)
+            
+            timestamp = format_datetime(last_status.get("created_at"))
+            with Horizontal(classes="post-footer"):
+                yield Static(timestamp, classes="timestamp")
+        else:
+            yield Static("No messages yet.")

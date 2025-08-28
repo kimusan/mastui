@@ -45,6 +45,13 @@ class ConfigScreen(ModalScreen):
                     )
                     yield Static()  # Spacer
 
+                    yield Label("Enable Direct Messages timeline?", classes="config-label")
+                    yield Switch(
+                        value=config.direct_timeline_enabled,
+                        id="direct_timeline_enabled",
+                    )
+                    yield Static()  # Spacer
+
                     yield Label("Force single-column mode?", classes="config-label")
                     yield Switch(
                         value=config.force_single_column, id="force_single_column"
@@ -149,6 +156,9 @@ class ConfigScreen(ModalScreen):
         ).value
         config.federated_timeline_enabled = self.query_one(
             "#federated_timeline_enabled"
+        ).value
+        config.direct_timeline_enabled = self.query_one(
+            "#direct_timeline_enabled"
         ).value
         config.force_single_column = self.query_one("#force_single_column").value
         config.save_config()

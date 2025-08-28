@@ -38,7 +38,7 @@ class TimelineContent(VerticalScroll):
         if self.selected_item:
             self.selected_item.remove_class("selected")
         try:
-            items = self.query("Post, Notification")
+            items = self.query("Post, Notification, ConversationSummary")
             if items:
                 self.selected_item = items.first()
                 self.selected_item.add_class("selected")
@@ -49,7 +49,7 @@ class TimelineContent(VerticalScroll):
             self.selected_item = None
 
     def scroll_up(self):
-        items = self.query("Post, Notification")
+        items = self.query("Post, Notification, ConversationSummary")
         if self.selected_item and items:
             try:
                 idx = items.nodes.index(self.selected_item)
@@ -63,7 +63,7 @@ class TimelineContent(VerticalScroll):
                 self.select_first_item()
 
     def scroll_down(self):
-        items = self.query("Post, Notification")
+        items = self.query("Post, Notification, ConversationSummary")
         if self.selected_item and items:
             try:
                 idx = items.nodes.index(self.selected_item)

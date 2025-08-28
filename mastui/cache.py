@@ -46,10 +46,88 @@ class Cache:
                     data TEXT NOT NULL
                 )
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    unread INTEGER NOT NULL,
+                    last_status_id TEXT,
+                    data TEXT NOT NULL
+                )
+            """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_id ON posts (timeline_id, id)")
             conn.commit()
         except sqlite3.Error as e:
             log.error(f"Failed to create tables: {e}", exc_info=True)
+        finally:
+            if conn:
+                conn.close()
+
+    def get_conversations(self):
+        """Get all conversations from the database."""
+        conn = self._get_conn()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT data FROM conversations")
+            rows = cursor.fetchall()
+            # Manually set 'unread' to a boolean, as it's stored as an integer
+            conversations = []
+            for row in rows:
+                conv = json.loads(row['data'])
+                conv['unread'] = bool(conv.get('unread'))
+                conversations.append(conv)
+            return conversations
+        except sqlite3.Error as e:
+            log.error(f"Failed to get conversations: {e}", exc_info=True)
+            return []
+        finally:
+            if conn:
+                conn.close()
+
+    def bulk_insert_conversations(self, conversations: list):
+        """Bulk insert conversations into the database."""
+        if not conversations:
+            return
+        conn = self._get_conn()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            convos_to_insert = []
+            for convo in conversations:
+                last_status = convo.get('last_status')
+                convos_to_insert.append((
+                    convo['id'],
+                    1 if convo.get('unread') else 0,
+                    last_status['id'] if last_status else None,
+                    json.dumps(convo, cls=CustomJsonEncoder)
+                ))
+            
+            cursor.executemany(
+                "INSERT OR REPLACE INTO conversations (id, unread, last_status_id, data) VALUES (?, ?, ?, ?)",
+                convos_to_insert
+            )
+            conn.commit()
+            log.info(f"Inserted/updated {len(convos_to_insert)} conversations")
+        except sqlite3.Error as e:
+            log.error(f"Failed to bulk insert conversations: {e}", exc_info=True)
+        finally:
+            if conn:
+                conn.close()
+
+    def mark_conversation_as_read(self, conversation_id: str):
+        """Mark a conversation as read in the database."""
+        conn = self._get_conn()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE conversations SET unread = 0 WHERE id = ?", (conversation_id,))
+            conn.commit()
+            log.info(f"Marked conversation {conversation_id} as read in cache.")
+        except sqlite3.Error as e:
+            log.error(f"Failed to mark conversation as read: {e}", exc_info=True)
         finally:
             if conn:
                 conn.close()

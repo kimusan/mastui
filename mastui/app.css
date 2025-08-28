@@ -477,7 +477,7 @@ ImageWidget {
     color: $text-muted;
 }
 
-LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline {
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen {
     align: center middle;
 }
 
@@ -521,6 +521,24 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
 
 #hashtag-timeline-container {
     padding: 1;
+}
+
+#conversation-dialog {
+    width: 80%;
+    height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+    overflow-y: auto;
+    border-title-align: center;
+}
+
+#conversation-container {
+    padding: 1;
+}
+
+.unread {
+    background: $accent 20%;
 }
 
 #search-dialog {

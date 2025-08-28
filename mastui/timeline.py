@@ -1,8 +1,8 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import Horizontal
 from textual import on, events
-from mastui.widgets import Post, Notification, GapIndicator
-from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline
+from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
+from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewConversation
 from mastui.timeline_content import TimelineContent
 import logging
 from datetime import datetime, timezone, timedelta
@@ -99,6 +99,20 @@ class Timeline(Static, can_focus=True):
             f"Worker thread started for {self.id} with since_id={since_id}, max_id={max_id}"
         )
         try:
+            # Special handling for Direct Messages timeline
+            if self.id == "direct":
+                # Step 1: Load from cache immediately for instant UI
+                cached_convos = self.app.cache.get_conversations()
+                if cached_convos:
+                    self.post_message(TimelineUpdate(cached_convos))
+                
+                # Step 2: Fetch from API in the background
+                fresh_convos = self.fetch_posts()
+                if fresh_convos:
+                    self.app.cache.bulk_insert_conversations(fresh_convos)
+                    self.post_message(TimelineUpdate(fresh_convos))
+                return
+
             # Case 1: Refreshing for newer posts (always hits the server)
             if since_id:
                 posts = self.fetch_posts(since_id=since_id)
@@ -184,6 +198,10 @@ class Timeline(Static, can_focus=True):
                     posts = api.timeline_public(
                         since_id=since_id, max_id=max_id, limit=limit
                     )
+                elif self.id == "direct":
+                    posts = api.conversations(
+                        since_id=since_id, max_id=max_id, limit=limit
+                    )
                 log.info(f"Fetched {len(posts)} new posts for {self.id}")
             except Exception as e:
                 log.error(f"Error loading {self.id} timeline: {e}", exc_info=True)
@@ -233,37 +251,45 @@ class Timeline(Static, can_focus=True):
             return
 
         if posts_data:
-            new_latest_post_id = posts_data[0]["id"]
-            if self.latest_post_id is None or new_latest_post_id > self.latest_post_id:
-                self.latest_post_id = new_latest_post_id
-                log.info(f"New latest post for {self.id} is {self.latest_post_id}")
+            new_latest_post_id_str = posts_data[0]["id"]
+            if self.latest_post_id is None:
+                self.latest_post_id = new_latest_post_id_str
+            elif int(new_latest_post_id_str) > int(self.latest_post_id):
+                self.latest_post_id = new_latest_post_id_str
+            log.info(f"New latest post for {self.id} is {self.latest_post_id}")
 
-            new_oldest_post_id = posts_data[-1]["id"]
-            if self.oldest_post_id is None or new_oldest_post_id < self.oldest_post_id:
-                self.oldest_post_id = new_oldest_post_id
-                log.info(f"New oldest post for {self.id} is {self.oldest_post_id}")
+            new_oldest_post_id_str = posts_data[-1]["id"]
+            if self.oldest_post_id is None:
+                self.oldest_post_id = new_oldest_post_id_str
+            elif int(new_oldest_post_id_str) < int(self.oldest_post_id):
+                self.oldest_post_id = new_oldest_post_id_str
+            log.info(f"New oldest post for {self.id} is {self.oldest_post_id}")
 
         if is_initial_load:
             for item in self.content_container.query(".status-message"):
                 item.remove()
 
         new_widgets = []
-        for post in posts_data:
+        for item in posts_data:
             widget_id = ""
             if self.id == "notifications":
-                status = post.get("status") or {}
+                status = item.get("status") or {}
                 status_id = status.get("id", "")
-                unique_part = f"{post['type']}-{post['account']['id']}-{status_id}"
+                unique_part = f"{item['type']}-{item['account']['id']}-{status_id}"
                 widget_id = f"notif-{unique_part}"
+            elif self.id == "direct":
+                widget_id = f"conv-{item['id']}"
             else:
-                widget_id = f"post-{post['id']}"
+                widget_id = f"post-{item['id']}"
 
             if widget_id not in self.post_ids:
                 self.post_ids.add(widget_id)
                 if self.id == "home" or self.id == "federated":
-                    new_widgets.append(Post(post, timeline_id=self.id, id=widget_id))
+                    new_widgets.append(Post(item, timeline_id=self.id, id=widget_id))
                 elif self.id == "notifications":
-                    new_widgets.append(Notification(post, id=widget_id))
+                    new_widgets.append(Notification(item, id=widget_id))
+                elif self.id == "direct":
+                    new_widgets.append(ConversationSummary(item, id=widget_id))
 
         if new_widgets:
             log.info(f"Mounting {len(new_widgets)} new posts in {self.id}")
@@ -292,9 +318,18 @@ class Timeline(Static, can_focus=True):
         prune_direction = "top" if max_id else "bottom"
         self.prune_posts(direction=prune_direction)
 
+        # After adding new items, re-sort the entire conversation timeline
+        if self.id == "direct":
+            def get_sort_key(widget: ConversationSummary) -> datetime:
+                if widget.conversation.get('last_status') and widget.conversation['last_status'].get('created_at'):
+                    return widget.conversation['last_status']['created_at']
+                return datetime.min.replace(tzinfo=timezone.utc)
+            
+            self.content_container.sort_children(key=get_sort_key, reverse=True)
+
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""
-        all_posts = self.content_container.query("Post, Notification")
+        all_posts = self.content_container.query("Post, Notification, ConversationSummary")
         if len(all_posts) > MAX_POSTS_IN_UI:
             log.info(
                 f"Pruning posts in {self.id} from the {direction}. Have {len(all_posts)}, max {MAX_POSTS_IN_UI}"
@@ -357,7 +392,17 @@ class Timeline(Static, can_focus=True):
 
     def open_thread(self) -> None:
         """Proxy open_thread to the content container."""
-        self.content_container.open_thread()
+        if self.id == "direct":
+            selected = self.content_container.selected_item
+            if isinstance(selected, ConversationSummary):
+                self.post_message(
+                    ViewConversation(
+                        selected.conversation["id"],
+                        selected.conversation["last_status"]["id"]
+                    )
+                )
+        else:
+            self.content_container.open_thread()
 
     def view_profile(self) -> None:
         """Proxy view_profile to the content container."""
@@ -380,6 +425,8 @@ class Timelines(Static):
             yield Timeline("Notifications", id="notifications")
         if self.app.config.federated_timeline_enabled:
             yield Timeline("Federated", id="federated")
+        if self.app.config.direct_timeline_enabled:
+            yield Timeline("Direct Messages", id="direct")
 
     def on_mount(self) -> None:
         """Focus the first timeline when mounted."""

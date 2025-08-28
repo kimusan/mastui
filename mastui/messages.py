@@ -56,6 +56,20 @@ class ViewHashtag(Message):
         super().__init__()
 
 
+class ViewConversation(Message):
+    """A message to view a direct message conversation."""
+    def __init__(self, conversation_id: str, last_status_id: str) -> None:
+        self.conversation_id = conversation_id
+        self.last_status_id = last_status_id
+        super().__init__()
+
+
+class ConversationRead(Message):
+    """A message indicating a conversation has been marked as read."""
+    def __init__(self, conversation_id: str) -> None:
+        self.conversation_id = conversation_id
+        super().__init__()
+
 class VoteOnPoll(Message):
     """A message to vote on a poll."""
     def __init__(self, poll_id: str, choice: int, timeline_id: str, post_id: str) -> None:

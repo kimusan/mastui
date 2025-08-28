@@ -53,6 +53,7 @@ class Config:
         self.home_timeline_enabled = config_values.get("HOME_TIMELINE_ENABLED", "on") == "on"
         self.notifications_timeline_enabled = config_values.get("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
         self.federated_timeline_enabled = config_values.get("FEDERATED_TIMELINE_ENABLED", "on") == "on"
+        self.direct_timeline_enabled = config_values.get("DIRECT_TIMELINE_ENABLED", "on") == "on"
         self.force_single_column = config_values.get("FORCE_SINGLE_COLUMN", "off") == "on"
 
 
@@ -85,6 +86,7 @@ class Config:
             f.write(f"HOME_TIMELINE_ENABLED={'on' if self.home_timeline_enabled else 'off'}\n")
             f.write(f"NOTIFICATIONS_TIMELINE_ENABLED={'on' if self.notifications_timeline_enabled else 'off'}\n")
             f.write(f"FEDERATED_TIMELINE_ENABLED={'on' if self.federated_timeline_enabled else 'off'}\n")
+            f.write(f"DIRECT_TIMELINE_ENABLED={'on' if self.direct_timeline_enabled else 'off'}\n")
             f.write(f"FORCE_SINGLE_COLUMN={'on' if self.force_single_column else 'off'}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):

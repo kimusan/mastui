@@ -16,6 +16,7 @@ from mastui.config_screen import ConfigScreen
 from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
 from mastui.hashtag_timeline import HashtagTimeline
+from mastui.conversation_screen import ConversationScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme_builtin
 from mastui.theme_manager import load_custom_themes
@@ -30,6 +31,8 @@ from mastui.messages import (
     FocusPreviousTimeline,
     ViewProfile,
     ViewHashtag,
+    ViewConversation,
+    ConversationRead,
     ResumeTimers,
 )
 from mastui.cache import Cache
@@ -198,9 +201,7 @@ class Mastui(App):
         """Fetches instance information from the API."""
         try:
             instance = self.api.instance()
-            self.max_characters = instance["configuration"]["statuses"][
-                "max_characters"
-            ]
+            self.max_characters = instance["configuration"]["statuses"]["max_characters"]
         except Exception as e:
             log.error(f"Error fetching instance info: {e}", exc_info=True)
             self.notify("Could not fetch instance information.", severity="error")
@@ -535,9 +536,48 @@ class Mastui(App):
             self.on_hashtag_screen_dismiss,
         )
 
+    @on(ViewConversation)
+    def on_view_conversation(self, message: ViewConversation) -> None:
+        """Called when a conversation is selected."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.pause_timers()
+        self.push_screen(
+            ConversationScreen(
+                conversation_id=message.conversation_id,
+                last_status_id=message.last_status_id,
+                api=self.api
+            ),
+            self.on_conversation_screen_dismiss,
+        )
+
     def on_hashtag_screen_dismiss(self, _) -> None:
         """Called when the hashtag timeline screen is dismissed."""
         self.resume_timers()
+
+    @on(ConversationRead)
+    def on_conversation_read(self, message: ConversationRead) -> None:
+        """Called when a conversation has been marked as read."""
+        try:
+            # Update the cache immediately
+            self.cache.mark_conversation_as_read(message.conversation_id)
+
+            # Find the summary widget and update it for responsiveness
+            summary_widget = self.query_one(f"#conv-{message.conversation_id}")
+            summary_widget.conversation["unread"] = False
+            summary_widget.remove_class("unread")
+            summary_widget.border_title = summary_widget.border_title.replace("📩", "📭")
+        except Exception as e:
+            log.warning(f"Could not update conversation summary after marking as read: {e}")
+
+    def on_conversation_screen_dismiss(self, conversation_id: str) -> None:
+        """Called when the conversation screen is dismissed."""
+        self.resume_timers()
+        try:
+            # Trigger a refresh from the server to confirm
+            self.query_one("#direct").refresh_posts()
+        except Exception as e:
+            log.warning(f"Could not refresh DM timeline after closing conversation: {e}")
 
     def action_link_clicked(self, link: str) -> None:
         """Called when a link is clicked."""
