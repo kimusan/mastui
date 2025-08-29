@@ -14,13 +14,17 @@ class ImageWidget(Static):
     """A widget to display an image."""
 
     def __init__(self, url: str, config, **kwargs):
-        super().__init__("Loading image...", **kwargs)
+        super().__init__("🖼️  Loading image...", **kwargs)
         self.url = url
         self.config = config
         self.pil_image = None
+        self._image_loaded = False
 
-    def on_mount(self):
-        self.run_worker(self.load_image, thread=True)
+    def on_visible(self) -> None:
+        """Load the image when the widget becomes visible."""
+        if not self._image_loaded:
+            self._image_loaded = True
+            self.run_worker(self.load_image, thread=True)
 
     def load_image(self):
         """Loads the image from the cache or URL."""
@@ -50,7 +54,9 @@ class ImageWidget(Static):
 
     def on_resize(self, event: events.Resize) -> None:
         """Re-render the image when the widget is resized."""
-        self.render_image()
+        # Only render if the image has been loaded
+        if self._image_loaded and self.pil_image:
+            self.render_image()
 
     def show_error(self):
         """Displays an error message when the image fails to load."""
