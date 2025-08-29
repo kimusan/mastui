@@ -19,6 +19,7 @@ from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
 from mastui.hashtag_timeline import HashtagTimeline
 from mastui.conversation_screen import ConversationScreen
+from mastui.log_viewer_screen import LogViewerScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme_builtin
 from mastui.theme_manager import load_custom_themes
@@ -73,6 +74,7 @@ class Mastui(App):
         Binding("down", "scroll_down", "Scroll down", show=False),
         Binding("?", "show_help", "Help", show=True),
         Binding("q", "quit", "Quit", show=True),
+        Binding("f12", "view_log", "View Log", show=False),
     ]
     CSS_PATH = css_path
     initial_data = None
@@ -83,10 +85,11 @@ class Mastui(App):
     me: dict | None = None
     notified_dm_ids: set[str] = set()
 
-    def __init__(self, action=None, ssl_verify=True):
+    def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
         self.action = action
         self.ssl_verify = ssl_verify
+        self._debug = debug
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -846,6 +849,12 @@ class Mastui(App):
         for timeline in self.query(Timeline):
             timeline.resume_timers()
 
+    def action_view_log(self) -> None:
+        """An action to view the application log file."""
+        if self._debug and self.log_file_path:
+            if not isinstance(self.screen, LogViewerScreen):
+                self.push_screen(LogViewerScreen(self.log_file_path))
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -864,7 +873,7 @@ def main():
     log_file_path = setup_logging(debug=args.debug)
 
     action = "add_account" if args.add_account else None
-    app = Mastui(action=action, ssl_verify=args.ssl_verify)
+    app = Mastui(action=action, ssl_verify=args.ssl_verify, debug=args.debug)
     app.log_file_path = log_file_path
     app.run()
 
