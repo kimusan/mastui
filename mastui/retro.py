@@ -24,6 +24,7 @@ retro_theme_builtin.styles = {
     "footer": "bg: #1A1A1A text: #A0A0A0",
     "timeline_title": "text: #00FF00 bold",
     "timeline-item.selected": "bg: #1A1A1A",
+    "Timeline:focus .timeline-item.selected": "bg: #00FF00 40%",
     "timeline-item.favourited": "text: #FFFF00",
     "timeline-item.reblogged": "text: #00FF00",
     "post-footer": "text: #606060",

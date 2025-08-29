@@ -166,7 +166,19 @@ Post.reblogged {
     background: $success 20%;
 }
 
+Post.mention {
+    border: round $accent;
+}
+
+/* A selected item in an inactive timeline */
 .timeline-item.selected, Post.selected, Notification.selected {
+    background: $surface-darken-1;
+}
+
+/* A selected item in an active timeline */
+Timeline:focus .timeline-item.selected,
+Timeline:focus Post.selected,
+Timeline:focus Notification.selected {
     background: $accent 30%;
 }
 

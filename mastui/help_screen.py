@@ -15,7 +15,7 @@ class HelpScreen(ModalScreen):
             yield Header(show_clock=False)
             yield Static("[bold]Key Bindings[/bold]", classes="title")
             table = DataTable(zebra_stripes=True)
-            table.add_columns("Key", "Action")
+            table.add_columns("Key(s)", "Action")
             
             # General App Bindings
             table.add_row("[bold]General[/bold]", "")
@@ -30,12 +30,14 @@ class HelpScreen(ModalScreen):
             # Timeline Bindings
             table.add_row("", "") # Spacer
             table.add_row("[bold]Timelines[/bold]", "")
-            table.add_row("up / k", "Scroll up / Move selection up")
-            table.add_row("down / j", "Scroll down / Move selection down")
-            table.add_row("left / h", "Focus timeline to the left")
-            table.add_row("right / l", "Focus timeline to the right")
+            table.add_row("up", "Move selection up")
+            table.add_row("down", "Move selection down")
+            table.add_row("left", "Focus timeline to the left")
+            table.add_row("right", "Focus timeline to the right")
+            table.add_row("g", "Jump to top of timeline")
             table.add_row("r", "Refresh all timelines")
             table.add_row("c", "Compose new post")
+            table.add_row("m", "Toggle Direct Messages timeline")
 
             # Post Actions (when a post is selected)
             table.add_row("", "") # Spacer
@@ -44,6 +46,7 @@ class HelpScreen(ModalScreen):
             table.add_row("l", "Like / Unlike post")
             table.add_row("b", "Boost / Reblog post")
             table.add_row("p", "View author's profile")
+            table.add_row("e", "Edit your own post")
             table.add_row("enter", "View post thread")
 
             # Profile Screen Bindings

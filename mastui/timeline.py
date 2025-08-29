@@ -23,6 +23,7 @@ class Timeline(Static, can_focus=True):
         self.latest_post_id = None
         self.oldest_post_id = None
         self.loading_more = False
+        self.scroll_anchor_id = None
 
     @property
     def content_container(self) -> TimelineContent:
@@ -76,6 +77,24 @@ class Timeline(Static, can_focus=True):
         """Refresh the timeline with new posts."""
         if self.loading_more:
             return
+
+        # --- Start of scroll preservation logic ---
+        self.scroll_anchor_id = None
+        container = self.content_container
+        all_items = container.query("Post, Notification, ConversationSummary")
+        if not all_items:
+            return # Nothing to anchor to
+
+        # Find the first visible item to anchor to
+        scroll_y = container.scroll_y
+        for item in all_items:
+            widget_region = item.virtual_region
+            if widget_region.y + widget_region.height > scroll_y:
+                self.scroll_anchor_id = item.id
+                log.debug(f"Set scroll anchor for {self.id} to {self.scroll_anchor_id}")
+                break
+        # --- End of scroll preservation logic ---
+
         self.loading_more = True
         log.info(f"Refreshing {self.id} timeline...")
         self.loading_indicator.display = True
@@ -327,6 +346,17 @@ class Timeline(Static, can_focus=True):
             
             self.content_container.sort_children(key=get_sort_key, reverse=True)
 
+        # --- Start of scroll restoration logic ---
+        if self.scroll_anchor_id and since_id: # Only restore on a refresh
+            try:
+                anchor_widget = self.content_container.query_one(f"#{self.scroll_anchor_id}")
+                self.content_container.scroll_to_widget(anchor_widget, animate=False, top=True)
+                log.debug(f"Restored scroll position for {self.id} to {self.scroll_anchor_id}")
+            except Exception as e:
+                log.warning(f"Could not restore scroll position: {e}")
+        self.scroll_anchor_id = None
+        # --- End of scroll restoration logic ---
+
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""
         all_posts = self.content_container.query("Post, Notification, ConversationSummary")
@@ -353,7 +383,7 @@ class Timeline(Static, can_focus=True):
         elif event.key == "right":
             self.post_message(FocusNextTimeline())
             event.stop()
-        elif event.key in ("up", "down", "l", "b", "a", "e", "enter", "p"):
+        elif event.key in ("up", "down", "l", "b", "a", "e", "enter", "p", "g"):
             event.stop()
             if event.key == "up":
                 self.scroll_up()
@@ -371,6 +401,8 @@ class Timeline(Static, can_focus=True):
                 self.open_thread()
             elif event.key == "p":
                 self.view_profile()
+            elif event.key == "g":
+                self.go_to_top()
 
     def scroll_up(self) -> None:
         """Proxy scroll_up to the content container."""
@@ -413,6 +445,10 @@ class Timeline(Static, can_focus=True):
     def view_profile(self) -> None:
         """Proxy view_profile to the content container."""
         self.content_container.view_profile()
+
+    def go_to_top(self) -> None:
+        """Proxy go_to_top to the content container."""
+        self.content_container.go_to_top()
 
     def compose(self):
         with Horizontal(classes="timeline-header"):

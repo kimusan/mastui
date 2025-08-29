@@ -164,6 +164,17 @@ class Post(Vertical):
         if status_to_display.get("reblogged"):
             self.add_class("reblogged")
 
+        # Check for mentions
+        try:
+            user_id = self.app.me["id"]
+            if any(
+                mention["id"] == user_id
+                for mention in status_to_display.get("mentions", [])
+            ):
+                self.add_class("mention")
+        except Exception as e:
+            log.error(f"Could not check for mentions: {e}")
+
     def compose(self):
         reblog = self.post.get("reblog")
         is_reblog = reblog is not None
@@ -507,7 +518,7 @@ class ConversationSummary(Widget, can_focus=True):
 
         # Filter out the current user's account to display others
         other_accounts = [
-            acc for acc in accounts if acc["id"] != self.app.api.me()["id"]
+            acc for acc in accounts if acc["id"] != self.app.me["id"]
         ]
         
         participant_names = ", ".join(

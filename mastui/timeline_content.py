@@ -138,7 +138,7 @@ class TimelineContent(VerticalScroll):
         """Edit the selected post."""
         if isinstance(self.selected_item, Post):
             status = self.selected_item.post.get("reblog") or self.selected_item.post
-            if status["account"]["id"] == self.app.api.me()["id"]:
+            if status["account"]["id"] == self.app.me["id"]:
                 self.app.action_edit_post()
             else:
                 self.app.notify("You can only edit your own posts.", severity="error")
@@ -165,3 +165,8 @@ class TimelineContent(VerticalScroll):
                 status = self.selected_item.notif.get("status")
                 if status:
                     self.app.push_screen(ThreadScreen(status["id"], self.app.api))
+
+    def go_to_top(self) -> None:
+        """Scrolls the timeline to the top and selects the first item."""
+        self.scroll_y = 0
+        self.select_first_item()

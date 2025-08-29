@@ -68,6 +68,7 @@ class Mastui(App):
         Binding("m", "toggle_dms", "Toggle DMs", show=True),
         Binding("l", "like_post", "Like post", show=False),
         Binding("b", "boost_post", "Boost post", show=False),
+        Binding("g", "go_to_top", "Go to top", show=False),
         Binding("up", "scroll_up", "Scroll up", show=False),
         Binding("down", "scroll_down", "Scroll down", show=False),
         Binding("?", "show_help", "Help", show=True),
@@ -79,6 +80,7 @@ class Mastui(App):
     log_file_path: str | None = None
     config: Config = None
     cache: Cache = None
+    me: dict | None = None
 
     def __init__(self, action=None, ssl_verify=True):
         super().__init__()
@@ -193,6 +195,15 @@ class Mastui(App):
         self.push_screen(SplashScreen())
         self.api = get_api(self.config)
         if self.api:
+            # Fetch the user's info once and store it
+            try:
+                self.me = self.api.me()
+            except Exception as e:
+                log.error(f"Failed to verify credentials: {e}", exc_info=True)
+                self.notify("Failed to connect to your instance. Please try again.", severity="error")
+                self.call_later(self.show_login_screen)
+                return
+
             self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
             if self.config.auto_prune_cache:
                 self.run_worker(self.prune_cache, thread=True, exclusive=True)
@@ -384,7 +395,7 @@ class Mastui(App):
         status = selected_item.post.get("reblog") or selected_item.post
         
         # Check if the post is by the current user
-        if status["account"]["id"] != self.api.me()["id"]:
+        if status["account"]["id"] != self.me["id"]:
             self.notify("You can only edit your own posts.", severity="error")
             return
 
@@ -753,6 +764,12 @@ class Mastui(App):
         if focused:
             focused.first().scroll_down()
 
+    def action_go_to_top(self) -> None:
+        """An action to scroll to the top of the focused timeline."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().go_to_top()
+
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
         if isinstance(self.screen, ModalScreen):
@@ -791,6 +808,7 @@ class Mastui(App):
         self.api = None
         self.config = None
         self.cache = None
+        self.me = None
         self.sub_title = ""
 
     def pause_timers(self):

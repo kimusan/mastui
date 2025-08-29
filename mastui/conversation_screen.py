@@ -158,7 +158,7 @@ class ConversationScreen(ModalScreen):
         """Edit the selected post."""
         if isinstance(self.selected_item, Post):
             status = self.selected_item.post.get("reblog") or self.selected_item.post
-            if status["account"]["id"] == self.app.api.me()["id"]:
+            if status["account"]["id"] == self.app.me["id"]:
                 self.app.push_screen(
                     EditPostScreen(status=status, max_characters=self.app.max_characters),
                     lambda result: self.app.on_edit_post_screen_dismiss((result, status['id']))
