@@ -19,10 +19,18 @@ class ReplyScreen(ModalScreen):
         self.visibility = visibility
 
     def get_mentions(self):
-        """Get mentions from the post being replied to."""
+        """Get all unique mentions from the post being replied to, excluding the current user."""
+        # Start with the author of the post
         mentions = {f"@{self.post_to_reply_to['account']['acct']}"}
+
+        # Add all mentioned users
         for mention in self.post_to_reply_to.get('mentions', []):
             mentions.add(f"@{mention['acct']}")
+
+        # Remove the current user's own handle
+        my_acct = f"@{self.app.me['acct']}"
+        mentions.discard(my_acct)
+
         return " ".join(sorted(list(mentions)))
 
     def compose(self) -> ComposeResult:
