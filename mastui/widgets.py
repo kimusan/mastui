@@ -209,7 +209,7 @@ class Post(Vertical):
                 f"Likes: {status_to_display.get('favourites_count', 0)}",
                 id="like-count",
             )
-            yield Static(self.created_at_str, classes="timestamp")
+            yield Static(format_datetime(status_to_display["created_at"]), classes="timestamp")
 
             visibility_icons = {
                 "public": "🌐",
@@ -326,6 +326,12 @@ class Notification(Widget):
         author_acct = f"@{author['acct']}"
         author_str = f"{author_display_name} ({author_acct})"
 
+        created_at = None
+        if self.notif["type"] == "mention":
+            created_at = self.notif["status"]["created_at"]
+        else:
+            created_at = self.notif["created_at"]
+
         if notif_type == "mention":
             status = self.notif["status"]
             spoiler_text = status.get("spoiler_text")
@@ -347,7 +353,7 @@ class Notification(Widget):
                 yield Static(
                     f"Likes: {status.get('favourites_count', 0)}", id="like-count"
                 )
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "favourite":
             status = self.notif["status"]
@@ -358,7 +364,7 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "reblog":
             status = self.notif["status"]
@@ -369,12 +375,12 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "follow":
             self.border_title = f"👋 {author_str} followed you."
             with Horizontal(classes="post-footer"):
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "poll":
             status = self.notif["status"]
@@ -383,7 +389,7 @@ class Notification(Widget):
                 status["poll"], timeline_id="notifications", post_id=status["id"]
             )
             with Horizontal(classes="post-footer"):
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
         elif notif_type == "update":
             status = self.notif["status"]
             self.border_title = (
@@ -396,7 +402,7 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
-                yield Static(self.created_at_str, classes="timestamp")
+                yield Static(format_datetime(created_at), classes="timestamp")
 
         else:
             yield Static(f"Unsupported notification type: {notif_type}")
@@ -520,6 +526,6 @@ class ConversationSummary(Widget, can_focus=True):
             
             timestamp = format_datetime(last_status.get("created_at"))
             with Horizontal(classes="post-footer"):
-                yield Static(timestamp, classes="timestamp")
+                yield Static(format_datetime(last_status.get("created_at")), classes="timestamp")
         else:
             yield Static("No messages yet.")

@@ -547,12 +547,14 @@ class Mastui(App):
         log.debug(f"Received PostStatusUpdate for post ID {target_id}")
 
         found_widget = False
-        for post_widget in self.query(Post):
-            original_status = post_widget.post.get("reblog") or post_widget.post
-            if original_status and original_status["id"] == target_id:
-                log.debug(f"Found matching post widget: {post_widget}")
-                post_widget.update_from_post(updated_post_data)
-                found_widget = True
+        # Search on the active screen (could be a modal) and in the main timelines
+        for container in [self.screen, *self.query(Timelines)]:
+            for post_widget in container.query(Post):
+                original_status = post_widget.post.get("reblog") or post_widget.post
+                if original_status and original_status["id"] == target_id:
+                    log.debug(f"Found matching post widget: {post_widget}")
+                    post_widget.update_from_post(updated_post_data)
+                    found_widget = True
         
         if not found_widget:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")

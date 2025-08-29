@@ -14,8 +14,6 @@ class HashtagTimeline(ModalScreen):
 
     BINDINGS = [
         ("escape", "dismiss", "Close Timeline"),
-        ("up", "scroll_up", "Scroll Up"),
-        ("down", "scroll_down", "Scroll Down"),
         ("l", "like_post", "Like Post"),
         ("b", "boost_post", "Boost Post"),
         ("a", "reply_to_post", "Reply to Post"),
@@ -33,6 +31,7 @@ class HashtagTimeline(ModalScreen):
         with Container(id="hashtag-timeline-dialog"):
             yield Header(show_clock=False)
             yield TimelineContent(
+                self,
                 Static(
                     f"Loading posts for #{self.hashtag}...", classes="status-message"
                 ),
@@ -67,6 +66,14 @@ class HashtagTimeline(ModalScreen):
             container.mount(Post(post, timeline_id="hashtag"))
 
         container.select_first_item()
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "up":
+            self.action_scroll_up()
+            event.stop()
+        elif event.key == "down":
+            self.action_scroll_down()
+            event.stop()
 
     def action_scroll_up(self):
         self.query_one(TimelineContent).scroll_up()

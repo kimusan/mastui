@@ -17,8 +17,6 @@ class ThreadScreen(ModalScreen):
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
         ("a", "reply_to_post", "Reply to post"),
-        ("up", "scroll_up", "Scroll up"),
-        ("down", "scroll_down", "Scroll down"),
     ]
 
     def __init__(self, post_id: str, api, **kwargs) -> None:
@@ -75,6 +73,14 @@ class ThreadScreen(ModalScreen):
             
         self.select_first_item()
 
+    def on_key(self, event: Key) -> None:
+        if event.key == "up":
+            self.action_scroll_up()
+            event.stop()
+        elif event.key == "down":
+            self.action_scroll_down()
+            event.stop()
+
     def select_first_item(self):
         if self.selected_item:
             self.selected_item.remove_class("selected")
@@ -85,24 +91,7 @@ class ThreadScreen(ModalScreen):
             log.error(f"Could not select first item in thread: {e}", exc_info=True)
             self.selected_item = None
 
-    def on_key(self, event: Key) -> None:
-        if event.key == "down":
-            self.scroll_down()
-            event.stop()
-        elif event.key == "up":
-            self.scroll_up()
-            event.stop()
-        elif event.key == "l":
-            self.action_like_post()
-            event.stop()
-        elif event.key == "b":
-            self.action_boost_post()
-            event.stop()
-        elif event.key == "a":
-            self.action_reply_to_post()
-            event.stop()
-
-    def scroll_up(self):
+    def action_scroll_up(self):
         items = self.query("Post")
         if self.selected_item and items:
             try:
@@ -116,7 +105,7 @@ class ThreadScreen(ModalScreen):
                 log.error(f"Could not scroll up in thread: {e}", exc_info=True)
                 self.select_first_item()
 
-    def scroll_down(self):
+    def action_scroll_down(self):
         items = self.query("Post")
         if self.selected_item and items:
             try:

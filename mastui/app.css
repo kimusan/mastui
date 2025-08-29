@@ -136,6 +136,7 @@ SplashScreen > Vertical {
 }
 
 .timestamp {
+    width: auto;
     color: $text-muted;
     text-align: right;
 }
