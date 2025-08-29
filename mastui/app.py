@@ -678,18 +678,50 @@ class Mastui(App):
         self.config.direct_timeline_enabled = not self.config.direct_timeline_enabled
         self.config.save_config()
 
-        # Hide the notification icon if we are showing the timeline
-        if self.config.direct_timeline_enabled:
-            self.query_one(CustomHeader).hide_dm_notification()
-
-        # Re-render the timelines
         try:
-            self.query_one(Timelines).remove()
-            self.mount(Timelines())
+            timelines_container = self.query_one(Timelines)
+            dm_timeline_query = timelines_container.query("#direct")
+
+            if self.config.direct_timeline_enabled:
+                # Show the timeline
+                self.query_one(CustomHeader).hide_dm_notification()
+                if not dm_timeline_query:  # If it doesn't exist, create it
+                    new_timeline = Timeline("Direct Messages", id="direct")
+                    timelines_container.mount(new_timeline)
+                    new_timeline.scroll_visible()  # Make sure it's visible
+                    new_timeline.focus()  # Focus the new timeline
+            else:
+                # Hide the timeline
+                if dm_timeline_query:
+                    timeline_to_remove = dm_timeline_query.first()
+                    # If the timeline to be removed has focus, move focus first
+                    if timeline_to_remove.has_focus:
+                        all_timelines = timelines_container.query(Timeline)
+                        try:
+                            idx = all_timelines.nodes.index(timeline_to_remove)
+                            if idx > 0:
+                                all_timelines[idx - 1].focus()
+                            elif len(all_timelines) > 1:
+                                all_timelines[1].focus()
+                        except ValueError:
+                            # Fallback if something goes wrong
+                            if len(all_timelines) > 1:
+                                all_timelines[0].focus()
+                    timeline_to_remove.remove()
+
         except Exception as e:
-            log.error(
-                f"Error re-rendering timelines after DM toggle: {e}", exc_info=True
-            )
+            log.error(f"Error toggling DM timeline smoothly: {e}", exc_info=True)
+            # Fallback to the old method if the smooth one fails
+            try:
+                self.query_one(Timelines).remove()
+                self.mount(Timelines())
+            except Exception as fallback_e:
+                log.error(
+                    f"Error re-rendering timelines after DM toggle fallback: {fallback_e}",
+                    exc_info=True,
+                )
+        
+        self.call_later(self.check_layout_mode)
 
     def action_view_profile(self) -> None:
         """An action to view the profile of the selected post's author."""
