@@ -137,6 +137,8 @@ class Timeline(Static, can_focus=True):
                 posts = self.fetch_posts(since_id=since_id)
                 if posts:
                     self.app.cache.bulk_insert_posts(self.id, posts)
+                    if self.id == "notifications":
+                        self._handle_popups(posts)
                 self.post_message(TimelineUpdate(posts, since_id=since_id))
                 return
 
@@ -356,6 +358,23 @@ class Timeline(Static, can_focus=True):
                 log.warning(f"Could not restore scroll position: {e}")
         self.scroll_anchor_id = None
         # --- End of scroll restoration logic ---
+
+    def _handle_popups(self, notifications: list):
+        """Handle pop-up notifications for new items."""
+        if self.id != "notifications" or not notifications:
+            return
+
+        config = self.app.config
+        for notif in notifications:
+            acct = notif["account"]["acct"]
+            if notif["type"] == "mention" and config.notifications_popups_mentions:
+                self.app.notify(f"New mention from @{acct}", title="New Mention")
+            elif notif["type"] == "follow" and config.notifications_popups_follows:
+                self.app.notify(f"@{acct} followed you", title="New Follower")
+            elif notif["type"] == "reblog" and config.notifications_popups_reblogs:
+                self.app.notify(f"@{acct} boosted your post", title="New Boost")
+            elif notif["type"] == "favourite" and config.notifications_popups_favourites:
+                self.app.notify(f"@{acct} favourited your post", title="New Favourite")
 
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""

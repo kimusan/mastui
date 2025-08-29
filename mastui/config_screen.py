@@ -107,6 +107,24 @@ class ConfigScreen(ModalScreen):
                     yield Switch(value=config.auto_prune_cache, id="auto_prune_cache")
                     yield Static()  # Spacer
 
+            with Collapsible(title="Notifications"):
+                with Grid(classes="config-group-body"):
+                    yield Label("Pop-up on new mentions?", classes="config-label")
+                    yield Switch(value=config.notifications_popups_mentions, id="notifications_popups_mentions")
+                    yield Static()
+
+                    yield Label("Pop-up on new follows?", classes="config-label")
+                    yield Switch(value=config.notifications_popups_follows, id="notifications_popups_follows")
+                    yield Static()
+
+                    yield Label("Pop-up on new reblogs?", classes="config-label")
+                    yield Switch(value=config.notifications_popups_reblogs, id="notifications_popups_reblogs")
+                    yield Static()
+
+                    yield Label("Pop-up on new favourites?", classes="config-label")
+                    yield Switch(value=config.notifications_popups_favourites, id="notifications_popups_favourites")
+                    yield Static()
+
             with Horizontal(id="config-buttons"):
                 yield Button("Save", variant="primary", id="save")
                 yield Button("Cancel", id="cancel")
@@ -161,4 +179,11 @@ class ConfigScreen(ModalScreen):
             "#direct_timeline_enabled"
         ).value
         config.force_single_column = self.query_one("#force_single_column").value
+
+        # Save notification settings
+        config.notifications_popups_mentions = self.query_one("#notifications_popups_mentions").value
+        config.notifications_popups_follows = self.query_one("#notifications_popups_follows").value
+        config.notifications_popups_reblogs = self.query_one("#notifications_popups_reblogs").value
+        config.notifications_popups_favourites = self.query_one("#notifications_popups_favourites").value
+        
         config.save_config()

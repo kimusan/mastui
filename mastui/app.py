@@ -81,6 +81,7 @@ class Mastui(App):
     config: Config = None
     cache: Cache = None
     me: dict | None = None
+    notified_dm_ids: set[str] = set()
 
     def __init__(self, action=None, ssl_verify=True):
         super().__init__()
@@ -223,12 +224,35 @@ class Mastui(App):
 
         log.debug("Checking for new direct messages in the background...")
         try:
-            latest_convos = self.api.conversations(limit=1)
-            if latest_convos and latest_convos[0].get("unread"):
-                header.show_dm_notification()
-                self.notify("You have a new Direct Message", title="New DM")
-            else:
+            all_convos = self.api.conversations()  # Fetches up to 20 by default
+            if not all_convos:
                 header.hide_dm_notification()
+                return
+
+            unread_convos = [c for c in all_convos if c.get("unread")]
+
+            if not unread_convos:
+                header.hide_dm_notification()
+                return
+
+            header.show_dm_notification()
+
+            for convo in unread_convos:
+                if convo["id"] not in self.notified_dm_ids:
+                    # Find the other participant
+                    other_participants = [
+                        acc
+                        for acc in convo["accounts"]
+                        if acc["id"] != self.me["id"]
+                    ]
+                    if other_participants:
+                        participant_name = other_participants[0]["acct"]
+                        self.notify(f"New DM from @{participant_name}", title="New DM")
+                    else:  # Should not happen, but as a fallback
+                        self.notify("You have a new Direct Message", title="New DM")
+
+                    self.notified_dm_ids.add(convo["id"])
+
         except Exception as e:
             log.error(f"Background DM check failed: {e}", exc_info=True)
 
@@ -809,6 +833,7 @@ class Mastui(App):
         self.config = None
         self.cache = None
         self.me = None
+        self.notified_dm_ids = set()
         self.sub_title = ""
 
     def pause_timers(self):

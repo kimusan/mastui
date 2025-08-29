@@ -56,6 +56,12 @@ class Config:
         self.direct_timeline_enabled = config_values.get("DIRECT_TIMELINE_ENABLED", "on") == "on"
         self.force_single_column = config_values.get("FORCE_SINGLE_COLUMN", "off") == "on"
 
+        # Notification settings
+        self.notifications_popups_mentions = config_values.get("NOTIFICATIONS_POPUPS_MENTIONS", "off") == "on"
+        self.notifications_popups_follows = config_values.get("NOTIFICATIONS_POPUPS_FOLLOWS", "off") == "on"
+        self.notifications_popups_reblogs = config_values.get("NOTIFICATIONS_POPUPS_REBLOGS", "off") == "on"
+        self.notifications_popups_favourites = config_values.get("NOTIFICATIONS_POPUPS_FAVOURITES", "off") == "on"
+
 
     def save_config(self):
         with open(self.env_file, "w") as f:
@@ -88,6 +94,10 @@ class Config:
             f.write(f"FEDERATED_TIMELINE_ENABLED={'on' if self.federated_timeline_enabled else 'off'}\n")
             f.write(f"DIRECT_TIMELINE_ENABLED={'on' if self.direct_timeline_enabled else 'off'}\n")
             f.write(f"FORCE_SINGLE_COLUMN={'on' if self.force_single_column else 'off'}\n")
+            f.write(f"NOTIFICATIONS_POPUPS_MENTIONS={'on' if self.notifications_popups_mentions else 'off'}\n")
+            f.write(f"NOTIFICATIONS_POPUPS_FOLLOWS={'on' if self.notifications_popups_follows else 'off'}\n")
+            f.write(f"NOTIFICATIONS_POPUPS_REBLOGS={'on' if self.notifications_popups_reblogs else 'off'}\n")
+            f.write(f"NOTIFICATIONS_POPUPS_FAVOURITES={'on' if self.notifications_popups_favourites else 'off'}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host
