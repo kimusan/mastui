@@ -139,7 +139,7 @@ class Mastui(App):
             self.call_later(self.show_login_screen)
 
     def select_profile(self):
-        """Select a profile to use."""
+        """Select a profile to use, or load the last used one."""
         migrated = profile_manager.migrate_old_profile()
         if migrated:
             self.notify(
@@ -147,6 +147,13 @@ class Mastui(App):
                 title="Profile Migrated",
             )
 
+        # Try to load the last used profile
+        last_profile = profile_manager.get_last_profile()
+        if last_profile and last_profile in profile_manager.get_profiles():
+            self.load_profile(last_profile)
+            return
+
+        # Fallback to selection screen
         profiles = profile_manager.get_profiles()
         if len(profiles) == 1:
             self.load_profile(profiles[0])
@@ -190,6 +197,9 @@ class Mastui(App):
 
         self.cache = Cache(profile_path / "cache.db")
 
+        # Save this as the last successfully loaded profile
+        profile_manager.set_last_profile(profile_name)
+
         # Update the header with the profile name
         self.sub_title = profile_name
 
@@ -199,24 +209,51 @@ class Mastui(App):
         self.push_screen(SplashScreen())
         self.api = get_api(self.config)
         if self.api:
-            # Fetch the user's info once and store it
-            try:
-                self.me = self.api.me()
-            except Exception as e:
-                log.error(f"Failed to verify credentials: {e}", exc_info=True)
-                self.notify("Failed to connect to your instance. Please try again.", severity="error")
-                self.call_later(self.show_login_screen)
-                return
-
-            self.run_worker(self.fetch_instance_info, thread=True, exclusive=True)
-            if self.config.auto_prune_cache:
-                self.run_worker(self.prune_cache, thread=True, exclusive=True)
-            self.set_timer(2, self.show_timelines)
-            self.set_interval(300, self.check_for_dms)  # Check for DMs every 5 minutes
-            self.call_later(self.check_for_dms)  # Also check right after startup
+            self.run_worker(self._load_profile_data, thread=True, exclusive=True)
         else:
             log.error("API object could not be created. Forcing login.")
             self.call_later(self.show_login_screen)
+
+    def _load_profile_data(self):
+        """Worker to fetch initial profile data in the background."""
+        splash_screen = self.screen
+        try:
+            # Update splash screen status
+            if isinstance(splash_screen, SplashScreen):
+                self.call_from_thread(splash_screen.update_status, "Authenticating")
+
+            # Fetch the user's info once and store it
+            self.me = self.api.me()
+
+            # Update splash screen status
+            if isinstance(splash_screen, SplashScreen):
+                self.call_from_thread(splash_screen.update_status, "Fetching instance details")
+
+            # Fetch instance info
+            instance = self.api.instance()
+            self.max_characters = instance["configuration"]["statuses"]["max_characters"]
+        except Exception as e:
+            log.error(f"Failed to verify credentials or fetch instance info: {e}", exc_info=True)
+            self.call_from_thread(
+                self.notify,
+                "Failed to connect to your instance. Please try again.",
+                severity="error",
+            )
+            self.call_from_thread(self.show_login_screen)
+            return
+
+        # Update splash screen status
+        if isinstance(splash_screen, SplashScreen):
+            self.call_from_thread(splash_screen.update_status, "Loading timelines")
+
+        # Once data is loaded, show the timelines
+        self.call_from_thread(self.show_timelines)
+
+        # Start other background tasks
+        if self.config.auto_prune_cache:
+            self.run_worker(self.prune_cache, thread=True, exclusive=True)
+        self.set_interval(300, self.check_for_dms)  # Check for DMs every 5 minutes
+        self.call_from_thread(self.check_for_dms)  # Also check right after startup
 
     def check_for_dms(self):
         """Background worker to check for new direct messages."""

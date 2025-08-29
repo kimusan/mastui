@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 class SplashScreen(Screen):
     """A splash screen with the app name, version, and logo."""
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.base_status = "Loading"
+        self.dot_count = 0
+
     def get_version(self):
         """
         Reads the version from the installed package metadata,
@@ -48,25 +53,25 @@ class SplashScreen(Screen):
         yield Vertical(
             Static(Panel(logo, border_style="dim"), id="logo"),
             Static(f"Mastui v{version}", id="version"),
-            Static("Loading...", id="splash-status"),
+            Static(f"{self.base_status}...", id="splash-status"),
             id="splash-container",
         )
 
     def on_mount(self) -> None:
-        self.set_interval(0.3, self.update_loading_text)
+        self.set_interval(0.4, self.update_loading_text)
 
     def update_loading_text(self) -> None:
-        status = self.query_one("#splash-status")
-        text = status.renderable
-        if text.endswith("..."):
-            status.update(text[:-3])
-        else:
-            status.update(text + ".")
+        """Update the loading text with blinking dots."""
+        self.dot_count = (self.dot_count + 1) % 4
+        status_widget = self.query_one("#splash-status")
+        # Add padding to prevent the width from changing
+        status_text = f"{self.base_status}{'.' * self.dot_count}"
+        status_widget.update(f"{status_text:<{len(self.base_status) + 3}}")
+
 
     def update_status(self, message: str) -> None:
         """Update the status message on the splash screen."""
-        try:
-            self.query_one("#splash-status").update(message)
-        except Exception as e:
-            log.error(f"Could not update splash screen status: {e}", exc_info=True)
+        self.base_status = message
+        self.dot_count = 0
+        self.update_loading_text() # Update immediately with new base text
 

@@ -4,8 +4,27 @@ import shutil
 
 class ProfileManager:
     def __init__(self):
-        self.profiles_dir = Path.home() / ".config" / "mastui" / "profiles"
+        self.config_dir = Path.home() / ".config" / "mastui"
+        self.profiles_dir = self.config_dir / "profiles"
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
+        self.last_profile_file = self.config_dir / "last_profile.txt"
+
+    def get_last_profile(self) -> str | None:
+        """Reads the name of the last used profile."""
+        try:
+            if self.last_profile_file.exists():
+                return self.last_profile_file.read_text().strip()
+        except Exception:
+            return None
+        return None
+
+    def set_last_profile(self, profile_name: str):
+        """Saves the name of the last used profile."""
+        try:
+            self.last_profile_file.write_text(profile_name)
+        except Exception:
+            pass  # Fail silently if we can't write the file
+
 
     def get_profiles(self) -> list[str]:
         """Returns a list of available profile names."""
