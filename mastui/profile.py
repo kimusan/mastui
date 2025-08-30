@@ -57,6 +57,7 @@ class ProfileScreen(ModalScreen):
         container.query("*").remove()
 
         header = f"[bold]{profile['display_name']}[/bold] (@{profile['acct']})"
+        container.border_title = f"Profile: {header}"
         
         # Add relationship statuses to header
         if profile.get('following'):
@@ -80,7 +81,6 @@ class ProfileScreen(ModalScreen):
             container.mount(ImageWidget(profile['avatar'], self.app.config, id="profile-avatar"))
 
         container.mount(
-            Static(Panel(header, border_style="dim")),
             Static(Panel(note, title="Bio"), id="profile-bio"),
             Static(Panel(Markdown(fields_text), title="Links"), id="profile-links"),
             Static(stats, id="profile-stats")

@@ -22,9 +22,8 @@ class LoginScreen(ModalScreen):
         self.client_secret = None
 
     def compose(self) -> ComposeResult:
-        self.title = "Mastui Login"
-        with Vertical(id="login-dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="login-dialog") as d:
+            d.border_title = "Mastui Login"
             with ContentSwitcher(initial="login-initial-view"):
                 with Vertical(id="login-initial-view"):
                     yield Static("[bold]Welcome to Mastui![/bold]\n\nEnter your Mastodon instance to get started.")
@@ -150,8 +149,12 @@ class LoginScreen(ModalScreen):
             auth_link_input.text = auth_url
             switcher.current = "login-auth-view"
             self.query_one("#auth_code").focus()
+        except (TypeError, ValueError) as e:
+            log.error(f"Error unpacking result in on_auth_link_created: {result} - {e}", exc_info=True)
+            status.update("An unexpected error occurred. See log for details.")
+            switcher.current = "login-initial-view"
         except Exception as e:
-            log.error(f"Error in on_auth_link_created: {e}", exc_info=True)
+            log.error(f"Unexpected error in on_auth_link_created: {e}", exc_info=True)
             status.update("An unexpected error occurred. See log for details.")
             switcher.current = "login-initial-view"
 

@@ -16,10 +16,9 @@ class ConfigScreen(ModalScreen):
     """A modal screen for changing settings."""
 
     def compose(self):
-        self.title = "Mastui Options"
         config = self.app.config  # Use the app's config object
-        with Vertical(id="config-dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="config-dialog") as d:
+            d.border_title = "Mastui Options"
 
             with Collapsible(title="Timeline Visibility"):
                 with Grid(classes="config-group-body"):

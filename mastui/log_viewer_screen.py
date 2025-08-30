@@ -17,9 +17,8 @@ class LogViewerScreen(ModalScreen):
         self.log_file_path = log_file_path
 
     def compose(self):
-        self.title = "Mastui Log Viewer"
-        with Vertical(id="log-viewer-dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="log-viewer-dialog") as d:
+            d.border_title = "Mastui Log Viewer"
             yield Log(highlight=True, id="log-viewer")
 
     def on_mount(self):

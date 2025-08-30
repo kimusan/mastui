@@ -27,9 +27,8 @@ class HashtagTimeline(ModalScreen):
         self.api = api
 
     def compose(self):
-        self.title = f"#{self.hashtag}"
-        with Container(id="hashtag-timeline-dialog"):
-            yield Header(show_clock=False)
+        with Container(id="hashtag-timeline-dialog") as d:
+            d.border_title = f"#{self.hashtag}"
             yield TimelineContent(
                 self,
                 Static(

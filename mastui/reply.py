@@ -34,9 +34,8 @@ class ReplyScreen(ModalScreen):
         return " ".join(sorted(list(mentions)))
 
     def compose(self) -> ComposeResult:
-        self.title = "Reply to Post"
-        with Vertical(id="reply_dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="reply_dialog") as d:
+            d.border_title = "Reply to Post"
             with VerticalScroll(id="reply_content_container"):
                 with Vertical(id="original_post_preview") as v:
                     v.border_title = f"Replying to @{self.post_to_reply_to['account']['acct']}"

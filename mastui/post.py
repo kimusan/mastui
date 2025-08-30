@@ -24,9 +24,8 @@ class PostScreen(ModalScreen):
         self.max_characters = max_characters
 
     def compose(self):
-        self.title = "New Post"
-        with Vertical(id="post_dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="post_dialog") as d:
+            d.border_title = "New Post"
             with VerticalScroll(id="post_content_container"):
                 yield TextArea(id="post_content", language="markdown")
                 with Horizontal(id="post_options"):

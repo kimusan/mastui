@@ -10,9 +10,8 @@ class HelpScreen(ModalScreen):
     ]
 
     def compose(self):
-        self.title = "Mastui Help"
-        with Vertical(id="help-dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="help-dialog") as d:
+            d.border_title = "Mastui Help"
             yield Static("[bold]Key Bindings[/bold]", classes="title")
             table = DataTable(zebra_stripes=True)
             table.add_columns("Key(s)", "Action")

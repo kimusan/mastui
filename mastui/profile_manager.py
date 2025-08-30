@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 import shutil
+import logging
+
+log = logging.getLogger(__name__)
 
 class ProfileManager:
     def __init__(self):
@@ -14,7 +17,8 @@ class ProfileManager:
         try:
             if self.last_profile_file.exists():
                 return self.last_profile_file.read_text().strip()
-        except Exception:
+        except (IOError, OSError) as e:
+            log.error(f"Failed to read last profile file: {e}", exc_info=True)
             return None
         return None
 
@@ -22,8 +26,8 @@ class ProfileManager:
         """Saves the name of the last used profile."""
         try:
             self.last_profile_file.write_text(profile_name)
-        except Exception:
-            pass  # Fail silently if we can't write the file
+        except (IOError, OSError) as e:
+            log.error(f"Failed to write last profile file: {e}", exc_info=True)
 
 
     def get_profiles(self) -> list[str]:

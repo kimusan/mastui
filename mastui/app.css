@@ -446,7 +446,7 @@ ConfigScreen .collapsible--title {
     height: 80%;
     background: $surface;
     border: solid $primary;
-    padding: 1;
+    padding: 0;
     overflow-y: auto;
     border-title-align: center;
 }
@@ -505,6 +505,20 @@ ImageWidget {
 
 LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen {
     align: center middle;
+}
+
+#profile-dialog,
+#help-dialog,
+#hashtag-timeline-dialog,
+#conversation-dialog,
+#search-dialog,
+#log-viewer-dialog,
+#config-dialog,
+#post_dialog,
+#reply_dialog,
+#login-dialog,
+#profile-selection-dialog {
+    border-title-align: center;
 }
 
 #profile-dialog {

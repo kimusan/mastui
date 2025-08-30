@@ -54,8 +54,11 @@ def login(host, client_id, client_secret, auth_code, ssl_verify=True):
             session=final_session,
         )
         return api, env_content, None
+    except MastodonError as e:
+        log.error(f"Mastodon API error during login for host '{host}': {e}", exc_info=True)
+        return None, None, str(e)
     except Exception as e:
-        log.error(f"Error during login for host '{host}': {e}", exc_info=True)
+        log.error(f"Unexpected error during login for host '{host}': {e}", exc_info=True)
         return None, None, str(e)
 
 
@@ -99,11 +102,11 @@ def create_app(host, ssl_verify=True):
         if "Expecting value" in error_message:
             error_message = f"Could not parse server response from '{host}'. The instance may be offline, misconfigured, or not a Mastodon instance."
 
-        return None, error_message
+        return None, None, None, error_message
     except Exception as e:
         # Catch any other potential errors (e.g., network issues not caught by MastodonError)
         log.error(
             f"Unexpected error during app creation for host '{host}': {e}",
             exc_info=True,
         )
-        return None, str(e)
+        return None, None, None, str(e)

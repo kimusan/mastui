@@ -18,9 +18,8 @@ class EditPostScreen(ModalScreen):
         self.max_characters = max_characters
 
     def compose(self):
-        self.title = "Edit Post"
-        with Vertical(id="post_dialog"):
-            yield Header(show_clock=False)
+        with Vertical(id="post_dialog") as d:
+            d.border_title = "Edit Post"
             with VerticalScroll(id="post_content_container"):
                 yield TextArea(html_to_plain_text(self.status.get('content', '')), id="post_content", language="markdown")
                 with Horizontal(id="post_options"):
