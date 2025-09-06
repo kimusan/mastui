@@ -19,7 +19,7 @@
 
 Whether you're a power user who wants to manage multiple accounts or someone who just loves the terminal, Mastui is designed to be your new favorite way to interact with Mastodon.
 
-![Main Mastui View](https://raw.githubusercontent.com/kimusan/mastui/refs/head/assets/screenshots/mastui-main-view.png)
+![Main Mastui View](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/assets/screenshots/mastui-main-view.png)
 
 ## 💻 Cross-Platform Support
 
