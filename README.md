@@ -1,7 +1,7 @@
 # Mastui - A Fast and Modern Mastodon Client for the Terminal
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kimusan/main/mastui/assets/mastui-logo.png" alt="Mastui Logo" width="400"/>
+  <img src="https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/mastui-logo.png" alt="Mastui Logo" width="400"/>
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 Whether you're a power user who wants to manage multiple accounts or someone who just loves the terminal, Mastui is designed to be your new favorite way to interact with Mastodon.
 
-![Main Mastui View](https://raw.githubusercontent.com/kimusan/main/mastui/assets/screenshots/mastui-main-view.png)
+![Main Mastui View](https://raw.githubusercontent.com/kimusan/mastui/refs/head/assets/screenshots/mastui-main-view.png)
 
 ## 💻 Cross-Platform Support
 
@@ -70,11 +70,11 @@ Mastui is packed with features to make your Mastodon experience seamless and eff
 
 | **Thread View** | **Profile View** |
 | :---: | :---: |
-| ![Thread View](https://raw.githubusercontent.com/kimusan/main/mastui/assets/mastui-thread-view.png) | ![Profile View](https://raw.githubusercontent.com/kimusan/main/mastui/assets/screenshots/mastui-profile-view.png) |
+| ![Thread View](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/mastui-thread-view.png) | ![Profile View](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/screenshots/mastui-profile-view.png) |
 | **Compose Window with Poll** | **Options Screen** |
-| ![Compose poll](https://raw.githubusercontent.com/kimusan/main/mastui/assets/mastui-compose-poll.png) | ![Options Window](https://raw.githubusercontent.com/kimusan/main/mastui/assets/screenshots/mastui-options-window.png) |
+| ![Compose poll](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/mastui-compose-poll.png) | ![Options Window](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/screenshots/mastui-options-window.png) |
 | **Retro Green Theme** | **Light Theme** |
-| ![Retro Theme](https://raw.githubusercontent.com/kimusan/main/mastui/assets/screenshots/mastui-retro-green-on-black-theme.png) | ![Light Theme](https://raw.githubusercontent.com/kimusan/main/mastui/assets/screenshots/mastui-light-theme.png) |
+| ![Retro Theme](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/screenshots/mastui-retro-green-on-black-theme.png) | ![Light Theme](https://raw.githubusercontent.com/kimusan/mastui/refs/main/assets/screenshots/mastui-light-theme.png) |
 
 ## 🚀 Installation
 
@@ -166,4 +166,3 @@ See also the list of contributors who participated in this project.
 ## 📜 License
 
 Mastui is licensed under the MIT License. See the `LICENSE` file for more information.
-
