@@ -12,17 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Jump to Top:** Use the `g` key to instantly scroll to the top of a timeline.
 - **Log Viewer:** A hidden log viewer (`F12`) is available when running with `--debug`.
 - **Enhanced Notifications:** Get detailed pop-up notifications for DMs and optionally for mentions, follows, boosts, and favourites.
-- **Edit Posts:** Edit your own posts using the `e` key.
-- **Direct Messages:** A dedicated timeline for viewing and replying to Direct Messages.
-- **Multi-Profile Support:** Log into and switch between multiple accounts.
-- **Search:** Full-text search for users, hashtags, and posts.
-- **Mute/Block:** Mute and block users from their profile pages.
-- **Polls:** View, vote on, and create polls.
-- **Custom Themes:** Support for user-created custom themes.
 
 ### Changed
 - **Optimized Startup:** The app now loads the last used profile automatically and displays the splash screen immediately while loading data in the background.
-- **Lazy Loading:** Images are now "lazy loaded" only when they scroll into view, improving performance and reducing bandwidth.
 - **UI Polish:**
     - The selected item in the active timeline is now clearly highlighted.
     - Timestamps now correctly show both date and time.
@@ -32,7 +24,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Correctly handle "boost" and "like" actions in all views, including threads and hashtag timelines.
+- Images now load reliably after a regression with the lazy loading feature.
 - Numerous small bug fixes and stability improvements.
+
+## [0.9.0] - 2025-08-29
+
+### Added
+- **Edit Posts:** Edit your own posts using the `e` key.
+- **Direct Messages:** A dedicated timeline for viewing and replying to Direct Messages.
+- **Multi-Profile Support:** Log into and switch between multiple accounts.
+- **Search:** Full-text search for users, hashtags, and posts.
+- **Mute/Block:** Mute and block users from their profile pages.
+- **Polls:** View, vote on, and create polls.
+- **Custom Themes:** Support for user-created custom themes.
+- **Profile Pictures:** Avatars are now displayed in profile views.
+- **Mouse Support:** Full mouse support for scrolling and interaction.
+- **Caching:** A backend cache was added to improve performance and preserve posts between sessions.
+
+### Changed
+- **UI Overhaul:** Major UI cleanup and streamlining of modal windows. All styling is now consolidated in the main CSS file.
+- **Onboarding:** The login and authentication flow has been improved and made more robust.
+- **Clickable Links:** Hashtags and links in posts are now clickable.
+
+### Fixed
+- **Thread View:** Corrected bugs related to duplicate IDs and rendering issues in conversation threads.
+- **Authentication:** Fixed several issues related to the authentication flow and SSL verification.
+- **Scrolling:** Fixed an issue where the view would jump back to the top when scrolling with the mouse.
 
 ## [0.7.0]
 

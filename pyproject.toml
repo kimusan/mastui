@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mastui"
-version = "1.0.0a0"
+version = "1.0.0"
 description = "A Mastodon TUI client."
 authors = ["Kim Schulz"]
 readme = "README.md"
