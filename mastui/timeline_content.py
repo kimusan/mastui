@@ -48,6 +48,7 @@ class TimelineContent(VerticalScroll):
             log.error(f"Could not select first item in timeline: {e}", exc_info=True)
             self.selected_item = None
 
+
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
         if self.scroll_y >= self.max_scroll_y - 2:
             if not self.timeline.loading_more:
