@@ -74,9 +74,7 @@ Mastui is packed with features to make your Mastodon experience seamless and eff
 | ![Thread View](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-thread-view.png) | ![Profile View](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-profile-view.png) |
 | **Compose Window with Poll** | **Options Screen** |
 | ![Compose poll](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-compose-poll.png) | ![Options Window](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-options-window.png) |
-| **Retro Green Theme*
-
-* | **Light Theme** |
+| **Retro Green Theme** | **Light Theme** |
 | ![Retro Theme](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-retro-green-on-black-theme.png) | ![Light Theme](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-light-theme.png) |
 
 ## 🚀 Installation
