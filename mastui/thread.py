@@ -8,6 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class ThreadScreen(ModalScreen):
     """A modal screen to display a post thread."""
 
@@ -24,13 +25,14 @@ class ThreadScreen(ModalScreen):
         self.post_id = post_id
         self.api = api
         self.selected_item = None
+        self._rendering = False
 
     def compose(self):
         with Container(id="thread-dialog") as td:
             td.border_title = "Thread View"
             yield VerticalScroll(
                 Static("Loading thread...", classes="status-message"),
-                id="thread-container"
+                id="thread-container",
             )
 
     def on_mount(self):
@@ -53,25 +55,34 @@ class ThreadScreen(ModalScreen):
 
     def render_thread(self, context, main_post_data):
         """Render the thread."""
+        if self._rendering:
+            return
+
+        self._rendering = True
         container = self.query_one("#thread-container")
         container.query("*").remove()
 
-        ancestors = context.get("ancestors", [])
-        descendants = context.get("descendants", [])
-        
-        for post in ancestors:
-            container.mount(Post(post, timeline_id="thread", id=f"thread-{post['id']}"))
+        def mount_posts():
+            try:
+                ancestors = context.get("ancestors", [])
+                descendants = context.get("descendants", [])
 
-        main_post = Post(main_post_data, timeline_id="thread", id=f"thread-{main_post_data['id']}")
-        main_post.add_class("main-post")
-        container.mount(main_post)
+                for post in ancestors:
+                    container.mount(Post(post, timeline_id="thread"))
 
-        for post in descendants:
-            reply_post = Post(post, timeline_id="thread", id=f"thread-{post['id']}")
-            reply_post.add_class("reply-post")
-            container.mount(reply_post)
-            
-        self.select_first_item()
+                main_post = Post(main_post_data, timeline_id="thread")
+                main_post.add_class("main-post")
+                container.mount(main_post)
+
+                for post in descendants:
+                    reply_post = Post(post, timeline_id="thread")
+                    reply_post.add_class("reply-post")
+                    container.mount(reply_post)
+                self.select_first_item()
+            finally:
+                self._rendering = False
+
+        self.call_after_refresh(mount_posts)
 
     def on_key(self, event: Key) -> None:
         if event.key == "up":
@@ -121,32 +132,46 @@ class ThreadScreen(ModalScreen):
 
     def action_like_post(self):
         if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
+            status_to_action = (
+                self.selected_item.post.get("reblog") or self.selected_item.post
+            )
             if not status_to_action:
-                self.app.notify("Cannot like a post that has been deleted.", severity="error")
+                self.app.notify(
+                    "Cannot like a post that has been deleted.", severity="error"
+                )
                 return
             self.selected_item.show_spinner()
-            self.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
+            self.post_message(
+                LikePost(
+                    status_to_action["id"], status_to_action.get("favourited", False)
+                )
+            )
 
     def action_boost_post(self):
         if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
+            status_to_action = (
+                self.selected_item.post.get("reblog") or self.selected_item.post
+            )
             if not status_to_action:
-                self.app.notify("Cannot boost a post that has been deleted.", severity="error")
+                self.app.notify(
+                    "Cannot boost a post that has been deleted.", severity="error"
+                )
                 return
             self.selected_item.show_spinner()
             self.post_message(BoostPost(status_to_action["id"]))
 
     def action_reply_to_post(self):
         if isinstance(self.selected_item, Post):
-            post_to_reply_to = self.selected_item.post.get("reblog") or self.selected_item.post
+            post_to_reply_to = (
+                self.selected_item.post.get("reblog") or self.selected_item.post
+            )
             if post_to_reply_to:
                 self.app.push_screen(
                     ReplyScreen(
-                        post_to_reply_to, 
-                        max_characters=self.app.max_characters
-                    ), 
-                    self.app.on_reply_screen_dismiss
+                        post_to_reply_to, max_characters=self.app.max_characters
+                    ),
+                    self.app.on_reply_screen_dismiss,
                 )
             else:
                 self.app.notify("This item cannot be replied to.", severity="error")
+
