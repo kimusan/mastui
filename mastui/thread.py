@@ -141,6 +141,12 @@ class ThreadScreen(ModalScreen):
         if isinstance(self.selected_item, Post):
             post_to_reply_to = self.selected_item.post.get("reblog") or self.selected_item.post
             if post_to_reply_to:
-                self.app.push_screen(ReplyScreen(post_to_reply_to), self.app.on_reply_screen_dismiss)
+                self.app.push_screen(
+                    ReplyScreen(
+                        post_to_reply_to, 
+                        max_characters=self.app.max_characters
+                    ), 
+                    self.app.on_reply_screen_dismiss
+                )
             else:
                 self.app.notify("This item cannot be replied to.", severity="error")
