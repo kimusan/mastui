@@ -11,6 +11,7 @@ from textual.widgets import (
 )
 from textual.containers import Grid, Vertical, Horizontal
 from textual import on
+from mastui.keybind_screen import KeybindScreen
 
 class ConfigScreen(ModalScreen):
     """A modal screen for changing settings."""
@@ -125,6 +126,7 @@ class ConfigScreen(ModalScreen):
                     yield Static()
 
             with Horizontal(id="config-buttons"):
+                yield Button("Customize Keys", id="keybinds")
                 yield Button("Save", variant="primary", id="save")
                 yield Button("Cancel", id="cancel")
 
@@ -132,8 +134,15 @@ class ConfigScreen(ModalScreen):
         if event.button.id == "save":
             self.save_settings()
             self.dismiss(True)
+        elif event.button.id == "keybinds":
+            self.app.push_screen(KeybindScreen(self.app.keybind_manager), self.on_keybind_screen_dismiss)
         else:
             self.dismiss(False)
+
+    def on_keybind_screen_dismiss(self, result: bool) -> None:
+        if result:
+            self.app.bind_keys()
+
 
     @on(Collapsible.Toggled)
     def on_collapsible_toggled(self, event: Collapsible.Toggled) -> None:

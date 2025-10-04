@@ -19,6 +19,8 @@ from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
 from mastui.hashtag_timeline import HashtagTimeline
 from mastui.conversation_screen import ConversationScreen
+from mastui.keybind_manager import KeybindManager
+from mastui.keybind_screen import KeybindScreen
 from mastui.log_viewer_screen import LogViewerScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme_builtin
@@ -56,26 +58,6 @@ css_path = os.path.join(os.path.dirname(__file__), "app.css")
 class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
-    BINDINGS = [
-        Binding("d", "toggle_dark", "Toggle dark mode", show=False),
-        Binding("r", "refresh_timelines", "Refresh timelines", show=False),
-        Binding("c", "compose_post", "Compose post", show=False),
-        Binding("p", "view_profile", "View profile", show=False),
-        Binding("a", "reply_to_post", "Reply to post", show=False),
-        Binding("e", "edit_post", "Edit post", show=False),
-        Binding("o", "open_options", "Options", show=False),
-        Binding("/", "search", "Search", show=False),
-        Binding("u", "switch_profile", "Switch user profile", show=False),
-        Binding("m", "toggle_dms", "Toggle DMs", show=True),
-        Binding("l", "like_post", "Like post", show=False),
-        Binding("b", "boost_post", "Boost post", show=False),
-        Binding("g", "go_to_top", "Go to top", show=False),
-        Binding("up", "scroll_up", "Scroll up", show=False),
-        Binding("down", "scroll_down", "Scroll down", show=False),
-        Binding("?", "show_help", "Help", show=True),
-        Binding("q", "quit", "Quit", show=True),
-        Binding("f12", "view_log", "View Log", show=False),
-    ]
     CSS_PATH = css_path
     initial_data = None
     max_characters = 500  # Default value
@@ -84,6 +66,7 @@ class Mastui(App):
     cache: Cache = None
     me: dict | None = None
     notified_dm_ids: set[str] = set()
+    keybind_manager: KeybindManager = None
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
@@ -196,6 +179,11 @@ class Mastui(App):
             return
 
         self.cache = Cache(profile_path / "cache.db")
+
+        # Initialize and load keybindings
+        self.keybind_manager = KeybindManager(profile_path)
+        self.keybind_manager.load_keymap()
+        self.bind_keys()
 
         # Save this as the last successfully loaded profile
         profile_manager.set_last_profile(profile_name)
@@ -854,6 +842,25 @@ class Mastui(App):
         else:
             # If the same profile is chosen, or selection is cancelled, just resume
             self.resume_timers()
+
+    def bind_keys(self):
+        """(Re)bind all keys from the keybind manager."""
+        # First, unbind all keys that are currently in our map by binding them to a null action
+        if self.keybind_manager and self.keybind_manager.keymap:
+            for key in self.keybind_manager.keymap.values():
+                self.bind(key, "", show=False)
+
+        # Load the latest map from disk (in case it was just changed)
+        self.keybind_manager.load_keymap()
+
+        # Bind the new keys
+        for action, key in self.keybind_manager.keymap.items():
+            self.bind(
+                key,
+                action,
+                description=self.keybind_manager.action_descriptions.get(action, ""),
+            )
+
 
     def switch_profile(self, profile_name: str) -> None:
         """Performs a soft restart to switch to a new profile."""

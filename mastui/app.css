@@ -694,3 +694,32 @@ AccountResult {
     max-height: 8;
     overflow-y: auto;
 }
+
+#keybind-container {
+    height: 1fr;
+    overflow-y: auto;
+    padding: 1;
+}
+
+#keybind-container > Horizontal {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.keybind-label {
+    width: 1fr;
+}
+
+#keybind-container Input {
+    width: 20;
+}
+
+#keybind-container KeyInput:focus {
+    border: tall $accent;
+}
+
+#keybind-buttons {
+    height: auto;
+    align-horizontal: right;
+    padding-top: 1;
+}
