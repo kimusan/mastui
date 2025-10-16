@@ -4,6 +4,7 @@ from textual import on, events
 from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
 from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewConversation
 from mastui.timeline_content import TimelineContent
+from mastodon import MastodonNetworkError
 import logging
 from datetime import datetime, timezone, timedelta
 
@@ -224,6 +225,13 @@ class Timeline(Static, can_focus=True):
                         since_id=since_id, max_id=max_id, limit=limit
                     )
                 log.info(f"Fetched {len(posts)} new posts for {self.id}")
+            except MastodonNetworkError as e:
+                log.error(f"Network error loading {self.id} timeline: {e}", exc_info=True)
+                self.app.notify(
+                    f"Connection to {self.app.config.mastodon_host} timed out. Will retry.",
+                    severity="error",
+                    timeout=10,
+                )
             except Exception as e:
                 log.error(f"Error loading {self.id} timeline: {e}", exc_info=True)
                 self.app.notify(
