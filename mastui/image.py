@@ -18,10 +18,16 @@ class ImageWidget(Static):
         self.url = url
         self.config = config
         self.pil_image = None
+        self._is_mounted = False
 
     def on_mount(self) -> None:
         """Load the image when the widget is mounted."""
+        self._is_mounted = True
         self.run_worker(self.load_image, thread=True)
+
+    def on_unmount(self) -> None:
+        """Set the mounted flag to False when the widget is unmounted."""
+        self._is_mounted = False
 
     def load_image(self):
         """Loads the image from the cache or URL."""
@@ -44,10 +50,12 @@ class ImageWidget(Static):
                 cache_path.write_bytes(image_data)
 
             self.pil_image = PILImage.open(BytesIO(image_data))
-            self.app.call_from_thread(self.render_image)
+            if self._is_mounted:
+                self.app.call_from_thread(self.render_image)
         except Exception as e:
             log.error(f"Error loading image: {e}", exc_info=True)
-            self.app.call_from_thread(self.show_error)
+            if self._is_mounted:
+                self.app.call_from_thread(self.show_error)
 
     def on_resize(self, event: events.Resize) -> None:
         """Re-render the image when the widget is resized."""
