@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Static, ListView, ListItem, Label
+from textual.widgets import ListView, ListItem, Label
 from textual.containers import Container, VerticalScroll
 from textual.binding import Binding
 from textual import on
@@ -117,7 +117,9 @@ class URLSelectorScreen(ModalScreen):
         if list_view.index is not None and list_view.index < len(self.urls):
             self.copy_url(self.urls[list_view.index])
         else:
-            log.warning(f"Invalid selection: index={list_view.index}, urls count={len(self.urls)}")
+            log.warning(
+                f"Invalid selection: index={list_view.index}, urls count={len(self.urls)}"
+            )
             self.app.notify("No URL selected", severity="warning")
 
     def action_select_url(self, index: int):
