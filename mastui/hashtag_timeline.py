@@ -18,6 +18,7 @@ class HashtagTimeline(ModalScreen):
         ("b", "boost_post", "Boost Post"),
         ("a", "reply_to_post", "Reply to Post"),
         ("p", "view_profile", "View Profile"),
+        ("x", "show_urls", "Show URLs"),
         ("enter", "open_thread", "Open Thread"),
     ]
 
@@ -91,6 +92,9 @@ class HashtagTimeline(ModalScreen):
 
     def action_view_profile(self):
         self.query_one(TimelineContent).view_profile()
+
+    def action_show_urls(self):
+        self.query_one(TimelineContent).show_urls()
 
     def action_open_thread(self):
         self.query_one(TimelineContent).open_thread()

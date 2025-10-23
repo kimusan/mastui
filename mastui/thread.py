@@ -4,6 +4,7 @@ from textual.containers import VerticalScroll, Container
 from textual.events import Key
 from mastui.widgets import Post, Notification, LikePost, BoostPost
 from mastui.reply import ReplyScreen
+from mastui.url_selector import URLSelectorScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class ThreadScreen(ModalScreen):
         ("l", "like_post", "Like post"),
         ("b", "boost_post", "Boost post"),
         ("a", "reply_to_post", "Reply to post"),
+        ("x", "show_urls", "Show URLs"),
     ]
 
     def __init__(self, post_id: str, api, **kwargs) -> None:
@@ -174,4 +176,11 @@ class ThreadScreen(ModalScreen):
                 )
             else:
                 self.app.notify("This item cannot be replied to.", severity="error")
+
+    def action_show_urls(self):
+        """Show URLs from the selected post."""
+        if isinstance(self.selected_item, Post):
+            self.app.push_screen(URLSelectorScreen(self.selected_item.post))
+        else:
+            self.app.notify("No post selected.", severity="warning")
 

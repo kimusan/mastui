@@ -503,7 +503,7 @@ ImageWidget {
     color: $text-muted;
 }
 
-LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen {
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen, URLSelectorScreen {
     align: center middle;
 }
 
@@ -693,6 +693,28 @@ AccountResult {
     height: auto;
     max-height: 8;
     overflow-y: auto;
+}
+
+#url-selector-dialog {
+    width: 80%;
+    height: 60%;
+    background: $surface;
+    border: thick $primary;
+}
+#url-container {
+    width: 100%;
+    height: 100%;
+    padding: 1;
+}
+#url-list {
+    width: 100%;
+    height: 100%;
+}
+#url-list > ListItem {
+    padding: 0 1;
+}
+#url-container-list > ListItem:hover {
+    background: $accent;
 }
 
 #keybind-container {

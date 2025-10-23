@@ -11,7 +11,7 @@ from mastui.edit_post_screen import EditPostScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
-from mastui.widgets import Post, LikePost, BoostPost, VoteOnPoll
+from mastui.widgets import Post, Notification, LikePost, BoostPost, VoteOnPoll
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
@@ -41,6 +41,7 @@ from mastui.messages import (
     ResumeTimers,
 )
 from mastui.cache import Cache
+from mastui.url_selector import URLSelectorScreen
 from mastodon.errors import MastodonAPIError
 import logging
 import argparse
@@ -822,6 +823,34 @@ class Mastui(App):
         if focused:
             focused.first().go_to_top()
 
+    def action_show_urls(self) -> None:
+        """Find the selected post and show the URL selector screen."""
+        post_to_extract = None
+
+        # Case 1: A modal screen is active (e.g., Thread, Conversation)
+        if isinstance(self.screen, ModalScreen) and hasattr(self.screen, "selected_item"):
+            selected_item = self.screen.selected_item
+            if isinstance(selected_item, Post):
+                post_to_extract = selected_item.post
+
+        # Case 2: A main timeline is focused
+        else:
+            focused = self.query("Timeline:focus")
+            if focused:
+                selected_item = focused.first().content_container.selected_item
+                if isinstance(selected_item, Post):
+                    post_to_extract = selected_item.post
+                elif isinstance(selected_item, Notification) and selected_item.notif.get("status"):
+                    post_to_extract = selected_item.notif["status"]
+
+        if post_to_extract:
+            self.pause_timers()
+            self.push_screen(
+                URLSelectorScreen(post_to_extract), lambda _: self.resume_timers()
+            )
+        else:
+            self.notify("No post selected or post has no content.", severity="warning")
+
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
         if isinstance(self.screen, ModalScreen):
@@ -860,6 +889,7 @@ class Mastui(App):
                 action,
                 description=self.keybind_manager.action_descriptions.get(action, ""),
             )
+        self.bind("x", "show_urls", description="Extract URLs from post")
 
 
     def switch_profile(self, profile_name: str) -> None:

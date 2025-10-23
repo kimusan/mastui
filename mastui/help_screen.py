@@ -46,6 +46,7 @@ class HelpScreen(ModalScreen):
             table.add_row("b", "Boost / Reblog post")
             table.add_row("p", "View author's profile")
             table.add_row("e", "Edit your own post")
+            table.add_row("x", "List URLs in post")
             table.add_row("enter", "View post thread")
 
             # Profile Screen Bindings
