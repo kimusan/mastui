@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2025-10-04
+
+### Added
+
+- **Local Timeline:** Added support for viewing the local timeline.
+- **Roadmap:** Added a `ROADMAP.md` file to outline future development.
+
+### Fixed
+
+- **Network Errors:** Improved handling of network timeouts and connection errors.
+- **Image Loading:** Fixed a crash that could occur when loading images in the background.
+- **Poll Notifications:** Fixed a crash that could occur when receiving a notification for a poll on a deleted post.
 
 ## [1.1.0] - 2025-10-04
 
@@ -134,4 +145,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Optimized the boost and like functionality.
 - Posts are now preserved on timeline refresh.
-
