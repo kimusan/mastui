@@ -29,6 +29,12 @@ class ConfigScreen(ModalScreen):
                     )
                     yield Static()  # Spacer
 
+                    yield Label("Enable Local timeline?", classes="config-label")
+                    yield Switch(
+                        value=config.local_timeline_enabled, id="local_timeline_enabled"
+                    )
+                    yield Static()  # Spacer
+
                     yield Label(
                         "Enable Notifications timeline?", classes="config-label"
                     )
@@ -65,6 +71,13 @@ class ConfigScreen(ModalScreen):
                     yield Input(
                         str(config.home_auto_refresh_interval),
                         id="home_auto_refresh_interval",
+                    )
+
+                    yield Label("Auto-refresh local?", classes="config-label")
+                    yield Switch(value=config.local_auto_refresh, id="local_auto_refresh")
+                    yield Input(
+                        str(config.local_auto_refresh_interval),
+                        id="local_auto_refresh_interval",
                     )
 
                     yield Label("Auto-refresh notifications?", classes="config-label")
@@ -163,6 +176,10 @@ class ConfigScreen(ModalScreen):
         config.home_auto_refresh_interval = int(
             self.query_one("#home_auto_refresh_interval").value
         )
+        config.local_auto_refresh = self.query_one("#local_auto_refresh").value
+        config.local_auto_refresh_interval = int(
+            self.query_one("#local_auto_refresh_interval").value
+        )
         config.notifications_auto_refresh = self.query_one(
             "#notifications_auto_refresh"
         ).value
@@ -177,6 +194,7 @@ class ConfigScreen(ModalScreen):
         config.image_renderer = self.query_one("#image_renderer").value
         config.auto_prune_cache = self.query_one("#auto_prune_cache").value
         config.home_timeline_enabled = self.query_one("#home_timeline_enabled").value
+        config.local_timeline_enabled = self.query_one("#local_timeline_enabled").value
         config.notifications_timeline_enabled = self.query_one(
             "#notifications_timeline_enabled"
         ).value

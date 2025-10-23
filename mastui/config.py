@@ -39,6 +39,8 @@ class Config:
         # Auto-refresh settings
         self.home_auto_refresh = config_values.get("HOME_AUTO_REFRESH", "on") == "on"
         self.home_auto_refresh_interval = int(config_values.get("HOME_AUTO_REFRESH_INTERVAL", "2"))
+        self.local_auto_refresh = config_values.get("LOCAL_AUTO_REFRESH", "on") == "on"
+        self.local_auto_refresh_interval = int(config_values.get("LOCAL_AUTO_REFRESH_INTERVAL", "2"))
         self.notifications_auto_refresh = config_values.get("NOTIFICATIONS_AUTO_REFRESH", "on") == "on"
         self.notifications_auto_refresh_interval = int(config_values.get("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
         self.federated_auto_refresh = config_values.get("FEDERATED_AUTO_REFRESH", "on") == "on"
@@ -51,6 +53,7 @@ class Config:
 
         # Timeline settings
         self.home_timeline_enabled = config_values.get("HOME_TIMELINE_ENABLED", "on") == "on"
+        self.local_timeline_enabled = config_values.get("LOCAL_TIMELINE_ENABLED", "off") == "on"
         self.notifications_timeline_enabled = config_values.get("NOTIFICATIONS_TIMELINE_ENABLED", "on") == "on"
         self.federated_timeline_enabled = config_values.get("FEDERATED_TIMELINE_ENABLED", "on") == "on"
         self.direct_timeline_enabled = config_values.get("DIRECT_TIMELINE_ENABLED", "on") == "on"
@@ -82,6 +85,8 @@ class Config:
             
             f.write(f"HOME_AUTO_REFRESH={'on' if self.home_auto_refresh else 'off'}\n")
             f.write(f"HOME_AUTO_REFRESH_INTERVAL={self.home_auto_refresh_interval}\n")
+            f.write(f"LOCAL_AUTO_REFRESH={'on' if self.local_auto_refresh else 'off'}\n")
+            f.write(f"LOCAL_AUTO_REFRESH_INTERVAL={self.local_auto_refresh_interval}\n")
             f.write(f"NOTIFICATIONS_AUTO_REFRESH={'on' if self.notifications_auto_refresh else 'off'}\n")
             f.write(f"NOTIFICATIONS_AUTO_REFRESH_INTERVAL={self.notifications_auto_refresh_interval}\n")
             f.write(f"FEDERATED_AUTO_REFRESH={'on' if self.federated_auto_refresh else 'off'}\n")
@@ -90,6 +95,7 @@ class Config:
             f.write(f"IMAGE_RENDERER={self.image_renderer}\n")
             f.write(f"AUTO_PRUNE_CACHE={'on' if self.auto_prune_cache else 'off'}\n")
             f.write(f"HOME_TIMELINE_ENABLED={'on' if self.home_timeline_enabled else 'off'}\n")
+            f.write(f"LOCAL_TIMELINE_ENABLED={'on' if self.local_timeline_enabled else 'off'}\n")
             f.write(f"NOTIFICATIONS_TIMELINE_ENABLED={'on' if self.notifications_timeline_enabled else 'off'}\n")
             f.write(f"FEDERATED_TIMELINE_ENABLED={'on' if self.federated_timeline_enabled else 'off'}\n")
             f.write(f"DIRECT_TIMELINE_ENABLED={'on' if self.direct_timeline_enabled else 'off'}\n")

@@ -216,6 +216,10 @@ class Timeline(Static, can_focus=True):
                     posts = api.notifications(
                         since_id=since_id, max_id=max_id, limit=limit
                     )
+                elif self.id == "local":
+                    posts = api.timeline_local(
+                        since_id=since_id, max_id=max_id, limit=limit
+                    )
                 elif self.id == "federated":
                     posts = api.timeline_public(
                         since_id=since_id, max_id=max_id, limit=limit
@@ -313,7 +317,7 @@ class Timeline(Static, can_focus=True):
 
             if widget_id not in self.post_ids:
                 self.post_ids.add(widget_id)
-                if self.id == "home" or self.id == "federated":
+                if self.id == "home" or self.id == "federated" or self.id == "local":
                     new_widgets.append(Post(item, timeline_id=self.id, id=widget_id))
                 elif self.id == "notifications":
                     new_widgets.append(Notification(item, id=widget_id))
@@ -490,6 +494,8 @@ class Timelines(Static):
     def compose(self):
         if self.app.config.home_timeline_enabled:
             yield Timeline("Home", id="home")
+        if self.app.config.local_timeline_enabled:
+            yield Timeline("Local", id="local")
         if self.app.config.notifications_timeline_enabled:
             yield Timeline("Notifications", id="notifications")
         if self.app.config.federated_timeline_enabled:
