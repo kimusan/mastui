@@ -6,6 +6,7 @@ from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.messages import ViewProfile, SelectPost
+from mastui.url_selector import URLSelectorScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -171,3 +172,20 @@ class TimelineContent(VerticalScroll):
         """Scrolls the timeline to the top and selects the first item."""
         self.scroll_y = 0
         self.select_first_item()
+
+    def show_urls(self):
+        """Show URLs from the selected post."""
+        post_to_extract = None
+
+        if isinstance(self.selected_item, Post):
+            post_to_extract = self.selected_item.post
+        elif isinstance(self.selected_item, Notification):
+            if self.selected_item.notif.get("status"):
+                post_to_extract = self.selected_item.notif["status"]
+
+        if post_to_extract:
+            self.app.push_screen(URLSelectorScreen(post_to_extract))
+        else:
+            self.app.notify(
+                "No post selected or post has no content.", severity="warning"
+            )

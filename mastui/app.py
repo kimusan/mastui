@@ -41,6 +41,7 @@ from mastui.messages import (
     ResumeTimers,
 )
 from mastui.cache import Cache
+from mastui.url_selector import URLSelectorScreen
 from mastodon.errors import MastodonAPIError
 import logging
 import argparse
@@ -822,6 +823,41 @@ class Mastui(App):
         if focused:
             focused.first().go_to_top()
 
+    def action_show_urls(self) -> None:
+        """An action to show URLs from the selected post."""
+        if isinstance(self.screen, ModalScreen):
+            return
+
+        focused = self.query("Timeline:focus")
+        if not focused:
+            self.notify("No timeline focused.", severity="warning")
+            return
+
+        timeline = focused.first()
+        selected_item = timeline.content_container.selected_item
+
+        if not selected_item:
+            self.notify("No post selected.", severity="warning")
+            return
+
+        post_to_extract = None
+
+        # Handle different widget types
+        if isinstance(selected_item, Post):
+            post_to_extract = selected_item.post
+        elif hasattr(selected_item, "notif") and selected_item.notif.get("status"):
+            # Notification with a status
+            post_to_extract = selected_item.notif["status"]
+
+        if post_to_extract:
+            self.pause_timers()
+            self.push_screen(
+                URLSelectorScreen(post_to_extract), lambda _: self.resume_timers()
+            )
+        else:
+            self.notify(
+                "No post content available to extract URLs from.", severity="warning"
+            )
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
         if isinstance(self.screen, ModalScreen):

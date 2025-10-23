@@ -723,3 +723,29 @@ AccountResult {
     align-horizontal: right;
     padding-top: 1;
 }
+
+#url-selector-dialog {
+    width: 80%;
+    height: 60%;
+    background: $surface;
+    border: thick $primary;
+}
+
+#url-container {
+    width: 100%;
+    height: 100%;
+    padding: 1;
+}
+
+#url-list {
+    width: 100%;
+    height: 100%;
+}
+
+#url-list > ListItem {
+    padding: 0 1;
+}
+
+#url-container-list > ListItem:hover {
+    background: $accent;
+}

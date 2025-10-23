@@ -434,6 +434,12 @@ class Timeline(Static, can_focus=True):
                 self.view_profile()
             elif event.key == "g":
                 self.go_to_top()
+            elif event.key == "x":
+                self.show_urls()
+
+    def show_urls(self) -> None:
+        """Proxy show_urls to the content container."""
+        self.content_container.show_urls()
 
     def scroll_up(self) -> None:
         """Proxy scroll_up to the content container."""

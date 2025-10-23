@@ -5,6 +5,7 @@ from mastui.widgets import Post, LikePost, BoostPost
 from mastui.messages import ConversationRead
 from mastui.reply import ReplyScreen
 from mastui.edit_post_screen import EditPostScreen
+from mastui.url_selector import URLSelectorScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ class ConversationScreen(ModalScreen):
         ("b", "boost_post", "Boost post"),
         ("a", "reply_to_post", "Reply to post"),
         ("e", "edit_post", "Edit post"),
+        ("x", "show_urls", "Show URLs"),
     ]
 
     def __init__(self, conversation_id: str, last_status_id: str, api, **kwargs) -> None:
@@ -167,3 +169,10 @@ class ConversationScreen(ModalScreen):
                 self.app.notify("You can only edit your own posts.", severity="error")
         else:
             self.app.notify("This item cannot be edited.", severity="warning")
+
+    def action_show_urls(self):
+        """Show URLs from the selected post."""
+        if isinstance(self.selected_item, Post):
+            self.app.push_screen(URLSelectorScreen(self.selected_item.post))
+        else:
+            self.app.notify("No post selected.", severity="warning")
