@@ -394,7 +394,14 @@ class Notification(Widget):
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "poll":
-            status = self.notif["status"]
+            status = self.notif.get("status")
+            if not status:
+                self.border_title = "📊 A poll you participated in has ended"
+                yield Static("(The original post appears to have been deleted.)")
+                with Horizontal(classes="post-footer"):
+                    yield Static(format_datetime(created_at), classes="timestamp")
+                return
+
             self.border_title = "📊 A poll you participated in has ended:"
             yield PollWidget(
                 status["poll"], timeline_id="notifications", post_id=status["id"]
