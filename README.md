@@ -37,7 +37,7 @@ If you encounter any platform-specific issues, please [open an issue](https://gi
 
 Mastui is packed with features to make your Mastodon experience seamless and efficient:
 
-* **Multi-Column Layout:** View your Home, Notifications, Federated, and Direct Message timelines simultaneously. The layout automatically switches to a single-column view on narrow terminals.
+* **Multi-Column Layout:** View your Home, Local, Notifications, Federated, and Direct Message timelines simultaneously. The layout automatically switches to a single-column view on narrow terminals.
 * **Multi-Profile Support:** Securely log into multiple accounts and switch between them instantly with the `u` key. Each profile has its own configuration, cache, and theme settings.
 * **Interactive Timelines:**
   * Like (`l`), Boost (`b`), and Reply (`a`) to posts directly.
@@ -63,6 +63,7 @@ Mastui is packed with features to make your Mastodon experience seamless and eff
   * Toggle the visibility of each timeline.
   * Configure auto-refresh intervals for each timeline.
   * Choose from multiple built-in themes or create your own.
+  * **Customize Keybindings:** Change most key bindings to your liking from the options screen.
 * **Advanced:**
   * Hidden log viewer (`F12`) for debugging when running with `--debug`.
   * Persistent SQLite cache for fast startup and offline reading.
