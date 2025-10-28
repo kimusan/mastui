@@ -173,23 +173,23 @@ class ConfigScreen(ModalScreen):
         """Saves the current settings to the config object."""
         config = self.app.config
         config.home_auto_refresh = self.query_one("#home_auto_refresh").value
-        config.home_auto_refresh_interval = int(
+        config.home_auto_refresh_interval = round(float(
             self.query_one("#home_auto_refresh_interval").value
-        )
+        ), 2)
         config.local_auto_refresh = self.query_one("#local_auto_refresh").value
-        config.local_auto_refresh_interval = int(
+        config.local_auto_refresh_interval = round(float(
             self.query_one("#local_auto_refresh_interval").value
-        )
+        ), 2)
         config.notifications_auto_refresh = self.query_one(
             "#notifications_auto_refresh"
         ).value
-        config.notifications_auto_refresh_interval = int(
+        config.notifications_auto_refresh_interval = round(float(
             self.query_one("#notifications_auto_refresh_interval").value
-        )
+        ), 2)
         config.federated_auto_refresh = self.query_one("#federated_auto_refresh").value
-        config.federated_auto_refresh_interval = int(
+        config.federated_auto_refresh_interval = round(float(
             self.query_one("#federated_auto_refresh_interval").value
-        )
+        ), 2)
         config.image_support = self.query_one("#image_support").value
         config.image_renderer = self.query_one("#image_renderer").value
         config.auto_prune_cache = self.query_one("#auto_prune_cache").value

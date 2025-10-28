@@ -38,13 +38,13 @@ class Config:
 
         # Auto-refresh settings
         self.home_auto_refresh = config_values.get("HOME_AUTO_REFRESH", "on") == "on"
-        self.home_auto_refresh_interval = int(config_values.get("HOME_AUTO_REFRESH_INTERVAL", "2"))
+        self.home_auto_refresh_interval = float(config_values.get("HOME_AUTO_REFRESH_INTERVAL", "2"))
         self.local_auto_refresh = config_values.get("LOCAL_AUTO_REFRESH", "on") == "on"
-        self.local_auto_refresh_interval = int(config_values.get("LOCAL_AUTO_REFRESH_INTERVAL", "2"))
+        self.local_auto_refresh_interval = float(config_values.get("LOCAL_AUTO_REFRESH_INTERVAL", "2"))
         self.notifications_auto_refresh = config_values.get("NOTIFICATIONS_AUTO_REFRESH", "on") == "on"
-        self.notifications_auto_refresh_interval = int(config_values.get("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
+        self.notifications_auto_refresh_interval = float(config_values.get("NOTIFICATIONS_AUTO_REFRESH_INTERVAL", "10"))
         self.federated_auto_refresh = config_values.get("FEDERATED_AUTO_REFRESH", "on") == "on"
-        self.federated_auto_refresh_interval = int(config_values.get("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
+        self.federated_auto_refresh_interval = float(config_values.get("FEDERATED_AUTO_REFRESH_INTERVAL", "2"))
 
         # Image settings
         self.image_support = config_values.get("IMAGE_SUPPORT", "off") == "on"
