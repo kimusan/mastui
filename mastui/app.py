@@ -608,18 +608,40 @@ class Mastui(App):
         updated_post_data = message.post_data
         target_post = updated_post_data.get("reblog") or updated_post_data
         target_id = target_post["id"]
-        log.debug(f"Received PostStatusUpdate for post ID {target_id}")
+        target_id_str = str(target_id)
+        log.debug(f"Received PostStatusUpdate for post ID {target_id_str}")
 
         found_widget = False
         # Search on the active screen (could be a modal) and in the main timelines
         for container in [self.screen, *self.query(Timelines)]:
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and original_status["id"] == target_id:
+                if original_status and str(original_status["id"]) == target_id_str:
                     log.debug(f"Found matching post widget: {post_widget}")
                     post_widget.update_from_post(updated_post_data)
                     found_widget = True
+            for notif_widget in container.query(Notification):
+                notif_status = notif_widget.notif.get("status")
+                if notif_status and hasattr(notif_widget, "update_from_post"):
+                    original_status = notif_status.get("reblog") or notif_status
+                    if original_status and str(original_status.get("id")) == target_id_str:
+                        log.debug(f"Found matching notification widget: {notif_widget}")
+                        notif_widget.update_from_post(updated_post_data)
+                        found_widget = True
         
+        # Fallback: search globally for any Notification widgets (covers nested layouts)
+        if not found_widget:
+            for notif_widget in self.query(Notification):
+                notif_status = notif_widget.notif.get("status")
+                if notif_status and hasattr(notif_widget, "update_from_post"):
+                    original_status = notif_status.get("reblog") or notif_status
+                    if original_status and str(original_status.get("id")) == target_id_str:
+                        log.debug(
+                            f"Found matching notification widget via fallback: {notif_widget}"
+                        )
+                        notif_widget.update_from_post(updated_post_data)
+                        found_widget = True
+
         if not found_widget:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")
 
@@ -630,17 +652,38 @@ class Mastui(App):
             log.debug(f"Searching for post in container {container}")
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and original_status["id"] == message.post_id:
+                if original_status and str(original_status["id"]) == str(message.post_id):
                     log.debug(
                         f"Found matching post widget to hide spinner: {post_widget}"
                     )
                     post_widget.hide_spinner()
                     found_widget = True
+            for notif_widget in container.query(Notification):
+                notif_status = notif_widget.notif.get("status")
+                if notif_status and hasattr(notif_widget, "hide_spinner"):
+                    original_status = notif_status.get("reblog") or notif_status
+                    if original_status and str(original_status.get("id")) == str(message.post_id):
+                        log.debug(
+                            f"Found matching notification widget to hide spinner: {notif_widget}"
+                        )
+                        notif_widget.hide_spinner()
+                        found_widget = True
+
+        if not found_widget:
+            for notif_widget in self.query(Notification):
+                notif_status = notif_widget.notif.get("status")
+                if notif_status and hasattr(notif_widget, "hide_spinner"):
+                    original_status = notif_status.get("reblog") or notif_status
+                    if original_status and str(original_status.get("id")) == str(message.post_id):
+                        notif_widget.hide_spinner()
+                        found_widget = True
 
         if not found_widget:
             log.warning(
                 f"Could not find a Post widget to hide spinner for ID {message.post_id}"
             )
+        else:
+            log.debug(f"Spinner hidden for post ID {message.post_id}")
 
     @on(FocusNextTimeline)
     def on_focus_next_timeline(self, message: FocusNextTimeline) -> None:

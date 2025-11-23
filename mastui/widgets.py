@@ -358,6 +358,9 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
+                spinner = LoadingIndicator(classes="action-spinner")
+                spinner.display = False
+                yield spinner
                 yield Static(
                     f"Boosts: {status.get('reblogs_count', 0)}", id="boost-count"
                 )
@@ -375,6 +378,9 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
+                spinner = LoadingIndicator(classes="action-spinner")
+                spinner.display = False
+                yield spinner
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "reblog":
@@ -386,6 +392,9 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
+                spinner = LoadingIndicator(classes="action-spinner")
+                spinner.display = False
+                yield spinner
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "follow":
@@ -407,6 +416,9 @@ class Notification(Widget):
                 status["poll"], timeline_id="notifications", post_id=status["id"]
             )
             with Horizontal(classes="post-footer"):
+                spinner = LoadingIndicator(classes="action-spinner")
+                spinner.display = False
+                yield spinner
                 yield Static(format_datetime(created_at), classes="timestamp")
         elif notif_type == "update":
             status = self.notif["status"]
@@ -420,6 +432,9 @@ class Notification(Widget):
                     if media["type"] == "image":
                         yield ImageWidget(media["url"], self.app.config)
             with Horizontal(classes="post-footer"):
+                spinner = LoadingIndicator(classes="action-spinner")
+                spinner.display = False
+                yield spinner
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         else:
@@ -428,6 +443,52 @@ class Notification(Widget):
     def on_click(self, event: events.Click) -> None:
         event.stop()
         self.post_message(SelectPost(self))
+
+    def show_spinner(self):
+        try:
+            spinner = self.query_one(".action-spinner")
+            spinner.display = True
+        except Exception as e:
+            log.debug(f"Notification spinner not found to show: {e}")
+
+    def hide_spinner(self):
+        try:
+            spinner = self.query_one(".action-spinner")
+            spinner.display = False
+        except Exception as e:
+            log.debug(f"Notification spinner not found to hide: {e}")
+
+    def update_from_post(self, post):
+        """Update notification contents after an action on the underlying status."""
+        status = post.get("reblog") or post
+        if self.notif.get("status"):
+            self.notif["status"] = status
+
+        if self.notif["type"] == "mention":
+            self.query_one("#boost-count").update(
+                f"Boosts: {status.get('reblogs_count', 0)}"
+            )
+            self.query_one("#like-count").update(
+                f"Likes: {status.get('favourites_count', 0)}"
+            )
+        self.hide_spinner()
+
+    def get_created_at(self) -> datetime | None:
+        """Expose the creation time for timeline sorting and gap detection."""
+        created_at = None
+        if self.notif["type"] == "mention" and self.notif.get("status"):
+            created_at = self.notif["status"].get("created_at")
+        else:
+            created_at = self.notif.get("created_at")
+
+        if not created_at:
+            return None
+        if isinstance(created_at, datetime):
+            return created_at
+        try:
+            return datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+        except Exception:
+            return None
 
     @on(Markdown.LinkClicked)
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
@@ -442,19 +503,6 @@ class Notification(Widget):
 
         # If it's not a hashtag, open it in the browser
         self.app.action_link_clicked(href)
-
-    def get_created_at(self) -> datetime | None:
-        ts_str = None
-        if self.notif["type"] == "mention":
-            ts_str = self.notif.get("status", {}).get("created_at")
-        else:
-            ts_str = self.notif.get("created_at")
-
-        if ts_str:
-            if isinstance(ts_str, datetime):
-                return ts_str
-            return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-        return None
 
 
 class SearchResult(Widget, can_focus=True):

@@ -96,23 +96,40 @@ class TimelineContent(VerticalScroll):
                 log.error(f"Could not scroll down in timeline: {e}", exc_info=True)
                 self.select_first_item()
 
-    def like_post(self):
+    def _get_status_for_action(self):
+        """Return the status object associated with the selected item, if any."""
         if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
-            if not status_to_action:
-                self.app.notify("Cannot like a post that has been deleted.", severity="error")
-                return
-            self.selected_item.show_spinner()
-            self.timeline.post_message(LikePost(status_to_action["id"], status_to_action.get("favourited", False)))
+            return self.selected_item.post.get("reblog") or self.selected_item.post
+        if isinstance(self.selected_item, Notification):
+            status = self.selected_item.notif.get("status")
+            if status:
+                return status.get("reblog") or status
+        return None
+
+    def _show_action_spinner(self):
+        if self.selected_item and hasattr(self.selected_item, "show_spinner"):
+            try:
+                self.selected_item.show_spinner()
+            except Exception as e:
+                log.warning(f"Could not show spinner on selected item: {e}")
+
+    def like_post(self):
+        status_to_action = self._get_status_for_action()
+        if not status_to_action:
+            self.app.notify("This item has no status to like.", severity="error")
+            return
+        self._show_action_spinner()
+        self.timeline.post_message(
+            LikePost(status_to_action["id"], status_to_action.get("favourited", False))
+        )
 
     def boost_post(self):
-        if isinstance(self.selected_item, Post):
-            status_to_action = self.selected_item.post.get("reblog") or self.selected_item.post
-            if not status_to_action:
-                self.app.notify("Cannot boost a post that has been deleted.", severity="error")
-                return
-            self.selected_item.show_spinner()
-            self.timeline.post_message(BoostPost(status_to_action["id"]))
+        status_to_action = self._get_status_for_action()
+        if not status_to_action:
+            self.app.notify("This item has no status to boost.", severity="error")
+            return
+        self._show_action_spinner()
+        self.timeline.post_message(BoostPost(status_to_action["id"]))
 
     def reply_to_post(self):
         if isinstance(self.app.screen, ModalScreen):
