@@ -7,6 +7,7 @@ from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.messages import ViewProfile, SelectPost
 from mastui.url_selector import URLSelectorScreen
+from mastui.confirm_dialog import ConfirmDeleteScreen
 import logging
 
 log = logging.getLogger(__name__)
@@ -173,8 +174,17 @@ class TimelineContent(VerticalScroll):
         if status["account"]["id"] != self.app.me["id"]:
             self.app.notify("You can only delete your own posts.", severity="error")
             return
-        self._show_action_spinner()
-        self.timeline.post_message(DeletePost(status["id"]))
+
+        def on_confirm(result: bool | None):
+            self.app.resume_timers()
+            if result:
+                self._show_action_spinner()
+                self.timeline.post_message(DeletePost(status["id"]))
+            else:
+                self.app.notify("Deletion cancelled.", severity="information")
+
+        self.app.pause_timers()
+        self.app.push_screen(ConfirmDeleteScreen(), on_confirm)
 
     def view_profile(self):
         if isinstance(self.selected_item, Post):
