@@ -414,7 +414,7 @@ class Timeline(Static, can_focus=True):
         elif event.key == "right":
             self.post_message(FocusNextTimeline())
             event.stop()
-        elif event.key in ("up", "down", "l", "b", "a", "e", "delete", "enter", "p", "g", "x"):
+        elif event.key in ("up", "down", "l", "b", "a", "e", "delete", "enter", "p", "g", "x", "?"):
             event.stop()
             if event.key == "up":
                 self.scroll_up()
@@ -438,6 +438,9 @@ class Timeline(Static, can_focus=True):
                 self.go_to_top()
             elif event.key == "x":
                 self.show_urls()
+            elif event.key == "?":
+                # Fallback binding to ensure help opens even if keymap is misconfigured
+                self.app.action_show_help()
 
     def scroll_up(self) -> None:
         """Proxy scroll_up to the content container."""
