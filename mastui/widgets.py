@@ -43,6 +43,16 @@ class BoostPost(PostMessage):
 
     pass
 
+class DeletePost(PostMessage):
+    """A message to delete a post."""
+
+    pass
+
+class PostDeleted(PostMessage):
+    """A message indicating a post was deleted."""
+
+    pass
+
 
 class RemovePollChoice(Message):
     """A message to remove a poll choice."""

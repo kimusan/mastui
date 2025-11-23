@@ -11,7 +11,7 @@ from mastui.edit_post_screen import EditPostScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
-from mastui.widgets import Post, Notification, LikePost, BoostPost, VoteOnPoll
+from mastui.widgets import Post, Notification, LikePost, BoostPost, DeletePost, VoteOnPoll, PostDeleted
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
@@ -434,6 +434,12 @@ class Mastui(App):
             self.pause_timers()
             focused.first().reply_to_post()
 
+    def action_delete_post(self) -> None:
+        """Action to delete the selected post if it belongs to the current user."""
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().delete_post()
+
     def action_edit_post(self) -> None:
         """Action to edit the selected post."""
         focused = self.query("Timeline:focus")
@@ -555,6 +561,22 @@ class Mastui(App):
             log.error(f"Error boosting post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
 
+    @on(DeletePost)
+    def handle_delete_post(self, message: DeletePost):
+        self.run_worker(
+            lambda: self.do_delete_post(message.post_id), exclusive=True, thread=True
+        )
+
+    def do_delete_post(self, post_id: str):
+        try:
+            self.api.status_delete(post_id)
+            self.cache.delete_post(post_id)
+            self.post_message(PostDeleted(post_id))
+            self.notify("Post deleted.", severity="information")
+        except Exception as e:
+            log.error(f"Error deleting post {post_id}: {e}", exc_info=True)
+            self.post_message(ActionFailed(post_id))
+
     @on(VoteOnPoll)
     def handle_vote_on_poll(self, message: VoteOnPoll):
         self.run_worker(
@@ -644,6 +666,28 @@ class Mastui(App):
 
         if not found_widget:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")
+
+    @on(PostDeleted)
+    def on_post_deleted(self, message: PostDeleted) -> None:
+        deleted_id = str(message.post_id)
+        log.debug(f"Received PostDeleted for post ID {deleted_id}")
+        for container in [self.screen, *self.query(Timelines)]:
+            for post_widget in list(container.query(Post)):
+                original_status = post_widget.post.get("reblog") or post_widget.post
+                if original_status and str(original_status["id"]) == deleted_id:
+                    log.debug(f"Removing post widget {post_widget} for deleted ID {deleted_id}")
+                    content_container = post_widget.parent
+                    post_widget.remove()
+                    if hasattr(content_container, "selected_item") and content_container.selected_item is post_widget:
+                        content_container.selected_item = None
+                        content_container.select_first_item()
+            for notif_widget in list(container.query(Notification)):
+                notif_status = notif_widget.notif.get("status")
+                if notif_status:
+                    original_status = notif_status.get("reblog") or notif_status
+                    if original_status and str(original_status.get("id")) == deleted_id:
+                        log.debug(f"Removing notification widget {notif_widget} for deleted ID {deleted_id}")
+                        notif_widget.remove()
 
     def on_action_failed(self, message: ActionFailed) -> None:
         log.debug(f"Received ActionFailed for post ID {message.post_id}")

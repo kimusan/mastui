@@ -223,6 +223,22 @@ class Cache:
             if conn:
                 conn.close()
 
+    def delete_post(self, post_id: str):
+        """Remove a post from all timelines in the cache."""
+        conn = self._get_conn()
+        if not conn:
+            return
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+            conn.commit()
+            log.info(f"Deleted post {post_id} from cache.")
+        except sqlite3.Error as e:
+            log.error(f"Failed to delete post {post_id} from cache: {e}", exc_info=True)
+        finally:
+            if conn:
+                conn.close()
+
     def prune_image_cache(self, days: int = 30) -> int:
         """Prune the image cache of files older than a certain number of days."""
         count = 0

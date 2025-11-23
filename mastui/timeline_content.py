@@ -1,7 +1,7 @@
 from textual.containers import VerticalScroll
 from textual import on, events
 from textual.screen import ModalScreen
-from mastui.widgets import Post, Notification, LikePost, BoostPost
+from mastui.widgets import Post, Notification, LikePost, BoostPost, DeletePost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
@@ -163,6 +163,18 @@ class TimelineContent(VerticalScroll):
                 self.app.notify("You can only edit your own posts.", severity="error")
         else:
             self.app.notify("This item cannot be edited.", severity="warning")
+
+    def delete_post(self):
+        """Delete the selected post, only if it belongs to the current user."""
+        status = self._get_status_for_action()
+        if not status:
+            self.app.notify("This item cannot be deleted.", severity="warning")
+            return
+        if status["account"]["id"] != self.app.me["id"]:
+            self.app.notify("You can only delete your own posts.", severity="error")
+            return
+        self._show_action_spinner()
+        self.timeline.post_message(DeletePost(status["id"]))
 
     def view_profile(self):
         if isinstance(self.selected_item, Post):
