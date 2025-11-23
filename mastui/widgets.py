@@ -41,7 +41,9 @@ class LikePost(PostMessage):
 class BoostPost(PostMessage):
     """A message to boost a post."""
 
-    pass
+    def __init__(self, post_id: str, reblogged: bool):
+        super().__init__(post_id)
+        self.reblogged = reblogged
 
 class DeletePost(PostMessage):
     """A message to delete a post."""

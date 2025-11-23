@@ -130,7 +130,9 @@ class TimelineContent(VerticalScroll):
             self.app.notify("This item has no status to boost.", severity="error")
             return
         self._show_action_spinner()
-        self.timeline.post_message(BoostPost(status_to_action["id"]))
+        self.timeline.post_message(
+            BoostPost(status_to_action["id"], status_to_action.get("reblogged", False))
+        )
 
     def reply_to_post(self):
         if isinstance(self.app.screen, ModalScreen):

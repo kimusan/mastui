@@ -139,7 +139,7 @@ class ConversationScreen(ModalScreen):
                 self.app.notify("Cannot boost a post that has been deleted.", severity="error")
                 return
             self.selected_item.show_spinner()
-            self.post_message(BoostPost(status_to_action["id"]))
+            self.post_message(BoostPost(status_to_action["id"], status_to_action.get("reblogged", False)))
 
     def action_reply_to_post(self):
         if isinstance(self.selected_item, Post):

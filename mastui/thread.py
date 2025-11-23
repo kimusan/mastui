@@ -160,7 +160,7 @@ class ThreadScreen(ModalScreen):
                 )
                 return
             self.selected_item.show_spinner()
-            self.post_message(BoostPost(status_to_action["id"]))
+            self.post_message(BoostPost(status_to_action["id"], status_to_action.get("reblogged", False)))
 
     def action_reply_to_post(self):
         if isinstance(self.selected_item, Post):
@@ -183,4 +183,3 @@ class ThreadScreen(ModalScreen):
             self.app.push_screen(URLSelectorScreen(self.selected_item.post))
         else:
             self.app.notify("No post selected.", severity="warning")
-

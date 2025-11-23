@@ -550,15 +550,20 @@ class Mastui(App):
     @on(BoostPost)
     def handle_boost_post(self, message: BoostPost):
         self.run_worker(
-            lambda: self.do_boost_post(message.post_id), exclusive=True, thread=True
+            lambda: self.do_boost_post(message.post_id, message.reblogged),
+            exclusive=True,
+            thread=True,
         )
 
-    def do_boost_post(self, post_id: str):
+    def do_boost_post(self, post_id: str, already_reblogged: bool):
         try:
-            post_data = self.api.status_reblog(post_id)
+            if already_reblogged:
+                post_data = self.api.status_unreblog(post_id)
+            else:
+                post_data = self.api.status_reblog(post_id)
             self.post_message(PostStatusUpdate(post_data))
         except Exception as e:
-            log.error(f"Error boosting post {post_id}: {e}", exc_info=True)
+            log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
 
     @on(DeletePost)

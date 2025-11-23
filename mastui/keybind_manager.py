@@ -45,7 +45,7 @@ class KeybindManager:
             "switch_profile": "Switch user profile",
             "toggle_dms": "Toggle Direct Messages timeline",
             "like_post": "Like / Unlike post",
-            "boost_post": "Boost / Reblog post",
+            "boost_post": "Boost / Unboost post",
             "go_to_top": "Jump to top of timeline",
             "scroll_up": "Move selection up",
             "scroll_down": "Move selection down",
