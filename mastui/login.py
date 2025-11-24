@@ -144,6 +144,10 @@ class LoginScreen(ModalScreen):
                 clipman.set(auth_url)
             except clipman.exceptions.ClipmanBaseException as e:
                 log.warning(f"Could not copy to clipboard: {e}")
+                status.update(
+                    "Link copied to clipboard: failed.\n"
+                    "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`)."
+                )
 
             auth_link_input = self.query_one("#auth_link")
             auth_link_input.text = auth_url
