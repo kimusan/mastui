@@ -28,6 +28,8 @@ from mastui.theme_manager import load_custom_themes
 from mastui.config import Config
 from mastui.profile_manager import profile_manager
 from mastui.profile_selection import ProfileSelectionScreen
+from mastui.version_check import check_for_update, get_installed_version
+from mastui.update_dialog import UpdateAvailableScreen
 from mastui.messages import (
     PostStatusUpdate,
     ActionFailed,
@@ -59,6 +61,7 @@ css_path = os.path.join(os.path.dirname(__file__), "app.css")
 class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
+    BINDINGS = [Binding("?", "show_help", "Help")]
     CSS_PATH = css_path
     initial_data = None
     max_characters = 500  # Default value
@@ -68,6 +71,8 @@ class Mastui(App):
     me: dict | None = None
     notified_dm_ids: set[str] = set()
     keybind_manager: KeybindManager = None
+    current_version: str = "0.0.0"
+    update_check_timer = None
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
@@ -349,6 +354,7 @@ class Mastui(App):
         log.info("Showing timelines...")
         self.mount(Timelines())
         self.call_later(self.check_layout_mode)
+        self.call_later(lambda: self.schedule_update_checks(initial=True))
 
     @on(events.Resize)
     def on_resize(self, event: events.Resize) -> None:
@@ -439,6 +445,53 @@ class Mastui(App):
         focused = self.query("Timeline:focus")
         if focused:
             focused.first().delete_post()
+
+    def schedule_update_checks(self, initial: bool = False) -> None:
+        """Schedule update checks (immediately and every 24 hours)."""
+        try:
+            self.current_version = get_installed_version()
+        except Exception as e:
+            log.debug(f"Could not detect installed version, using package version: {e}")
+            self.current_version = package_version
+
+        # Kick off an immediate check (respecting 24h window inside check_for_update)
+        self.run_worker(lambda: self.check_for_updates(force=initial), thread=True, exclusive=False)
+
+        # Set up daily checks
+        if not self.update_check_timer:
+            self.update_check_timer = self.set_interval(
+                24 * 60 * 60, lambda: self.run_worker(self.check_for_updates, thread=True, exclusive=False)
+            )
+
+    def check_for_updates(self, force: bool = False) -> None:
+        """Background update check against PyPI."""
+        if not self.config:
+            return
+        try:
+            result = check_for_update(
+                profile_path=self.config.profile_path,
+                current_version=self.current_version,
+                force=force,
+            )
+            if result.get("should_notify") and result.get("latest_version"):
+                latest = result["latest_version"]
+                release_url = result.get("release_url", "")
+                self.call_from_thread(self.show_update_dialog, latest, release_url)
+        except Exception as e:
+            log.debug(f"Update check failed: {e}", exc_info=True)
+
+    def show_update_dialog(self, latest_version: str, release_url: str) -> None:
+        """Show a modal dialog about a newer version."""
+        if isinstance(self.screen, ModalScreen):
+            # Avoid stacking on top of other modals; try again shortly.
+            self.call_later(lambda: self.show_update_dialog(latest_version, release_url))
+            return
+        dialog = UpdateAvailableScreen(
+            current_version=self.current_version,
+            latest_version=latest_version,
+            release_url=release_url,
+        )
+        self.push_screen(dialog)
 
     def action_edit_post(self) -> None:
         """Action to edit the selected post."""

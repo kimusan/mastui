@@ -119,6 +119,20 @@ SplashScreen > Vertical {
     text-align: center;
 }
 
+#update-dialog {
+    width: 60;
+    max-width: 90vw;
+    border: panel $accent;
+    padding: 1 2;
+    background: $surface;
+    height: auto;
+}
+
+.update-actions {
+    align-horizontal: center;
+    padding-top: 1;
+}
+
 .action-spinner {
     display: none;
 }
