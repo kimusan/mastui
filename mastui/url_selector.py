@@ -4,6 +4,7 @@ from textual.containers import Container, VerticalScroll
 from textual.binding import Binding
 from textual import on
 import clipman
+from urllib.parse import urlparse
 import re
 import logging
 from html import unescape
@@ -59,7 +60,13 @@ class URLSelectorScreen(ModalScreen):
 
             # Also look for plain URLs in text
             url_pattern = r'https?://[^\s< >"{}|\\^`\[\]]+'
-            plain_urls = re.findall(url_pattern, unescape(content))
+            plain_urls = []
+            for url in re.findall(url_pattern, unescape(content)):
+                # Skip obviously truncated URLs (e.g., "..."/"…") that won't open correctly
+                if url.endswith("...") or "…" in url:
+                    log.debug(f"Skipping truncated URL candidate: {url}")
+                    continue
+                plain_urls.append(url)
             urls.extend(plain_urls)
 
         # Extract from media attachments
@@ -86,7 +93,22 @@ class URLSelectorScreen(ModalScreen):
         for url in urls:
             # Clean up the URL
             url = url.strip()
-            if url and url not in seen:
+            if not url:
+                continue
+
+            # Skip truncated or incomplete URLs like "https://www."
+            parsed = urlparse(url)
+            if (
+                not parsed.scheme
+                or not parsed.netloc
+                or parsed.netloc == "www."
+                or url.endswith("...")
+                or "…" in url
+            ):
+                log.debug(f"Skipping invalid URL candidate: {url}")
+                continue
+
+            if url not in seen:
                 seen.add(url)
                 self.urls.append(url)
 
@@ -135,11 +157,20 @@ class URLSelectorScreen(ModalScreen):
         """Copy the URL to clipboard and dismiss the screen."""
         log.info(f"Copying URL to clipboard: {url}")
         try:
+            try:
+                clipman.init()
+            except clipman.exceptions.ClipmanBaseException as e:
+                log.debug(f"Clipboard init issue (continuing): {e}", exc_info=True)
+
             clipman.set(url)
-            self.app.notify(
-                f"Copied to clipboard: {url[:50]}...", severity="information"
-            )
-            self.dismiss()
         except Exception as e:
             log.error(f"Failed to copy URL to clipboard: {e}", exc_info=True)
-            self.app.notify(f"Failed to copy to clipboard: {e}", severity="error")
+            self.app.notify(
+                "Failed to copy to clipboard. "
+                "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`).",
+                severity="error",
+            )
+            return
+
+        self.app.notify(f"Copied to clipboard: {url[:50]}...", severity="information")
+        self.dismiss()
