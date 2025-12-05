@@ -27,6 +27,8 @@ class KeybindManager:
             "go_to_top": "g",
             "scroll_up": "up",
             "scroll_down": "down",
+            "focus_previous_column": "left",
+            "focus_next_column": "right",
             "show_help": "?",
             "view_log": "f12",
         }
@@ -49,6 +51,8 @@ class KeybindManager:
             "go_to_top": "Jump to top of timeline",
             "scroll_up": "Move selection up",
             "scroll_down": "Move selection down",
+            "focus_previous_column": "Focus previous column",
+            "focus_next_column": "Focus next column",
             "show_help": "Show this help screen",
             "view_log": "View Log File (Debug)",
         }

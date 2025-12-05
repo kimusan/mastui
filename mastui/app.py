@@ -11,7 +11,15 @@ from mastui.edit_post_screen import EditPostScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
 from mastui.timeline import Timelines, Timeline
-from mastui.widgets import Post, Notification, LikePost, BoostPost, DeletePost, VoteOnPoll, PostDeleted
+from mastui.widgets import (
+    Post,
+    Notification,
+    LikePost,
+    BoostPost,
+    DeletePost,
+    VoteOnPoll,
+    PostDeleted,
+)
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
@@ -73,12 +81,14 @@ class Mastui(App):
     keybind_manager: KeybindManager = None
     current_version: str = "0.0.0"
     update_check_timer = None
+    _bound_keys: set[str]
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
         self.action = action
         self.ssl_verify = ssl_verify
         self._debug = debug
+        self._bound_keys = set()
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -221,13 +231,20 @@ class Mastui(App):
 
             # Update splash screen status
             if isinstance(splash_screen, SplashScreen):
-                self.call_from_thread(splash_screen.update_status, "Fetching instance details")
+                self.call_from_thread(
+                    splash_screen.update_status, "Fetching instance details"
+                )
 
             # Fetch instance info
             instance = self.api.instance()
-            self.max_characters = instance["configuration"]["statuses"]["max_characters"]
+            self.max_characters = instance["configuration"]["statuses"][
+                "max_characters"
+            ]
         except Exception as e:
-            log.error(f"Failed to verify credentials or fetch instance info: {e}", exc_info=True)
+            log.error(
+                f"Failed to verify credentials or fetch instance info: {e}",
+                exc_info=True,
+            )
             self.call_from_thread(
                 self.notify,
                 "Failed to connect to your instance. Please try again.",
@@ -275,9 +292,7 @@ class Mastui(App):
                 if convo["id"] not in self.notified_dm_ids:
                     # Find the other participant
                     other_participants = [
-                        acc
-                        for acc in convo["accounts"]
-                        if acc["id"] != self.me["id"]
+                        acc for acc in convo["accounts"] if acc["id"] != self.me["id"]
                     ]
                     if other_participants:
                         participant_name = other_participants[0]["acct"]
@@ -455,12 +470,17 @@ class Mastui(App):
             self.current_version = package_version
 
         # Kick off an immediate check (respecting 24h window inside check_for_update)
-        self.run_worker(lambda: self.check_for_updates(force=initial), thread=True, exclusive=False)
+        self.run_worker(
+            lambda: self.check_for_updates(force=initial), thread=True, exclusive=False
+        )
 
         # Set up daily checks
         if not self.update_check_timer:
             self.update_check_timer = self.set_interval(
-                24 * 60 * 60, lambda: self.run_worker(self.check_for_updates, thread=True, exclusive=False)
+                24 * 60 * 60,
+                lambda: self.run_worker(
+                    self.check_for_updates, thread=True, exclusive=False
+                ),
             )
 
     def check_for_updates(self, force: bool = False) -> None:
@@ -484,7 +504,9 @@ class Mastui(App):
         """Show a modal dialog about a newer version."""
         if isinstance(self.screen, ModalScreen):
             # Avoid stacking on top of other modals; try again shortly.
-            self.call_later(lambda: self.show_update_dialog(latest_version, release_url))
+            self.call_later(
+                lambda: self.show_update_dialog(latest_version, release_url)
+            )
             return
         dialog = UpdateAvailableScreen(
             current_version=self.current_version,
@@ -498,14 +520,14 @@ class Mastui(App):
         focused = self.query("Timeline:focus")
         if not focused:
             return
-        
+
         selected_item = focused.first().content_container.selected_item
         if not isinstance(selected_item, Post):
             self.notify("Only your own posts can be edited.", severity="warning")
             return
 
         status = selected_item.post.get("reblog") or selected_item.post
-        
+
         # Check if the post is by the current user
         if status["account"]["id"] != self.me["id"]:
             self.notify("You can only edit your own posts.", severity="error")
@@ -514,7 +536,7 @@ class Mastui(App):
         self.pause_timers()
         self.push_screen(
             EditPostScreen(status=status, max_characters=self.max_characters),
-            lambda result: self.on_edit_post_screen_dismiss((result, status['id']))
+            lambda result: self.on_edit_post_screen_dismiss((result, status["id"])),
         )
 
     def on_post_screen_dismiss(self, result: dict) -> None:
@@ -573,7 +595,10 @@ class Mastui(App):
                 self.notify("Post updated successfully!", severity="information")
 
                 # Update the post in the cache for all timelines it might be in
-                for timeline_id in ["home", "notifications"]: # Add other relevant timelines
+                for timeline_id in [
+                    "home",
+                    "notifications",
+                ]:  # Add other relevant timelines
                     self.cache.bulk_insert_posts(timeline_id, [updated_post])
 
                 self.post_message(PostStatusUpdate(updated_post))
@@ -704,18 +729,24 @@ class Mastui(App):
                 notif_status = notif_widget.notif.get("status")
                 if notif_status and hasattr(notif_widget, "update_from_post"):
                     original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == target_id_str:
+                    if (
+                        original_status
+                        and str(original_status.get("id")) == target_id_str
+                    ):
                         log.debug(f"Found matching notification widget: {notif_widget}")
                         notif_widget.update_from_post(updated_post_data)
                         found_widget = True
-        
+
         # Fallback: search globally for any Notification widgets (covers nested layouts)
         if not found_widget:
             for notif_widget in self.query(Notification):
                 notif_status = notif_widget.notif.get("status")
                 if notif_status and hasattr(notif_widget, "update_from_post"):
                     original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == target_id_str:
+                    if (
+                        original_status
+                        and str(original_status.get("id")) == target_id_str
+                    ):
                         log.debug(
                             f"Found matching notification widget via fallback: {notif_widget}"
                         )
@@ -733,10 +764,15 @@ class Mastui(App):
             for post_widget in list(container.query(Post)):
                 original_status = post_widget.post.get("reblog") or post_widget.post
                 if original_status and str(original_status["id"]) == deleted_id:
-                    log.debug(f"Removing post widget {post_widget} for deleted ID {deleted_id}")
+                    log.debug(
+                        f"Removing post widget {post_widget} for deleted ID {deleted_id}"
+                    )
                     content_container = post_widget.parent
                     post_widget.remove()
-                    if hasattr(content_container, "selected_item") and content_container.selected_item is post_widget:
+                    if (
+                        hasattr(content_container, "selected_item")
+                        and content_container.selected_item is post_widget
+                    ):
                         content_container.selected_item = None
                         content_container.select_first_item()
             for notif_widget in list(container.query(Notification)):
@@ -744,7 +780,9 @@ class Mastui(App):
                 if notif_status:
                     original_status = notif_status.get("reblog") or notif_status
                     if original_status and str(original_status.get("id")) == deleted_id:
-                        log.debug(f"Removing notification widget {notif_widget} for deleted ID {deleted_id}")
+                        log.debug(
+                            f"Removing notification widget {notif_widget} for deleted ID {deleted_id}"
+                        )
                         notif_widget.remove()
 
     def on_action_failed(self, message: ActionFailed) -> None:
@@ -754,7 +792,9 @@ class Mastui(App):
             log.debug(f"Searching for post in container {container}")
             for post_widget in container.query(Post):
                 original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and str(original_status["id"]) == str(message.post_id):
+                if original_status and str(original_status["id"]) == str(
+                    message.post_id
+                ):
                     log.debug(
                         f"Found matching post widget to hide spinner: {post_widget}"
                     )
@@ -764,7 +804,9 @@ class Mastui(App):
                 notif_status = notif_widget.notif.get("status")
                 if notif_status and hasattr(notif_widget, "hide_spinner"):
                     original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == str(message.post_id):
+                    if original_status and str(original_status.get("id")) == str(
+                        message.post_id
+                    ):
                         log.debug(
                             f"Found matching notification widget to hide spinner: {notif_widget}"
                         )
@@ -776,7 +818,9 @@ class Mastui(App):
                 notif_status = notif_widget.notif.get("status")
                 if notif_status and hasattr(notif_widget, "hide_spinner"):
                     original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == str(message.post_id):
+                    if original_status and str(original_status.get("id")) == str(
+                        message.post_id
+                    ):
                         notif_widget.hide_spinner()
                         found_widget = True
 
@@ -789,19 +833,31 @@ class Mastui(App):
 
     @on(FocusNextTimeline)
     def on_focus_next_timeline(self, message: FocusNextTimeline) -> None:
-        timelines = self.query(Timeline)
-        for i, timeline in enumerate(timelines):
-            if timeline.has_focus:
-                timelines[(i + 1) % len(timelines)].focus()
-                return
+        self._focus_timeline(1)
 
     @on(FocusPreviousTimeline)
     def on_focus_previous_timeline(self, message: FocusPreviousTimeline) -> None:
+        self._focus_timeline(-1)
+
+    def _focus_timeline(self, offset: int) -> None:
+        """Focus the timeline offset from the current focused timeline."""
         timelines = self.query(Timeline)
+        if not timelines:
+            return
         for i, timeline in enumerate(timelines):
             if timeline.has_focus:
-                timelines[(i - 1) % len(timelines)].focus()
+                timelines[(i + offset) % len(timelines)].focus()
                 return
+        # If none focused, focus the first timeline
+        timelines.first().focus()
+
+    def action_focus_next_column(self) -> None:
+        """Focus the next visible timeline column."""
+        self._focus_timeline(1)
+
+    def action_focus_previous_column(self) -> None:
+        """Focus the previous visible timeline column."""
+        self._focus_timeline(-1)
 
     @on(ViewProfile)
     def on_view_profile(self, message: ViewProfile) -> None:
@@ -929,7 +985,7 @@ class Mastui(App):
                     f"Error re-rendering timelines after DM toggle fallback: {fallback_e}",
                     exc_info=True,
                 )
-        
+
         self.call_later(self.check_layout_mode)
 
     def action_view_profile(self) -> None:
@@ -973,7 +1029,9 @@ class Mastui(App):
         post_to_extract = None
 
         # Case 1: A modal screen is active (e.g., Thread, Conversation)
-        if isinstance(self.screen, ModalScreen) and hasattr(self.screen, "selected_item"):
+        if isinstance(self.screen, ModalScreen) and hasattr(
+            self.screen, "selected_item"
+        ):
             selected_item = self.screen.selected_item
             if isinstance(selected_item, Post):
                 post_to_extract = selected_item.post
@@ -985,7 +1043,9 @@ class Mastui(App):
                 selected_item = focused.first().content_container.selected_item
                 if isinstance(selected_item, Post):
                     post_to_extract = selected_item.post
-                elif isinstance(selected_item, Notification) and selected_item.notif.get("status"):
+                elif isinstance(
+                    selected_item, Notification
+                ) and selected_item.notif.get("status"):
                     post_to_extract = selected_item.notif["status"]
 
         if post_to_extract:
@@ -1019,10 +1079,10 @@ class Mastui(App):
 
     def bind_keys(self):
         """(Re)bind all keys from the keybind manager."""
-        # First, unbind all keys that are currently in our map by binding them to a null action
-        if self.keybind_manager and self.keybind_manager.keymap:
-            for key in self.keybind_manager.keymap.values():
+        if self._bound_keys:
+            for key in self._bound_keys:
                 self.bind(key, "", show=False)
+            self._bound_keys.clear()
 
         # Load the latest map from disk (in case it was just changed)
         self.keybind_manager.load_keymap()
@@ -1034,8 +1094,7 @@ class Mastui(App):
                 action,
                 description=self.keybind_manager.action_descriptions.get(action, ""),
             )
-        self.bind("x", "show_urls", description="Extract URLs from post")
-
+            self._bound_keys.add(key)
 
     def switch_profile(self, profile_name: str) -> None:
         """Performs a soft restart to switch to a new profile."""

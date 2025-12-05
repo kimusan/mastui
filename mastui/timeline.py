@@ -2,7 +2,7 @@ from textual.widgets import Static, LoadingIndicator
 from textual.containers import Horizontal
 from textual import on, events
 from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
-from mastui.messages import TimelineUpdate, FocusNextTimeline, FocusPreviousTimeline, ViewConversation
+from mastui.messages import TimelineUpdate, ViewConversation
 from mastui.timeline_content import TimelineContent
 from mastodon import MastodonNetworkError
 import logging
@@ -84,7 +84,7 @@ class Timeline(Static, can_focus=True):
         container = self.content_container
         all_items = container.query("Post, Notification, ConversationSummary")
         if not all_items:
-            return # Nothing to anchor to
+            return  # Nothing to anchor to
 
         # Find the first visible item to anchor to
         scroll_y = container.scroll_y
@@ -125,7 +125,7 @@ class Timeline(Static, can_focus=True):
                 cached_convos = self.app.cache.get_conversations()
                 if cached_convos:
                     self.post_message(TimelineUpdate(cached_convos))
-                
+
                 # Step 2: Fetch from API in the background
                 fresh_convos = self.fetch_posts()
                 if fresh_convos:
@@ -230,7 +230,9 @@ class Timeline(Static, can_focus=True):
                     )
                 log.info(f"Fetched {len(posts)} new posts for {self.id}")
             except MastodonNetworkError as e:
-                log.error(f"Network error loading {self.id} timeline: {e}", exc_info=True)
+                log.error(
+                    f"Network error loading {self.id} timeline: {e}", exc_info=True
+                )
                 self.app.notify(
                     f"Connection to {self.app.config.mastodon_host} timed out. Will retry.",
                     severity="error",
@@ -353,19 +355,28 @@ class Timeline(Static, can_focus=True):
 
         # After adding new items, re-sort the entire conversation timeline
         if self.id == "direct":
+
             def get_sort_key(widget: ConversationSummary) -> datetime:
-                if widget.conversation.get('last_status') and widget.conversation['last_status'].get('created_at'):
-                    return widget.conversation['last_status']['created_at']
+                if widget.conversation.get("last_status") and widget.conversation[
+                    "last_status"
+                ].get("created_at"):
+                    return widget.conversation["last_status"]["created_at"]
                 return datetime.min.replace(tzinfo=timezone.utc)
-            
+
             self.content_container.sort_children(key=get_sort_key, reverse=True)
 
         # --- Start of scroll restoration logic ---
-        if self.scroll_anchor_id and since_id: # Only restore on a refresh
+        if self.scroll_anchor_id and since_id:  # Only restore on a refresh
             try:
-                anchor_widget = self.content_container.query_one(f"#{self.scroll_anchor_id}")
-                self.content_container.scroll_to_widget(anchor_widget, animate=False, top=True)
-                log.debug(f"Restored scroll position for {self.id} to {self.scroll_anchor_id}")
+                anchor_widget = self.content_container.query_one(
+                    f"#{self.scroll_anchor_id}"
+                )
+                self.content_container.scroll_to_widget(
+                    anchor_widget, animate=False, top=True
+                )
+                log.debug(
+                    f"Restored scroll position for {self.id} to {self.scroll_anchor_id}"
+                )
             except Exception as e:
                 log.warning(f"Could not restore scroll position: {e}")
         self.scroll_anchor_id = None
@@ -385,12 +396,16 @@ class Timeline(Static, can_focus=True):
                 self.app.notify(f"@{acct} followed you", title="New Follower")
             elif notif["type"] == "reblog" and config.notifications_popups_reblogs:
                 self.app.notify(f"@{acct} boosted your post", title="New Boost")
-            elif notif["type"] == "favourite" and config.notifications_popups_favourites:
+            elif (
+                notif["type"] == "favourite" and config.notifications_popups_favourites
+            ):
                 self.app.notify(f"@{acct} favourited your post", title="New Favourite")
 
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""
-        all_posts = self.content_container.query("Post, Notification, ConversationSummary")
+        all_posts = self.content_container.query(
+            "Post, Notification, ConversationSummary"
+        )
         if len(all_posts) > MAX_POSTS_IN_UI:
             log.info(
                 f"Pruning posts in {self.id} from the {direction}. Have {len(all_posts)}, max {MAX_POSTS_IN_UI}"
@@ -408,39 +423,9 @@ class Timeline(Static, can_focus=True):
                     post.remove()
 
     def on_key(self, event: events.Key) -> None:
-        if event.key == "left":
-            self.post_message(FocusPreviousTimeline())
+        if event.key == "enter":
             event.stop()
-        elif event.key == "right":
-            self.post_message(FocusNextTimeline())
-            event.stop()
-        elif event.key in ("up", "down", "l", "b", "a", "e", "delete", "enter", "p", "g", "x", "?"):
-            event.stop()
-            if event.key == "up":
-                self.scroll_up()
-            elif event.key == "down":
-                self.scroll_down()
-            elif event.key == "l":
-                self.like_post()
-            elif event.key == "b":
-                self.boost_post()
-            elif event.key == "a":
-                self.reply_to_post()
-            elif event.key == "e":
-                self.edit_post()
-            elif event.key == "delete":
-                self.delete_post()
-            elif event.key == "enter":
-                self.open_thread()
-            elif event.key == "p":
-                self.view_profile()
-            elif event.key == "g":
-                self.go_to_top()
-            elif event.key == "x":
-                self.show_urls()
-            elif event.key == "?":
-                # Fallback binding to ensure help opens even if keymap is misconfigured
-                self.app.action_show_help()
+            self.open_thread()
 
     def scroll_up(self) -> None:
         """Proxy scroll_up to the content container."""
@@ -478,7 +463,7 @@ class Timeline(Static, can_focus=True):
                 self.post_message(
                     ViewConversation(
                         selected.conversation["id"],
-                        selected.conversation["last_status"]["id"]
+                        selected.conversation["last_status"]["id"],
                     )
                 )
         else:
