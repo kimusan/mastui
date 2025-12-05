@@ -2,6 +2,11 @@ from pathlib import Path
 from dotenv import dotenv_values
 import logging
 
+from mastui.languages import (
+    dedupe_language_codes,
+    get_default_language_codes,
+)
+
 log = logging.getLogger(__name__)
 
 class Config:
@@ -65,6 +70,16 @@ class Config:
         self.notifications_popups_reblogs = config_values.get("NOTIFICATIONS_POPUPS_REBLOGS", "off") == "on"
         self.notifications_popups_favourites = config_values.get("NOTIFICATIONS_POPUPS_FAVOURITES", "off") == "on"
 
+        # Language preferences for composer
+        stored_languages = config_values.get("POST_LANGUAGES", "")
+        if stored_languages:
+            parsed_languages = dedupe_language_codes(stored_languages.split(","))
+        else:
+            parsed_languages = []
+        if not parsed_languages:
+            parsed_languages = get_default_language_codes()
+        self.post_languages = parsed_languages
+
 
     def save_config(self):
         with open(self.env_file, "w") as f:
@@ -104,6 +119,7 @@ class Config:
             f.write(f"NOTIFICATIONS_POPUPS_FOLLOWS={'on' if self.notifications_popups_follows else 'off'}\n")
             f.write(f"NOTIFICATIONS_POPUPS_REBLOGS={'on' if self.notifications_popups_reblogs else 'off'}\n")
             f.write(f"NOTIFICATIONS_POPUPS_FAVOURITES={'on' if self.notifications_popups_favourites else 'off'}\n")
+            f.write(f"POST_LANGUAGES={','.join(self.post_languages)}\n")
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host

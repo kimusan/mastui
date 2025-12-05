@@ -3,7 +3,9 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header, Markdown
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual import on
-from mastui.utils import get_full_content_md, LANGUAGE_OPTIONS, VISIBILITY_OPTIONS
+
+from mastui.languages import get_language_options, get_default_language_codes
+from mastui.utils import get_full_content_md, VISIBILITY_OPTIONS
 
 class ReplyScreen(ModalScreen):
     """A modal screen for replying to a post."""
@@ -47,9 +49,16 @@ class ReplyScreen(ModalScreen):
                     yield Static("Content Warning:", classes="reply_option_label")
                     yield Switch(id="cw_switch")
                     yield Input(id="cw_input", placeholder="Spoiler text...", disabled=True)
+                language_source = self.post_to_reply_to.get("language")
+                preferred = self.app.config.post_languages or get_default_language_codes()
+                language_options = get_language_options(
+                    preferred, extra_codes=[language_source] if language_source else None
+                )
+                default_language = language_source or (language_options[0][1] if language_options else "en")
+
                 with Horizontal(id="reply_language_container"):
                     yield Static("Language:", classes="reply_option_label")
-                    yield Select(LANGUAGE_OPTIONS, id="language_select", value="en")
+                    yield Select(language_options, id="language_select", value=default_language)
                 with Horizontal(id="reply_visibility_container"):
                     yield Static("Visibility:", classes="reply_option_label")
                     yield Select(

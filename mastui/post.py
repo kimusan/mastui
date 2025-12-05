@@ -4,13 +4,13 @@ from textual.widgets import Button, Label, Input, Static, TextArea, Select, Head
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual import on
 from textual.css.query import NoMatches
-from mastui.utils import LANGUAGE_OPTIONS, VISIBILITY_OPTIONS
-from mastui.widgets import PollChoice, RemovePollChoice, PollChoiceMounted
 import logging
 
+from mastui.languages import get_language_options, get_default_language_codes
+from mastui.utils import VISIBILITY_OPTIONS
+from mastui.widgets import PollChoice, RemovePollChoice, PollChoiceMounted
+
 log = logging.getLogger(__name__)
-from textual import on
-from mastui.utils import LANGUAGE_OPTIONS
 
 class PostScreen(ModalScreen):
     """A modal screen for composing a new post."""
@@ -31,9 +31,13 @@ class PostScreen(ModalScreen):
                 with Horizontal(id="post_options"):
                     yield Label("CW:", classes="post_option_label")
                     yield Input(placeholder="Content warning", id="cw_input")
+                languages = self.app.config.post_languages or get_default_language_codes()
+                language_options = get_language_options(languages)
+                default_language = language_options[0][1] if language_options else "en"
+
                 with Horizontal(id="post_language_container"):
                     yield Label("Language:", classes="post_option_label")
-                    yield Select(LANGUAGE_OPTIONS, value="en", id="language_select")
+                    yield Select(language_options, value=default_language, id="language_select")
                 
                 with Horizontal(id="post_visibility_container"):
                     yield Label("Visibility:", classes="post_option_label")

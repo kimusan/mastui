@@ -8,17 +8,6 @@ import pprint
 
 log = logging.getLogger(__name__)
 
-LANGUAGE_OPTIONS = [
-    ("Chinese", "zh"),
-    ("Danish", "da"),
-    ("English", "en"),
-    ("French", "fr"),
-    ("German", "de"),
-    ("Japanese", "ja"),
-    ("Korean", "ko"),
-    ("Spanish", "es"),
-]
-
 VISIBILITY_OPTIONS = [
     ("🌐 Public", "public"),
     ("🔑 Unlisted", "unlisted"),

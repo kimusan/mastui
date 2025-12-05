@@ -444,6 +444,98 @@ ConfigScreen .collapsible--title {
     padding: 0 1;
 }
 
+.language-config-group {
+    layout: vertical;
+    width: 100%;
+    padding: 1;
+}
+
+.language-help-text {
+    margin-bottom: 1;
+}
+
+#language_rows_list {
+    width: 100%;
+    height: 16;
+    border: tall $panel;
+    background: $surface-darken-1;
+    padding: 0;
+    margin-bottom: 1;
+}
+
+#language_rows_list ListItem {
+    width: 100%;
+    padding: 0;
+    border: none;
+    height: 3;
+}
+
+.language-row-item {
+    height: auto;
+    min-height: 2;
+}
+
+.language-row {
+    width: 100%;
+    height: auto;
+    min-height: 2;
+    content-align: center middle;
+    border-bottom: solid $background-lighten-1;
+    padding: 0 1 0 0;
+}
+
+.language-row-label {
+    width: 1fr;
+    text-overflow: ellipsis;
+}
+
+.language-row-actions {
+    margin-left: 1;
+}
+
+.language-row-actions Button {
+    margin-left: 1;
+}
+
+.language-row-actions Button:first-child {
+    margin-left: 0;
+}
+
+.language-row-button {
+    min-width: 3;
+    padding: 0 1;
+}
+
+.language-empty {
+    color: $text-muted;
+}
+
+#language_add_controls {
+    width: 100%;
+    padding-top: 1;
+    margin-bottom: 1;
+}
+
+#language_add_select,
+#language_add_input {
+    width: 1fr;
+}
+
+#language_add_select {
+    max-width: 32;
+    margin-right: 1;
+}
+
+#language_add_input {
+    margin-right: 1;
+}
+
+#language_list_actions {
+    width: 100%;
+    align-horizontal: right;
+    padding-top: 1;
+}
+
 #character_limit {
     width: auto;
     height: 100%;

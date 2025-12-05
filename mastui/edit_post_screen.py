@@ -3,7 +3,9 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Input, Static, TextArea, Select, Header
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual import on
-from mastui.utils import LANGUAGE_OPTIONS, html_to_plain_text
+
+from mastui.languages import get_language_options, get_default_language_codes
+from mastui.utils import html_to_plain_text
 
 class EditPostScreen(ModalScreen):
     """A modal screen for editing a post."""
@@ -29,11 +31,18 @@ class EditPostScreen(ModalScreen):
                         placeholder="Content warning", 
                         id="cw_input"
                     )
+                status_language = self.status.get("language")
+                preferred_languages = self.app.config.post_languages or get_default_language_codes()
+                language_options = get_language_options(
+                    preferred_languages, extra_codes=[status_language] if status_language else None
+                )
+                selected_language = status_language or (language_options[0][1] if language_options else "en")
+
                 with Horizontal(id="post_language_container"):
                     yield Label("Language:", classes="post_option_label")
                     yield Select(
-                        LANGUAGE_OPTIONS, 
-                        value=self.status.get('language', 'en'), 
+                        language_options, 
+                        value=selected_language, 
                         id="language_select"
                     )
             with Horizontal(id="post_buttons"):
