@@ -1087,12 +1087,13 @@ class Mastui(App):
         # Load the latest map from disk (in case it was just changed)
         self.keybind_manager.load_keymap()
 
-        # Bind the new keys
+        # Bind the new keys without showing them in the footer (help screen covers these)
         for action, key in self.keybind_manager.keymap.items():
             self.bind(
                 key,
                 action,
                 description=self.keybind_manager.action_descriptions.get(action, ""),
+                show=False,
             )
             self._bound_keys.add(key)
 
