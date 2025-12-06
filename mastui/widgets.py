@@ -18,8 +18,16 @@ from mastui.image import ImageWidget
 from mastui.messages import SelectPost, VoteOnPoll, ViewHashtag
 import logging
 from datetime import datetime
+from rich.markup import escape as escape_markup
 
 log = logging.getLogger(__name__)
+
+
+def safe_markup(text: str | None) -> str:
+    """Escape user content for Static widgets that render Rich markup."""
+    if text is None:
+        return ""
+    return escape_markup(str(text))
 
 
 class PostMessage(Message):
@@ -114,7 +122,8 @@ class PollWidget(Vertical):
                 is_own_vote = i in self.poll.get("own_votes", [])
 
                 label_prefix = "✓ " if is_own_vote else "  "
-                label = f"{label_prefix}{option['title']} ({votes} votes, {percentage:.2f}%)"
+                option_title = safe_markup(option.get("title", ""))
+                label = f"{label_prefix}{option_title} ({votes} votes, {percentage:.2f}%)"
 
                 bar_color = "green" if is_own_vote else "blue"
                 result_bar = Static(f"[{bar_color}] {'█' * int(percentage / 2)} [/]")
@@ -193,20 +202,20 @@ class Post(Vertical):
         status_to_display = reblog or self.post
 
         if is_reblog:
-            booster_display_name = self.post["account"]["display_name"]
-            booster_acct = self.post["account"]["acct"]
+            booster_display_name = safe_markup(self.post["account"]["display_name"])
+            booster_acct = safe_markup(self.post["account"]["acct"])
             yield Static(
                 f"🚀 Boosted by {booster_display_name} (@{booster_acct})",
                 classes="boost-header",
             )
 
         spoiler_text = status_to_display.get("spoiler_text")
-        author_display_name = status_to_display["account"]["display_name"]
-        author_acct = status_to_display["account"]["acct"]
+        author_display_name = safe_markup(status_to_display["account"]["display_name"])
+        author_acct = safe_markup(status_to_display["account"]["acct"])
         author = f"{author_display_name} (@{author_acct})"
         self.border_title = author
         if spoiler_text:
-            self.border_title = spoiler_text
+            self.border_title = safe_markup(spoiler_text)
             self.border_subtitle = author
 
         yield Markdown(get_full_content_md(status_to_display), open_links=False)
@@ -345,8 +354,8 @@ class Notification(Widget):
     def compose(self):
         notif_type = self.notif["type"]
         author = self.notif["account"]
-        author_display_name = author["display_name"]
-        author_acct = f"@{author['acct']}"
+        author_display_name = safe_markup(author.get("display_name", ""))
+        author_acct = safe_markup(f"@{author.get('acct', '')}")
         author_str = f"{author_display_name} ({author_acct})"
 
         created_at = None
@@ -361,7 +370,7 @@ class Notification(Widget):
 
             self.border_title = f"Mention from {author_str}"
             if spoiler_text:
-                self.border_title = spoiler_text
+                self.border_title = safe_markup(spoiler_text)
                 self.border_subtitle = f"Mention from {author_str}"
 
             yield Markdown(get_full_content_md(status), open_links=False)
@@ -450,7 +459,7 @@ class Notification(Widget):
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         else:
-            yield Static(f"Unsupported notification type: {notif_type}")
+            yield Static(f"Unsupported notification type: {safe_markup(notif_type)}")
 
     def on_click(self, event: events.Click) -> None:
         event.stop()
@@ -533,8 +542,10 @@ class AccountResult(SearchResult):
 
     def compose(self):
         with Vertical():
+            display_name = safe_markup(self.account.get("display_name", ""))
+            acct = safe_markup(self.account.get("acct", ""))
             yield Static(
-                f"[bold]{self.account['display_name']}[/bold] @{self.account['acct']}"
+                f"[bold]{display_name}[/bold] @{acct}"
             )
             yield Markdown(to_markdown(self.account["note"]), open_links=False)
 
@@ -589,7 +600,7 @@ class ConversationSummary(Widget, can_focus=True):
         ]
         
         participant_names = ", ".join(
-            [f"@{acc['acct']}" for acc in other_accounts]
+            [f"@{safe_markup(acc.get('acct', ''))}" for acc in other_accounts]
         )
         
         icon = "📩" if is_unread else "📭"
