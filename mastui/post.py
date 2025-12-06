@@ -2,13 +2,14 @@ from textual.app import ComposeResult
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Input, Static, TextArea, Select, Header, Switch
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
-from textual import on
+from textual import on, events
 from textual.css.query import NoMatches
 import logging
 
 from mastui.languages import get_language_options, get_default_language_codes
 from mastui.utils import VISIBILITY_OPTIONS
 from mastui.widgets import PollChoice, RemovePollChoice, PollChoiceMounted
+from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +23,14 @@ class PostScreen(ModalScreen):
     def __init__(self, max_characters: int = 500, **kwargs):
         super().__init__(**kwargs)
         self.max_characters = max_characters
+        self.autocomplete: ComposerAutocompleteController | None = None
 
     def compose(self):
         with Vertical(id="post_dialog") as d:
             d.border_title = "New Post"
             with VerticalScroll(id="post_content_container"):
                 yield TextArea(id="post_content", language="markdown")
+                yield AutocompletePanel(id="post_autocomplete")
                 with Horizontal(id="post_options"):
                     yield Label("CW:", classes="post_option_label")
                     yield Input(placeholder="Content warning", id="cw_input")
@@ -79,6 +82,13 @@ class PostScreen(ModalScreen):
     def on_mount(self):
         self.query_one("#post_content").focus()
         self.update_character_limit()
+        self.autocomplete = ComposerAutocompleteController(self, "post_content", "post_autocomplete")
+        self.autocomplete.attach()
+
+    def on_unmount(self) -> None:
+        if self.autocomplete:
+            self.autocomplete.detach()
+            self.autocomplete = None
 
     @on(Switch.Changed, "#add_poll_switch")
     def on_add_poll_switch_changed(self, event: Switch.Changed) -> None:
@@ -124,8 +134,16 @@ class PostScreen(ModalScreen):
             except NoMatches:
                 pass
 
-    @on(Input.Changed)
-    @on(TextArea.Changed)
+    @on(Input.Changed, "#cw_input")
+    def on_cw_changed(self, _: Input.Changed) -> None:
+        self.update_character_limit()
+
+    @on(TextArea.Changed, "#post_content")
+    def on_post_content_changed(self, _: TextArea.Changed) -> None:
+        self.update_character_limit()
+        if self.autocomplete:
+            self.autocomplete.on_text_changed()
+
     def update_character_limit(self):
         """Updates the character limit."""
         content_len = len(self.query_one("#post_content").text)
@@ -165,3 +183,9 @@ class PostScreen(ModalScreen):
             self.dismiss(result)
         elif event.button.id == "cancel":
             self.dismiss(None)
+
+    def on_key(self, event: events.Key) -> None:
+        if self.autocomplete and self.autocomplete.handle_key(event):
+            return
+        # Fall back to default handling
+        return None

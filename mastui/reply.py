@@ -2,10 +2,11 @@ from textual.app import ComposeResult
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header, Markdown
 from textual.containers import Vertical, Horizontal, VerticalScroll
-from textual import on
+from textual import on, events
 
 from mastui.languages import get_language_options, get_default_language_codes
 from mastui.utils import get_full_content_md, VISIBILITY_OPTIONS
+from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
 
 class ReplyScreen(ModalScreen):
     """A modal screen for replying to a post."""
@@ -19,6 +20,7 @@ class ReplyScreen(ModalScreen):
         self.post_to_reply_to = post_to_reply_to
         self.max_characters = max_characters
         self.visibility = visibility
+        self.autocomplete: ComposerAutocompleteController | None = None
 
     def get_mentions(self):
         """Get all unique mentions from the post being replied to, excluding the current user."""
@@ -45,6 +47,7 @@ class ReplyScreen(ModalScreen):
                 reply_text_area = TextArea(id="reply_content", language="markdown")
                 reply_text_area.text = self.get_mentions() + " "
                 yield reply_text_area
+                yield AutocompletePanel(id="reply_autocomplete")
                 with Horizontal(id="reply_options"):
                     yield Static("Content Warning:", classes="reply_option_label")
                     yield Switch(id="cw_switch")
@@ -75,11 +78,26 @@ class ReplyScreen(ModalScreen):
         """Set initial focus."""
         self.query_one("#reply_content").focus()
         self.query_one("#reply_content").cursor_location = (0, len(self.query_one("#reply_content").text))
-        self.on_text_area_changed(TextArea.Changed(self.query_one("#reply_content")))
+        self.update_character_limit()
+        self.autocomplete = ComposerAutocompleteController(self, "reply_content", "reply_autocomplete")
+        self.autocomplete.attach()
+
+    def on_unmount(self) -> None:
+        if self.autocomplete:
+            self.autocomplete.detach()
+            self.autocomplete = None
 
     @on(Input.Changed, "#cw_input")
+    def on_cw_text_changed(self, _: Input.Changed) -> None:
+        self.update_character_limit()
+
     @on(TextArea.Changed, "#reply_content")
-    def on_text_area_changed(self, event: TextArea.Changed | Input.Changed) -> None:
+    def on_reply_content_changed(self, _: TextArea.Changed) -> None:
+        self.update_character_limit()
+        if self.autocomplete:
+            self.autocomplete.on_text_changed()
+
+    def update_character_limit(self) -> None:
         """Update the character count."""
         content_len = len(self.query_one("#reply_content").text)
         cw_len = len(self.query_one("#cw_input").value)
@@ -124,3 +142,8 @@ class ReplyScreen(ModalScreen):
 
         elif event.button.id == "cancel_button":
             self.dismiss(None)
+
+    def on_key(self, event: events.Key) -> None:
+        if self.autocomplete and self.autocomplete.handle_key(event):
+            return
+        return None

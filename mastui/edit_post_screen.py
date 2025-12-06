@@ -2,10 +2,11 @@ from textual.app import ComposeResult
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Input, Static, TextArea, Select, Header
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
-from textual import on
+from textual import on, events
 
 from mastui.languages import get_language_options, get_default_language_codes
 from mastui.utils import html_to_plain_text
+from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
 
 class EditPostScreen(ModalScreen):
     """A modal screen for editing a post."""
@@ -18,12 +19,14 @@ class EditPostScreen(ModalScreen):
         super().__init__(**kwargs)
         self.status = status
         self.max_characters = max_characters
+        self.autocomplete: ComposerAutocompleteController | None = None
 
     def compose(self):
         with Vertical(id="post_dialog") as d:
             d.border_title = "Edit Post"
             with VerticalScroll(id="post_content_container"):
                 yield TextArea(html_to_plain_text(self.status.get('content', '')), id="post_content", language="markdown")
+                yield AutocompletePanel(id="edit_autocomplete")
                 with Horizontal(id="post_options"):
                     yield Label("CW:", classes="post_option_label")
                     yield Input(
@@ -53,9 +56,24 @@ class EditPostScreen(ModalScreen):
     def on_mount(self):
         self.query_one("#post_content").focus()
         self.update_character_limit()
+        self.autocomplete = ComposerAutocompleteController(self, "post_content", "edit_autocomplete")
+        self.autocomplete.attach()
 
-    @on(Input.Changed)
-    @on(TextArea.Changed)
+    def on_unmount(self) -> None:
+        if self.autocomplete:
+            self.autocomplete.detach()
+            self.autocomplete = None
+
+    @on(Input.Changed, "#cw_input")
+    def on_cw_changed(self, _: Input.Changed) -> None:
+        self.update_character_limit()
+
+    @on(TextArea.Changed, "#post_content")
+    def on_content_changed(self, _: TextArea.Changed) -> None:
+        self.update_character_limit()
+        if self.autocomplete:
+            self.autocomplete.on_text_changed()
+
     def update_character_limit(self):
         """Updates the character limit."""
         content_len = len(self.query_one("#post_content").text)
@@ -81,3 +99,8 @@ class EditPostScreen(ModalScreen):
             self.dismiss(result)
         elif event.button.id == "cancel_button":
             self.dismiss(None)
+
+    def on_key(self, event: events.Key) -> None:
+        if self.autocomplete and self.autocomplete.handle_key(event):
+            return
+        return None

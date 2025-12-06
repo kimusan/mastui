@@ -536,6 +536,29 @@ ConfigScreen .collapsible--title {
     padding-top: 1;
 }
 
+.autocomplete-panel {
+    width: 100%;
+    border: tall $accent;
+    background: $surface;
+    max-height: 10;
+    overflow-y: auto;
+    padding: 0;
+    margin-top: 1;
+}
+
+.autocomplete-panel.hidden {
+    display: none;
+}
+
+.autocomplete-row {
+    padding: 0 1;
+}
+
+.autocomplete-row--selected {
+    background: $accent;
+    color: $background;
+}
+
 #character_limit {
     width: auto;
     height: 100%;

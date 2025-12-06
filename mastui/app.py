@@ -38,6 +38,7 @@ from mastui.profile_manager import profile_manager
 from mastui.profile_selection import ProfileSelectionScreen
 from mastui.version_check import check_for_update, get_installed_version
 from mastui.update_dialog import UpdateAvailableScreen
+from mastui.autocomplete import AutocompleteProvider
 from mastui.messages import (
     PostStatusUpdate,
     ActionFailed,
@@ -79,6 +80,7 @@ class Mastui(App):
     me: dict | None = None
     notified_dm_ids: set[str] = set()
     keybind_manager: KeybindManager = None
+    autocomplete_provider: AutocompleteProvider | None = None
     current_version: str = "0.0.0"
     update_check_timer = None
     _bound_keys: set[str]
@@ -89,6 +91,7 @@ class Mastui(App):
         self.ssl_verify = ssl_verify
         self._debug = debug
         self._bound_keys = set()
+        self.autocomplete_provider = None
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -228,6 +231,7 @@ class Mastui(App):
 
             # Fetch the user's info once and store it
             self.me = self.api.me()
+            self.autocomplete_provider = AutocompleteProvider(self.api, self.config, self.me)
 
             # Update splash screen status
             if isinstance(splash_screen, SplashScreen):
@@ -1096,6 +1100,18 @@ class Mastui(App):
                 show=False,
             )
             self._bound_keys.add(key)
+        self.bind("x", "show_urls", description="Extract URLs from post", show=False)
+
+    def get_autocomplete_provider(self) -> AutocompleteProvider | None:
+        if not self.autocomplete_provider and self.api and self.config:
+            try:
+                self.autocomplete_provider = AutocompleteProvider(
+                    self.api, self.config, self.me
+                )
+            except Exception as exc:  # pragma: no cover - depends on runtime API availability
+                log.warning("Unable to initialize autocomplete provider: %s", exc)
+                self.autocomplete_provider = None
+        return self.autocomplete_provider
 
     def switch_profile(self, profile_name: str) -> None:
         """Performs a soft restart to switch to a new profile."""
@@ -1117,6 +1133,7 @@ class Mastui(App):
         self.me = None
         self.notified_dm_ids = set()
         self.sub_title = ""
+        self.autocomplete_provider = None
 
     def pause_timers(self):
         """Pauses all timeline timers."""
