@@ -27,6 +27,7 @@ class TimelineContent(VerticalScroll):
     def on_blur(self):
         if self.selected_item:
             self.selected_item.remove_class("selected")
+            self.selected_item = None
 
     @on(SelectPost)
     def on_select_post(self, message: SelectPost) -> None:
@@ -37,18 +38,23 @@ class TimelineContent(VerticalScroll):
         self.focus()
 
     def select_first_item(self):
-        if self.selected_item:
-            self.selected_item.remove_class("selected")
+        first_item = self._first_item()
+        self._set_selected(first_item)
+
+    def _first_item(self):
         try:
             items = self.query("Post, Notification, ConversationSummary")
-            if items:
-                self.selected_item = items.first()
-                self.selected_item.add_class("selected")
-            else:
-                self.selected_item = None
+            return items.first() if items else None
         except Exception as e:
             log.error(f"Could not select first item in timeline: {e}", exc_info=True)
-            self.selected_item = None
+            return None
+
+    def _set_selected(self, widget):
+        if self.selected_item:
+            self.selected_item.remove_class("selected")
+        self.selected_item = widget
+        if self.selected_item:
+            self.selected_item.add_class("selected")
 
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
@@ -60,44 +66,46 @@ class TimelineContent(VerticalScroll):
 
     def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
         if self.scroll_y == 0:
-            if not self.timeline.loading_more:
+            if not getattr(self.timeline, "loading_more", False):
                 self.timeline.refresh_posts()
 
     def scroll_up(self):
-        items = self.query("Post, Notification, ConversationSummary")
-        if self.selected_item and items:
-            try:
-                idx = items.nodes.index(self.selected_item)
-                if idx > 0:
-                    self.selected_item.remove_class("selected")
-                    self.selected_item = items[idx - 1]
-                    self.selected_item.add_class("selected")
-                    self.selected_item.scroll_visible()
-                else:
-                    # Reached the top, refresh for newer posts
-                    if not self.timeline.loading_more:
-                        self.timeline.refresh_posts()
-            except ValueError as e:
-                log.error(f"Could not scroll up in timeline: {e}", exc_info=True)
-                self.select_first_item()
+        previous_item = self._adjacent_item(-1)
+        if previous_item:
+            self._set_selected(previous_item)
+            previous_item.scroll_visible()
+        else:
+            if not getattr(self.timeline, "loading_more", False):
+                self.timeline.refresh_posts()
 
     def scroll_down(self):
-        items = self.query("Post, Notification, ConversationSummary")
-        if self.selected_item and items:
-            try:
-                idx = items.nodes.index(self.selected_item)
-                if idx < len(items) - 1:
-                    self.selected_item.remove_class("selected")
-                    self.selected_item = items[idx + 1]
-                    self.selected_item.add_class("selected")
-                    self.selected_item.scroll_visible()
-                else:
-                    # Reached the bottom, load older posts
-                    if not self.timeline.loading_more:
-                        self.timeline.load_older_posts()
-            except ValueError as e:
-                log.error(f"Could not scroll down in timeline: {e}", exc_info=True)
-                self.select_first_item()
+        next_item = self._adjacent_item(1)
+        if next_item:
+            self._set_selected(next_item)
+            next_item.scroll_visible()
+        else:
+            if not getattr(self.timeline, "loading_more", False):
+                if hasattr(self.timeline, "load_older_posts"):
+                    self.timeline.load_older_posts()
+
+    def _adjacent_item(self, offset: int):
+        try:
+            items = self.query("Post, Notification, ConversationSummary")
+        except Exception:
+            return None
+
+        if not items:
+            return None
+
+        current = self.selected_item or items.first()
+        if current not in items:
+            return items.first()
+
+        idx = items.nodes.index(current)
+        new_index = idx + offset
+        if 0 <= new_index < len(items):
+            return items[new_index]
+        return None
 
     def _get_status_for_action(self):
         """Return the status object associated with the selected item, if any."""

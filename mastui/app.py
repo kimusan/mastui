@@ -84,6 +84,9 @@ class Mastui(App):
     current_version: str = "0.0.0"
     update_check_timer = None
     _bound_keys: set[str]
+    pending_timeline_inits: set[str] | None
+    _early_timeline_ready: set[str]
+    _timelines_widget: Timelines | None
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
@@ -92,6 +95,9 @@ class Mastui(App):
         self._debug = debug
         self._bound_keys = set()
         self.autocomplete_provider = None
+        self.pending_timeline_inits = None
+        self._early_timeline_ready = set()
+        self._timelines_widget = None
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -368,10 +374,28 @@ class Mastui(App):
         self.load_profile(profile_name)
 
     def show_timelines(self):
-        if isinstance(self.screen, SplashScreen):
-            self.pop_screen()
         log.info("Showing timelines...")
-        self.mount(Timelines())
+        self._early_timeline_ready.clear()
+        timelines = Timelines()
+        self._timelines_widget = timelines
+
+        try:
+            base_screen = self._screen_stack[0]
+            base_screen.mount(timelines)
+        except Exception as exc:
+            log.error(f"Failed to mount timelines on base screen: {exc}", exc_info=True)
+            self.mount(timelines)
+
+        def register_timelines():
+            timeline_ids = {timeline.id for timeline in timelines.query(Timeline)}
+            self.pending_timeline_inits = set(timeline_ids)
+            if self._early_timeline_ready:
+                self.pending_timeline_inits -= self._early_timeline_ready
+                self._early_timeline_ready.clear()
+            if not self.pending_timeline_inits:
+                self._dismiss_splash_screen()
+
+        self.call_after_refresh(register_timelines)
         self.call_later(self.check_layout_mode)
         self.call_later(lambda: self.schedule_update_checks(initial=True))
 
@@ -387,11 +411,11 @@ class Mastui(App):
         is_narrow = (
             self.config.force_single_column or self.size.width < self.size.height
         )
-        try:
-            timelines = self.query_one(Timelines)
+        timelines = self._timelines_widget
+        if timelines:
             timelines.set_class(is_narrow, "single-column-mode")
-        except Exception as e:
-            log.debug(f"Could not apply layout mode, Timelines widget not found: {e}")
+        else:
+            log.debug("Timelines widget not yet mounted; skipping layout check.")
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
@@ -1102,6 +1126,19 @@ class Mastui(App):
             self._bound_keys.add(key)
         self.bind("x", "show_urls", description="Extract URLs from post", show=False)
 
+    def notify_timeline_initialized(self, timeline_id: str) -> None:
+        if self.pending_timeline_inits is None:
+            self._early_timeline_ready.add(timeline_id)
+            return
+        if timeline_id in self.pending_timeline_inits:
+            self.pending_timeline_inits.discard(timeline_id)
+            if not self.pending_timeline_inits:
+                self._dismiss_splash_screen()
+
+    def _dismiss_splash_screen(self) -> None:
+        if isinstance(self.screen, SplashScreen):
+            self.pop_screen()
+
     def get_autocomplete_provider(self) -> AutocompleteProvider | None:
         if not self.autocomplete_provider and self.api and self.config:
             try:
@@ -1122,10 +1159,12 @@ class Mastui(App):
     def _tear_down_profile(self):
         """Removes the current profile's UI and data."""
         log.debug("Tearing down current profile.")
-        try:
-            self.query_one(Timelines).remove()
-        except Exception as e:
-            log.warning(f"Could not remove Timelines widget during tear down: {e}")
+        if self._timelines_widget:
+            try:
+                self._timelines_widget.remove()
+            except Exception as e:
+                log.warning(f"Could not remove Timelines widget during tear down: {e}")
+            self._timelines_widget = None
 
         self.api = None
         self.config = None
@@ -1134,6 +1173,10 @@ class Mastui(App):
         self.notified_dm_ids = set()
         self.sub_title = ""
         self.autocomplete_provider = None
+        if self.pending_timeline_inits is not None:
+            self.pending_timeline_inits.clear()
+        self.pending_timeline_inits = None
+        self._early_timeline_ready.clear()
 
     def pause_timers(self):
         """Pauses all timeline timers."""

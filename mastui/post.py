@@ -129,10 +129,8 @@ class PostScreen(ModalScreen):
         choices = self.query(PollChoice)
         can_remove = len(choices) > 2
         for choice in choices:
-            try:
-                choice.query_one(".remove-choice").disabled = not can_remove
-            except NoMatches:
-                pass
+            if choice.remove_button:
+                choice.remove_button.disabled = not can_remove
 
     @on(Input.Changed, "#cw_input")
     def on_cw_changed(self, _: Input.Changed) -> None:

@@ -11,6 +11,7 @@ from datetime import datetime, timezone, timedelta
 log = logging.getLogger(__name__)
 
 MAX_POSTS_IN_UI = 70
+INITIAL_RENDER_LIMIT = 20
 
 
 class Timeline(Static, can_focus=True):
@@ -25,6 +26,7 @@ class Timeline(Static, can_focus=True):
         self.oldest_post_id = None
         self.loading_more = False
         self.scroll_anchor_id = None
+        self.initial_render_done = False
 
     @property
     def content_container(self) -> TimelineContent:
@@ -82,18 +84,22 @@ class Timeline(Static, can_focus=True):
         # --- Start of scroll preservation logic ---
         self.scroll_anchor_id = None
         container = self.content_container
-        all_items = container.query("Post, Notification, ConversationSummary")
-        if not all_items:
-            return  # Nothing to anchor to
-
-        # Find the first visible item to anchor to
-        scroll_y = container.scroll_y
-        for item in all_items:
-            widget_region = item.virtual_region
-            if widget_region.y + widget_region.height > scroll_y:
-                self.scroll_anchor_id = item.id
-                log.debug(f"Set scroll anchor for {self.id} to {self.scroll_anchor_id}")
-                break
+        anchor_candidate = getattr(container, "selected_item", None)
+        if anchor_candidate and anchor_candidate.id:
+            self.scroll_anchor_id = anchor_candidate.id
+        else:
+            all_items = container.query("Post, Notification, ConversationSummary")
+            if not all_items:
+                return  # Nothing to anchor to
+            scroll_y = container.scroll_y
+            for item in all_items:
+                widget_region = item.virtual_region
+                if widget_region.y + widget_region.height > scroll_y:
+                    self.scroll_anchor_id = item.id
+                    log.debug(
+                        f"Set scroll anchor for {self.id} to {self.scroll_anchor_id}"
+                    )
+                    break
         # --- End of scroll preservation logic ---
 
         self.loading_more = True
@@ -263,7 +269,7 @@ class Timeline(Static, can_focus=True):
         log.info(f"render_posts called for {self.id} with {len(posts_data)} posts.")
         self.loading_indicator.display = False
         self.loading_more = False
-        is_initial_load = not self.post_ids
+        is_initial_load = not self.initial_render_done
 
         if is_initial_load and not posts_data:
             log.info(f"No posts to render for {self.id} on initial load.")
@@ -275,6 +281,7 @@ class Timeline(Static, can_focus=True):
                 self.content_container.mount(
                     Static("No new notifications.", classes="status-message")
                 )
+            self._notify_initial_render_complete()
             return
 
         if not posts_data and not is_initial_load:
@@ -284,6 +291,12 @@ class Timeline(Static, can_focus=True):
                     Static("End of timeline", classes="end-of-timeline")
                 )
             return
+
+        if is_initial_load and posts_data and len(posts_data) > INITIAL_RENDER_LIMIT:
+            log.info(
+                f"Initial load for {self.id} returned {len(posts_data)} posts; rendering only {INITIAL_RENDER_LIMIT}"
+            )
+            posts_data = posts_data[:INITIAL_RENDER_LIMIT]
 
         if posts_data:
             new_latest_post_id_str = posts_data[0]["id"]
@@ -349,6 +362,7 @@ class Timeline(Static, can_focus=True):
 
         if new_widgets and is_initial_load:
             self.content_container.select_first_item()
+            self._notify_initial_render_complete()
 
         prune_direction = "top" if max_id else "bottom"
         self.prune_posts(direction=prune_direction)
@@ -381,6 +395,14 @@ class Timeline(Static, can_focus=True):
                 log.warning(f"Could not restore scroll position: {e}")
         self.scroll_anchor_id = None
         # --- End of scroll restoration logic ---
+        if is_initial_load:
+            self._notify_initial_render_complete()
+
+    def _notify_initial_render_complete(self):
+        if not self.initial_render_done:
+            self.initial_render_done = True
+            if hasattr(self.app, "notify_timeline_initialized"):
+                self.app.notify_timeline_initialized(self.id)
 
     def _handle_popups(self, notifications: list):
         """Handle pop-up notifications for new items."""

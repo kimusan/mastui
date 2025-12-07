@@ -84,10 +84,13 @@ class PollChoice(Horizontal):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_class("poll-choice")
+        self.remove_button: Button | None = None
 
     def compose(self):
         yield Input(placeholder="Choice...")
-        yield Button("X", variant="error", classes="remove-choice", disabled=True)
+        btn = Button("X", variant="error", classes="remove-choice", disabled=True)
+        self.remove_button = btn
+        yield btn
 
     def on_mount(self) -> None:
         """When the widget is mounted, tell the parent to check button states."""

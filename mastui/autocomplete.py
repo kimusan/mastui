@@ -6,14 +6,16 @@ import logging
 from time import time
 
 from textual.widget import Widget
-from textual.widgets import Static, TextArea
+from textual.widgets import Static, TextArea, LoadingIndicator
 from textual.containers import Vertical
 from textual import events
+from textual.timer import Timer
 from rich.markup import escape
 
 log = logging.getLogger(__name__)
 
 AUTOCOMPLETE_MIN_LENGTH = 2
+MAX_AUTOCOMPLETE_RESULTS = 8
 WHITESPACE_CHARS = set(" \n\t\r")
 VALID_TOKEN_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.@")
 
@@ -79,7 +81,7 @@ class AutocompleteProvider:
             log.warning("Account autocomplete failed for '%s': %s", query, exc)
             suggestions = []
 
-        unique = self._deduplicate(suggestions)[:10]
+        unique = self._deduplicate(suggestions)[:MAX_AUTOCOMPLETE_RESULTS]
         self._account_cache[query] = (time(), unique)
         return unique
 
@@ -115,7 +117,7 @@ class AutocompleteProvider:
             log.warning("Tag autocomplete failed for '%s': %s", query, exc)
             suggestions = []
 
-        unique = self._deduplicate(suggestions)[:10]
+        unique = self._deduplicate(suggestions)[:MAX_AUTOCOMPLETE_RESULTS]
         self._tag_cache[query] = (time(), unique)
         return unique
 
@@ -190,22 +192,30 @@ class AutocompletePanel(Widget):
     def compose(self):
         yield Vertical(id=self._rows_id)
 
-    def set_suggestions(self, suggestions: list[AutocompleteSuggestion]) -> None:
+    def set_suggestions(
+        self,
+        suggestions: list[AutocompleteSuggestion],
+        loading: bool = False,
+    ) -> None:
         rows = self._rows_container
         for child in list(rows.children):
             child.remove()
 
         self.suggestions = suggestions
-        if not suggestions:
+        if not suggestions and not loading:
             self.hide()
             return
-
-        for suggestion in suggestions:
-            label = escape(suggestion.primary)
-            if suggestion.secondary:
-                label = f"{label} [dim]{escape(suggestion.secondary)}[/]"
-            row = Static(label, classes="autocomplete-row")
-            rows.mount(row)
+        if loading:
+            indicator = LoadingIndicator()
+            indicator.can_focus = False
+            rows.mount(indicator)
+        else:
+            for suggestion in suggestions:
+                label = escape(suggestion.primary)
+                if suggestion.secondary:
+                    label = f"{label} [dim]{escape(suggestion.secondary)}[/]"
+                row = Static(label, classes="autocomplete-row")
+                rows.mount(row)
         self.selected_index = 0
         self._update_selection()
         self.show()
@@ -252,7 +262,11 @@ class ComposerAutocompleteController:
         self.panel: AutocompletePanel | None = None
         self.app = None
         self._current_token: AutocompleteToken | None = None
+        self._pending_token: AutocompleteToken | None = None
         self._request_serial = 0
+        self._debounce_timer: Timer | None = None
+        self._debounce_interval = 0.2
+        self._ignore_next_change = False
 
     def attach(self) -> None:
         self.text_area = self.screen.query_one(f"#{self.text_area_id}", TextArea)
@@ -264,8 +278,15 @@ class ComposerAutocompleteController:
         self.panel = None
         self._current_token = None
         self.app = None
+        self._pending_token = None
+        if self._debounce_timer:
+            self._debounce_timer.stop()
+            self._debounce_timer = None
 
     def on_text_changed(self) -> None:
+        if self._ignore_next_change:
+            self._ignore_next_change = False
+            return
         if not self.text_area or not self.panel or not self.app:
             return
         provider = self.app.get_autocomplete_provider()
@@ -276,8 +297,13 @@ class ComposerAutocompleteController:
         if not token:
             self.panel.hide()
             self._current_token = None
+            self._pending_token = None
+            if self._debounce_timer:
+                self._debounce_timer.stop()
+                self._debounce_timer = None
             return
 
+        self._pending_token = token
         self._current_token = token
         self._request_serial += 1
         request_id = self._request_serial
@@ -286,17 +312,36 @@ class ComposerAutocompleteController:
         panel = self.panel
         app = self.app
 
-        def worker():
-            suggestions = provider.get_suggestions(token)
+        def fire_request():
+            if request_id != self._request_serial or not self._pending_token:
+                return
 
-            def apply():
-                if request_id != self._request_serial or not panel:
-                    return
-                panel.set_suggestions(suggestions)
+            def worker():
+                pending_token = self._pending_token
+                suggestions = provider.get_suggestions(pending_token)
 
-            app.call_from_thread(apply)
+                def apply():
+                    if request_id != self._request_serial or not panel:
+                        return
+                    entries = suggestions
+                    if suggestions:
+                        base = self._base_suggestion(pending_token)
+                        if base:
+                            entries = [base] + suggestions
+                    panel.set_suggestions(entries, loading=False)
 
-        app.run_worker(worker, thread=True)
+                app.call_from_thread(apply)
+
+            app.run_worker(worker, thread=True)
+
+        if self._debounce_timer:
+            self._debounce_timer.stop()
+        if self.panel and not self.panel.is_visible:
+            base = self._base_suggestion(token)
+            self.panel.set_suggestions([base] if base else [], loading=True)
+        self._debounce_timer = self.screen.set_timer(
+            self._debounce_interval, fire_request, pause=False
+        )
 
     def handle_key(self, event: events.Key) -> bool:
         if not self.panel or not self.panel.is_visible:
@@ -308,22 +353,35 @@ class ComposerAutocompleteController:
 
         if event.key == "ctrl+n":
             self.panel.move(1)
+            self._update_preview(self.panel.get_selected())
             event.stop()
             return True
         if event.key == "ctrl+p":
             self.panel.move(-1)
+            self._update_preview(self.panel.get_selected())
             event.stop()
             return True
         if event.key == "tab":
             self.panel.move(1)
+            self._update_preview(self.panel.get_selected())
             event.stop()
             return True
-        if event.key in ("enter", "ctrl+space"):
+        if event.key in ("ctrl+space",):
             suggestion = self.panel.get_selected()
             if suggestion:
                 self._insert_suggestion(suggestion)
             event.stop()
             return True
+        if event.key == "enter":
+            suggestion = self.panel.get_selected()
+            if suggestion:
+                self._insert_suggestion(suggestion)
+                event.prevent_default()
+                event.stop()
+                return True
+            else:
+                self.hide()
+                return False
         if event.key == "escape":
             self.panel.hide()
             event.stop()
@@ -344,12 +402,43 @@ class ComposerAutocompleteController:
         if token.end >= len(text) or text[token.end] not in WHITESPACE_CHARS:
             trailing = " "
         new_text = f"{text[:token.start]}{replacement}{trailing}{text[token.end:]}"
+        self._ignore_next_change = True
         self.text_area.text = new_text
         new_index = token.start + len(replacement) + len(trailing)
         self.text_area.cursor_location = location_from_index(new_text, new_index)
         self.panel.hide()
         self._current_token = None
+        self._pending_token = None
 
+    def _update_preview(self, suggestion: AutocompleteSuggestion | None) -> None:
+        if not suggestion or not self.text_area or not self._current_token:
+            return
+        token = self._current_token
+        text = self.text_area.text
+        replacement = suggestion.value
+        new_text = f"{text[:token.start]}{replacement}{text[token.end:]}"
+        self._ignore_next_change = True
+        self.text_area.text = new_text
+        new_index = token.start + len(replacement)
+        self.text_area.cursor_location = location_from_index(new_text, new_index)
+        self._current_token = AutocompleteToken(
+            kind=token.kind,
+            token=replacement,
+            query=replacement[1:] if len(replacement) > 1 else "",
+            start=token.start,
+            end=token.start + len(replacement),
+        )
+
+    def _base_suggestion(self, token: AutocompleteToken | None) -> AutocompleteSuggestion | None:
+        if not token:
+            return None
+        value = token.token
+        return AutocompleteSuggestion(
+            kind=token.kind,
+            value=value,
+            primary=value,
+            secondary=None,
+        )
 
 def extract_token(text: str, cursor_index: int) -> AutocompleteToken | None:
     if cursor_index == 0 or cursor_index > len(text):

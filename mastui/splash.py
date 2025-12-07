@@ -74,4 +74,3 @@ class SplashScreen(Screen):
         self.base_status = message
         self.dot_count = 0
         self.update_loading_text() # Update immediately with new base text
-

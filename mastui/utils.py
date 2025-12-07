@@ -55,6 +55,10 @@ def get_full_content_md(status: dict) -> str:
     if not status:
         return ""
 
+    cached = status.get("_cached_markdown")
+    if cached:
+        return cached
+
     html_content = status.get("content") or status.get("note") or ""
 
     content_md = to_markdown(html_content)
@@ -75,6 +79,7 @@ def get_full_content_md(status: dict) -> str:
         else:
             content_md = "\n".join(media_infos)
 
+    status["_cached_markdown"] = content_md
     return content_md
 
 
