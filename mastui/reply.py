@@ -4,6 +4,8 @@ from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Lab
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual import on, events
 
+from rich.markup import escape as escape_markup
+
 from mastui.languages import get_language_options, get_default_language_codes
 from mastui.utils import get_full_content_md, VISIBILITY_OPTIONS
 from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
@@ -42,7 +44,8 @@ class ReplyScreen(ModalScreen):
             d.border_title = "Reply to Post"
             with VerticalScroll(id="reply_content_container"):
                 with Vertical(id="original_post_preview") as v:
-                    v.border_title = f"Replying to @{self.post_to_reply_to['account']['acct']}"
+                    acct = escape_markup(self.post_to_reply_to['account']['acct'])
+                    v.border_title = f"Replying to @{acct}"
                     yield Markdown(get_full_content_md(self.post_to_reply_to))
                 reply_text_area = TextArea(id="reply_content", language="markdown")
                 reply_text_area.text = self.get_mentions() + " "

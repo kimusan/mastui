@@ -2,6 +2,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Static, Header
 from textual.containers import Container
 from textual.events import Key
+from rich.markup import escape as escape_markup
 from mastui.widgets import Post
 from mastui.timeline_content import TimelineContent
 import logging
@@ -28,12 +29,13 @@ class HashtagTimeline(ModalScreen):
         self.api = api
 
     def compose(self):
+        safe_tag = escape_markup(self.hashtag)
         with Container(id="hashtag-timeline-dialog") as d:
-            d.border_title = f"#{self.hashtag}"
+            d.border_title = f"#{safe_tag}"
             yield TimelineContent(
                 self,
                 Static(
-                    f"Loading posts for #{self.hashtag}...", classes="status-message"
+                    f"Loading posts for #{safe_tag}...", classes="status-message"
                 ),
                 id="hashtag-timeline-container",
             )

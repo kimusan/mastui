@@ -4,6 +4,7 @@ from textual.containers import Vertical
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.text import Text
+from rich.markup import escape as escape_markup
 from mastui.utils import to_markdown
 from mastui.image import ImageWidget
 import logging
@@ -56,8 +57,10 @@ class ProfileScreen(ModalScreen):
         container = self.query_one("#profile-dialog")
         container.query("*").remove()
 
-        header = f"[bold]{profile['display_name']}[/bold] (@{profile['acct']})"
-        container.border_title = f"Profile: {header}"
+        display_name = escape_markup(profile.get("display_name", ""))
+        acct = escape_markup(profile.get("acct", ""))
+        header = f"[bold]{display_name}[/bold] (@{acct})"
+        container.border_title = f"Profile: {display_name}"
         
         # Add relationship statuses to header
         if profile.get('following'):
@@ -75,7 +78,8 @@ class ProfileScreen(ModalScreen):
         fields_text = ""
         if profile.get('fields'):
             for field in profile['fields']:
-                fields_text += f"**{field['name']}:** {to_markdown(field['value'])}\n"
+                field_name = escape_markup(field.get('name', ''))
+                fields_text += f"**{field_name}:** {to_markdown(field.get('value', ''))}\n"
 
         if self.app.config.image_support:
             container.mount(ImageWidget(profile['avatar'], self.app.config, id="profile-avatar"))

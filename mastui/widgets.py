@@ -213,7 +213,7 @@ class Post(Vertical):
         author_display_name = safe_markup(status_to_display["account"]["display_name"])
         author_acct = safe_markup(status_to_display["account"]["acct"])
         author = f"{author_display_name} (@{author_acct})"
-        self.border_title = author
+        self.border_title = safe_markup(author)
         if spoiler_text:
             self.border_title = safe_markup(spoiler_text)
             self.border_subtitle = author
