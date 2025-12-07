@@ -22,51 +22,48 @@ Whether you're a power user who wants to manage multiple accounts or someone who
 
 ![Main Mastui View](https://raw.githubusercontent.com/kimusan/mastui/refs/heads/main/assets/screenshots/mastui-main-view.png)
 
-## 💻 Cross-Platform Support
+## 🧰 Requirements
 
-Mastui is built on the cross-platform Textual framework and is tested and expected to work on:
+- Python **3.9+**
+- A terminal with UTF-8 support and 120+ columns recommended
+- Optional: Sixel/TGP-capable terminal for high fidelity image rendering
+- Mastodon access token (the onboarding flow can create one for you)
+- `pipx` or `pip` for installation
 
-* **Linux**
-* **macOS**
-* **Microsoft Windows**
-* **Android (via Termux)**
+### Supported Operating Systems
+
+- **Linux**
+- **macOS**
+- **Windows** (PowerShell/WSL)
+- **Android** (via Termux)
 
 If you encounter any platform-specific issues, please [open an issue](https://github.com/kimusan/mastui/issues).
 
-## ✨ Features
+## ✨ Key Features
 
-Mastui is packed with features to make your Mastodon experience seamless and efficient:
-
-* **Multi-Column Layout:** View your Home, Local, Notifications, Federated, and Direct Message timelines simultaneously. The layout automatically switches to a single-column view on narrow terminals.
-* **Multi-Profile Support:** Securely log into multiple accounts and switch between them instantly with the `u` key. Each profile has its own configuration, cache, and theme settings.
-* **Interactive Timelines:**
-  * Like (`l`), Boost (`b`), and Reply (`a`) to posts directly.
-  * Jump to the top of a timeline with `g`.
-  * Scroll infinitely to load older posts from your cache or the server.
-  * Scroll position is preserved during automatic refreshes, so you never lose your place.
-* **Rich Content Support:**
-  * **Image Previews:** View images directly in your terminal with lazy loading for a smooth experience. Multiple renderers are supported (ANSI, Sixel, TGP).
-  * **Polls:** View and vote on polls.
-  * **Markdown & Links:** Posts are rendered beautifully with clickable links.
-* **Full-Featured Composer:**
-  * Write new posts (`c`) and replies (`a`) in a full-screen composer.
-  * Add Content Warnings (CWs) and select post language.
-  * Create and manage polls directly.
-* **Deeper Navigation:**
-  * View full post threads (`Enter`).
-  * View user profiles (`p`), including their bio, stats, and links.
-  * Follow, Mute, and Block users directly from their profile.
-* **Smart Notifications:**
-  * Get detailed pop-up notifications for new Direct Messages (e.g., "New DM from @user").
-  * Optionally enable pop-ups for mentions, follows, boosts, and favourites.
-* **Highly Configurable:**
-  * Toggle the visibility of each timeline.
-  * Configure auto-refresh intervals for each timeline.
-  * Choose from multiple built-in themes or create your own.
-  * **Customize Keybindings:** Change most key bindings to your liking from the options screen.
-* **Advanced:**
-  * Hidden log viewer (`F12`) for debugging when running with `--debug`.
-  * Persistent SQLite cache for fast startup and offline reading.
+- **Multi-Column Layout:** Home, Local, Federated, Mentions, and DM timelines can be shown side-by-side. Layout automatically collapses for narrow terminals.
+- **Multi-Profile & Sandboxed Config:** Every account has its own config directory, keymap, credentials, cache, and custom theme overrides.
+- **Timeline Power Features**
+  - Like, boost, reply, edit, and view threads directly from the keyboard
+  - Jump to the top (`g`), refresh (`r`), or move between columns with configurable bindings
+  - Persistent SQLite cache enables offline reading and super fast scrolling
+- **Rich Composer**
+  - Content warnings, poll builder, visibility controls, and language selector
+  - Autocomplete for `@mentions` and `#hashtags` sourced from your follows and the local instance
+  - Inline preview of original post when replying
+- **Media Friendly**
+  - Inline image previews with ANSI, Sixel, or TGP renderers (auto-detect)
+  - Polls rendered with vote counts or interactive voting UI
+  - URL extractor modal lets you copy media/card links without leaving the TUI
+- **Personalization**
+  - Quick theme switches plus custom CSS overrides
+  - Keybinding editor with per-profile `keymap.json`
+  - Options modal to toggle timelines, enable image caching, configure auto-refresh cadence, and curate the language list used in the composer
+- **Productivity niceties**
+  - Search panel for people, tags, and posts
+  - Hashtag timeline modal
+  - Profile and conversation screens with follow/mute/block actions
+  - Log viewer (`F12`) when running with `--debug`
 
 ## 🖼️ Screenshots
 
@@ -80,30 +77,33 @@ Mastui is packed with features to make your Mastodon experience seamless and eff
 
 ## 🚀 Installation
 
-The recommended way to install Mastui is with `pipx`, which installs it in an isolated environment.
-
-1. **Install pipx** (if you don't have it already):
-
-    ```bash
-    python3 -m pip install --user pipx
-    python3 -m pipx ensurepath
-    ```
-
-2. **Install Mastui using pipx**:
-
-    ```bash
-    pipx install mastui
-    ```
-
-After installation, you can run the application from anywhere by simply typing `mastui`.
-
-### Upgrading
-
-To upgrade to the latest version of Mastui, run:
+### pipx (recommended)
 
 ```bash
+pipx install mastui
+# later upgrades
 pipx upgrade mastui
 ```
+
+### pip / virtual environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install mastui
+```
+
+### From Source
+
+```bash
+git clone https://github.com/kimusan/mastui.git
+cd mastui
+pip install poetry
+poetry install
+poetry run mastui --debug
+```
+
+Mastui stores profile data under `~/.config/mastui/<profile>` (or the platform equivalent). Remove those directories to wipe a profile, or use the built-in profile manager.
 
 ## ⌨️ Key Bindings
 
@@ -151,8 +151,8 @@ Contributions are welcome! Please read `CONTRIBUTING.md` for details on our code
 
 Mastui is built with some fantastic open-source libraries:
 
-* [Python](https://www.python.org/)
 * [Textual](https://textual.textualize.io/) for the TUI framework
+* [Python](https://www.python.org/)
 * [Mastodon.py](https://mastodonpy.readthedocs.io/) for interacting with the Mastodon API
 * [textual-image](https://pypi.org/project/textual-image/) for image rendering
 * [httpx](https://www.python-httpx.org/) for HTTP requests
