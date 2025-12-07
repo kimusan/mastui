@@ -53,7 +53,9 @@ class TimelineContent(VerticalScroll):
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
         if self.scroll_y >= self.max_scroll_y - 2:
-            if not self.timeline.loading_more:
+            if getattr(self.timeline, "loading_more", False):
+                return
+            if hasattr(self.timeline, "load_older_posts"):
                 self.timeline.load_older_posts()
 
     def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
