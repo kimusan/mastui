@@ -1,6 +1,7 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import Horizontal
 from textual import on, events
+from textual._context import NoActiveAppError
 from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
 from mastui.messages import TimelineUpdate, ViewConversation
 from mastui.timeline_content import TimelineContent
@@ -121,6 +122,12 @@ class Timeline(Static, can_focus=True):
 
     def do_fetch_posts(self, since_id=None, max_id=None):
         """Worker method to fetch posts and post a message with the result."""
+        try:
+            app = self.app
+        except NoActiveAppError:
+            log.debug(f"App no longer active while fetching {self.id}; aborting worker.")
+            return
+
         log.info(
             f"Worker thread started for {self.id} with since_id={since_id}, max_id={max_id}"
         )
@@ -128,14 +135,14 @@ class Timeline(Static, can_focus=True):
             # Special handling for Direct Messages timeline
             if self.id == "direct":
                 # Step 1: Load from cache immediately for instant UI
-                cached_convos = self.app.cache.get_conversations()
+                cached_convos = app.cache.get_conversations()
                 if cached_convos:
                     self.post_message(TimelineUpdate(cached_convos))
 
                 # Step 2: Fetch from API in the background
                 fresh_convos = self.fetch_posts()
                 if fresh_convos:
-                    self.app.cache.bulk_insert_conversations(fresh_convos)
+                    app.cache.bulk_insert_conversations(fresh_convos)
                     self.post_message(TimelineUpdate(fresh_convos))
                 return
 
@@ -143,7 +150,7 @@ class Timeline(Static, can_focus=True):
             if since_id:
                 posts = self.fetch_posts(since_id=since_id)
                 if posts:
-                    self.app.cache.bulk_insert_posts(self.id, posts)
+                    app.cache.bulk_insert_posts(self.id, posts)
                     if self.id == "notifications":
                         self._handle_popups(posts)
                 self.post_message(TimelineUpdate(posts, since_id=since_id))
@@ -151,7 +158,7 @@ class Timeline(Static, can_focus=True):
 
             # Case 2: Scrolling down for older posts
             if max_id:
-                cached_posts = self.app.cache.get_posts(
+                cached_posts = app.cache.get_posts(
                     self.id, limit=20, max_id=max_id
                 )
                 if cached_posts:
@@ -165,22 +172,22 @@ class Timeline(Static, can_focus=True):
                 log.info(f"Cache exhausted for {self.id}, fetching older from server.")
                 server_posts = self.fetch_posts(max_id=max_id)
                 if server_posts:
-                    self.app.cache.bulk_insert_posts(self.id, server_posts)
+                    app.cache.bulk_insert_posts(self.id, server_posts)
                 self.post_message(TimelineUpdate(server_posts, max_id=max_id))
                 return
 
             # Case 3: Initial load (no since_id or max_id)
-            latest_cached_ts = self.app.cache.get_latest_post_timestamp(self.id)
+            latest_cached_ts = app.cache.get_latest_post_timestamp(self.id)
             if latest_cached_ts and (
                 datetime.now(timezone.utc) - latest_cached_ts
             ) < timedelta(hours=2):
                 log.info(f"Gap is small for {self.id}, filling it.")
-                latest_cached_id = self.get_latest_post_id_from_cache()
+                latest_cached_id = self.get_latest_post_id_from_cache(app)
                 gap_posts = self.fetch_posts(since_id=latest_cached_id)
                 if gap_posts:
-                    self.app.cache.bulk_insert_posts(self.id, gap_posts)
+                    app.cache.bulk_insert_posts(self.id, gap_posts)
 
-                all_posts = self.app.cache.get_posts(self.id, limit=20)
+                all_posts = app.cache.get_posts(self.id, limit=20)
                 self.post_message(TimelineUpdate(all_posts))
             else:
                 log.info(
@@ -188,7 +195,7 @@ class Timeline(Static, can_focus=True):
                 )
                 posts = self.fetch_posts(limit=10)
                 if posts:
-                    self.app.cache.bulk_insert_posts(self.id, posts)
+                    app.cache.bulk_insert_posts(self.id, posts)
                 self.post_message(TimelineUpdate(posts))
 
         except Exception as e:
@@ -197,9 +204,9 @@ class Timeline(Static, can_focus=True):
             )
             self.post_message(TimelineUpdate([]))
 
-    def get_latest_post_id_from_cache(self):
+    def get_latest_post_id_from_cache(self, app):
         """Helper to get the ID of the very latest post in the cache."""
-        latest_posts = self.app.cache.get_posts(self.id, limit=1)
+        latest_posts = app.cache.get_posts(self.id, limit=1)
         if latest_posts:
             return latest_posts[0]["id"]
         return None
