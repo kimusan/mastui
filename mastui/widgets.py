@@ -177,6 +177,7 @@ class Post(Vertical):
         self.post = post
         self.timeline_id = timeline_id
         self.add_class("timeline-item")
+        self.capture_mouse = True
         status_to_display = self.post.get("reblog") or self.post
         self.created_at_str = format_datetime(status_to_display["created_at"])
 
@@ -223,8 +224,10 @@ class Post(Vertical):
         filter_warning = get_status_filter_warning(status_to_display)
         if filter_warning:
             yield Static(safe_markup(filter_warning), classes="filter-warning")
-
-        yield Markdown(get_full_content_md(status_to_display), open_links=False)
+        content_md = Markdown(get_full_content_md(status_to_display), open_links=False)
+        content_md.suppress_click = True
+        content_md.can_focus = False
+        yield content_md
 
         if status_to_display.get("poll"):
             yield PollWidget(
@@ -258,6 +261,22 @@ class Post(Vertical):
             visibility = status_to_display.get("visibility")
             vis_icon = visibility_icons.get(visibility, "")
             yield Static(vis_icon, classes="visibility-icon")
+
+    def _focus_timeline(self) -> None:
+        timeline = self.query_ancestor("Timeline")
+        if timeline:
+            try:
+                self.app.set_focus(timeline)
+            except Exception:
+                pass
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        if event.button == 1:
+            self._focus_timeline()
+            self.post_message(SelectPost(self))
+            event.stop()
+        else:
+            self._focus_timeline()
 
     def show_spinner(self):
         self.query_one(".action-spinner").display = True
@@ -311,10 +330,6 @@ class Post(Vertical):
                 after=self.query_one(".post-footer"),
             )
 
-    def on_click(self, event: events.Click) -> None:
-        event.stop()
-        self.post_message(SelectPost(self))
-
     @on(Markdown.LinkClicked)
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
         """Handle a link being clicked in the Markdown."""
@@ -357,6 +372,7 @@ class Notification(Widget):
         super().__init__(**kwargs)
         self.notif = notif
         self.add_class("timeline-item")
+        self.capture_mouse = True
 
         created_at = None
         if self.notif["type"] == "mention":
@@ -390,7 +406,10 @@ class Notification(Widget):
 
             if filter_warning:
                 yield Static(safe_markup(filter_warning), classes="filter-warning")
-            yield Markdown(get_full_content_md(status), open_links=False)
+            mention_md = Markdown(get_full_content_md(status), open_links=False)
+            mention_md.suppress_click = True
+            mention_md.can_focus = False
+            yield mention_md
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
                     if media["type"] == "image":
@@ -413,7 +432,10 @@ class Notification(Widget):
             self.border_title = f"❤️ {author_str} favourited your post:"
             if filter_warning:
                 yield Static(safe_markup(filter_warning), classes="filter-warning")
-            yield Markdown(get_full_content_md(status), open_links=False)
+            fav_md = Markdown(get_full_content_md(status), open_links=False)
+            fav_md.suppress_click = True
+            fav_md.can_focus = False
+            yield fav_md
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
                     if media["type"] == "image":
@@ -430,7 +452,10 @@ class Notification(Widget):
             self.border_title = f"🚀 {author_str} boosted your post:"
             if filter_warning:
                 yield Static(safe_markup(filter_warning), classes="filter-warning")
-            yield Markdown(get_full_content_md(status), open_links=False)
+            reblog_md = Markdown(get_full_content_md(status), open_links=False)
+            reblog_md.suppress_click = True
+            reblog_md.can_focus = False
+            yield reblog_md
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
                     if media["type"] == "image":
@@ -473,7 +498,10 @@ class Notification(Widget):
             self.border_subtitle = f"{author_str}"
             if filter_warning:
                 yield Static(safe_markup(filter_warning), classes="filter-warning")
-            yield Markdown(get_full_content_md(status))
+            update_md = Markdown(get_full_content_md(status))
+            update_md.suppress_click = True
+            update_md.can_focus = False
+            yield update_md
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
                     if media["type"] == "image":
@@ -487,9 +515,19 @@ class Notification(Widget):
         else:
             yield Static(f"Unsupported notification type: {safe_markup(notif_type)}")
 
-    def on_click(self, event: events.Click) -> None:
-        event.stop()
-        self.post_message(SelectPost(self))
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        if event.button == 1:
+            self._focus_timeline()
+            self.post_message(SelectPost(self))
+            event.stop()
+
+    def _focus_timeline(self) -> None:
+        timeline = self.query_ancestor("Timeline")
+        if timeline:
+            try:
+                self.app.set_focus(timeline)
+            except Exception:
+                pass
 
     def show_spinner(self):
         try:
@@ -608,12 +646,14 @@ class ConversationSummary(Widget, can_focus=True):
         super().__init__(**kwargs)
         self.conversation = conversation
         self.add_class("timeline-item")
+        self.capture_mouse = True
         if conversation.get("unread"):
             self.add_class("unread")
 
-    def on_click(self, event: events.Click) -> None:
-        event.stop()
-        self.post_message(SelectPost(self))
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        if event.button == 1:
+            self._focus_timeline()
+            self.post_message(SelectPost(self))
 
     def compose(self):
         accounts = self.conversation.get("accounts", [])
@@ -637,9 +677,19 @@ class ConversationSummary(Widget, can_focus=True):
             # Truncate snippet to a reasonable length
             if len(snippet) > 100:
                 snippet = snippet[:97] + "..."
-            yield Markdown(snippet, open_links=False)
-
+            snippet_md = Markdown(snippet, open_links=False)
+            snippet_md.suppress_click = True
+            snippet_md.can_focus = False
+            yield snippet_md
             with Horizontal(classes="post-footer"):
                 yield Static(format_datetime(last_status.get("created_at")), classes="timestamp")
         else:
             yield Static("No messages yet.")
+
+    def _focus_timeline(self) -> None:
+        timeline = self.query_ancestor("Timeline")
+        if timeline:
+            try:
+                self.app.set_focus(timeline)
+            except Exception:
+                pass

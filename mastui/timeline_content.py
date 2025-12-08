@@ -34,7 +34,7 @@ class TimelineContent(VerticalScroll):
             self.selected_item.remove_class("selected")
         self.selected_item = message.post_widget
         self.selected_item.add_class("selected")
-        self.focus()
+        message.stop()
 
     def select_first_item(self):
         first_item = self._first_item()
