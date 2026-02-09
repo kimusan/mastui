@@ -17,8 +17,9 @@ BUMP_ARG="$1"
 poetry version "$BUMP_ARG"
 NEW_VER="$(poetry version -s)"
 
-# Regenerate CHANGELOG.md from git history
-#python3 scripts/gen_changelog.py
+# Update CHANGELOG.md while preserving existing release notes.
+# This promotes current Unreleased commits into the new version section.
+python3 scripts/gen_changelog.py --release-version "$NEW_VER"
 
 # Stage and commit
 git add pyproject.toml CHANGELOG.md || true
