@@ -122,10 +122,19 @@ class Timeline(Static, can_focus=True):
 
     def do_fetch_posts(self, since_id=None, max_id=None):
         """Worker method to fetch posts and post a message with the result."""
+        is_initial_load = (
+            since_id is None and max_id is None and not self.initial_render_done
+        )
         try:
             app = self.app
         except NoActiveAppError:
             log.debug(f"App no longer active while fetching {self.id}; aborting worker.")
+            if is_initial_load:
+                try:
+                    # Prevent splash deadlocks if startup worker context is unavailable.
+                    self.post_message(TimelineUpdate([]))
+                except Exception:
+                    pass
             return
 
         log.info(
@@ -144,6 +153,9 @@ class Timeline(Static, can_focus=True):
                 if fresh_convos:
                     app.cache.bulk_insert_conversations(fresh_convos)
                     self.post_message(TimelineUpdate(fresh_convos))
+                elif not cached_convos:
+                    # Ensure initial load completes even when there are no DMs.
+                    self.post_message(TimelineUpdate([]))
                 return
 
             # Case 1: Refreshing for newer posts (always hits the server)

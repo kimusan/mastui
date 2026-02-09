@@ -71,6 +71,7 @@ class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
     BINDINGS = [Binding("?", "show_help", "Help")]
+    SPLASH_INIT_TIMEOUT_SECONDS = 15
     CSS_PATH = css_path
     initial_data = None
     max_characters = 500  # Default value
@@ -396,6 +397,10 @@ class Mastui(App):
                 self._dismiss_splash_screen()
 
         self.call_after_refresh(register_timelines)
+        self.set_timer(
+            self.SPLASH_INIT_TIMEOUT_SECONDS,
+            self._on_splash_init_timeout,
+        )
         self.call_later(self.check_layout_mode)
         self.call_later(lambda: self.schedule_update_checks(initial=True))
 
@@ -1138,6 +1143,14 @@ class Mastui(App):
     def _dismiss_splash_screen(self) -> None:
         if isinstance(self.screen, SplashScreen):
             self.pop_screen()
+
+    def _on_splash_init_timeout(self) -> None:
+        if isinstance(self.screen, SplashScreen):
+            log.warning(
+                "Splash init timeout reached; pending timelines: %s",
+                sorted(self.pending_timeline_inits or []),
+            )
+            self._dismiss_splash_screen()
 
     def get_autocomplete_provider(self) -> AutocompleteProvider | None:
         if not self.autocomplete_provider and self.api and self.config:
