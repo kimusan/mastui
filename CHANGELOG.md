@@ -6,6 +6,12 @@ This changelog is derived from git release tags and commit history on `main`.
 
 ## [Unreleased]
 
+- No changes yet.
+
+## [1.7.1] - 2026-02-13
+
+- fix(startup): delay splash dismissal after timeline mount
+- chore(release): automate changelog updates
 - fix(startup): prevent splash deadlock on macOS
 
 ## [1.7.0] - 2026-01-17
