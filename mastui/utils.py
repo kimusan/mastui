@@ -15,7 +15,7 @@ VISIBILITY_OPTIONS = [
     ("🔒 Direct", "direct"),
 ]
 
-MARKDOWN_LINK_REGEX = re.compile(r"\\[^\\]+\\]\(([^)]+)\\\)")
+MARKDOWN_LINK_REGEX = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
 def markdown_links_to_html(text: str) -> str:
