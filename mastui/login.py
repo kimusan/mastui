@@ -63,7 +63,7 @@ class LoginScreen(ModalScreen):
             return ""
         
         # Prepend a scheme if one isn't present, for urlparse to work correctly.
-        if not host_input.startswith(('http://', 'https ')):
+        if not host_input.startswith(("http://", "https://")):
             host_input = 'https://' + host_input
             
         parsed_url = urlparse(host_input)
