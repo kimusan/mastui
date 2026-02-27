@@ -5,6 +5,16 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
+def _restrict_file_permissions(path: Path) -> None:
+    """Best-effort permission hardening for secret-bearing files."""
+    if os.name != "posix":
+        return
+    try:
+        os.chmod(path, 0o600)
+    except OSError as exc:
+        log.debug("Could not set restrictive permissions on %s: %s", path, exc)
+
 class ProfileManager:
     def __init__(self):
         self.config_dir = Path.home() / ".config" / "mastui"
@@ -42,7 +52,9 @@ class ProfileManager:
         """Creates a new profile directory and .env file."""
         profile_path = self.get_profile_path(profile_name)
         profile_path.mkdir(exist_ok=True)
-        (profile_path / ".env").write_text(env_content)
+        env_path = profile_path / ".env"
+        env_path.write_text(env_content)
+        _restrict_file_permissions(env_path)
 
     def delete_profile(self, profile_name: str):
         """Deletes a profile directory."""

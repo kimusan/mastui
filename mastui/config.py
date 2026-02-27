@@ -1,6 +1,7 @@
 from pathlib import Path
 from dotenv import dotenv_values
 import logging
+import os
 
 from mastui.languages import (
     dedupe_language_codes,
@@ -8,6 +9,17 @@ from mastui.languages import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _restrict_file_permissions(path: Path) -> None:
+    """Best-effort permission hardening for secret-bearing files."""
+    if os.name != "posix":
+        return
+    try:
+        os.chmod(path, 0o600)
+    except OSError as exc:
+        log.debug("Could not set restrictive permissions on %s: %s", path, exc)
+
 
 class Config:
     def __init__(self, profile_path: Path = None):
@@ -120,6 +132,7 @@ class Config:
             f.write(f"NOTIFICATIONS_POPUPS_REBLOGS={'on' if self.notifications_popups_reblogs else 'off'}\n")
             f.write(f"NOTIFICATIONS_POPUPS_FAVOURITES={'on' if self.notifications_popups_favourites else 'off'}\n")
             f.write(f"POST_LANGUAGES={','.join(self.post_languages)}\n")
+        _restrict_file_permissions(self.env_file)
 
     def save_credentials(self, host, client_id, client_secret, access_token):
         self.mastodon_host = host
