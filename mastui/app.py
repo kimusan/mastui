@@ -120,31 +120,6 @@ class Mastui(App):
             log.debug("No 'add_account' action specified, selecting profile.")
             self.select_profile()
 
-    def on_login(self, result: tuple) -> None:
-        """Called when the login screen is dismissed."""
-        api, env_content = result
-        log.info("Login successful.")
-        self.api = api
-
-        try:
-            # Create a default profile name
-            me = api.me()
-            # Sanitize username for directory name
-            sanitized_username = "".join(
-                c for c in me["username"] if c.isalnum() or c in "-_"
-            )
-            host = urlparse(me["url"]).hostname
-            profile_name = f"{sanitized_username}@{host}"
-
-            # Create the new profile
-            profile_manager.create_profile(profile_name, env_content)
-
-            self.load_profile(profile_name)
-        except Exception as e:
-            log.error(f"Error creating profile after login: {e}", exc_info=True)
-            self.notify("Failed to create profile. Please try again.", severity="error")
-            self.call_later(self.show_login_screen)
-
     def select_profile(self):
         """Select a profile to use, or load the last used one."""
         migrated = profile_manager.migrate_old_profile()
@@ -357,20 +332,25 @@ class Mastui(App):
         log.info("Login successful.")
         self.api = api
 
-        # Create a default profile name
-        me = api.me()
-        # Sanitize username for directory name
-        sanitized_username = "".join(
-            c for c in me["username"] if c.isalnum() or c in "-_"
-        ).rstrip()
-        host = urlparse(me["url"]).hostname
-        profile_name = f"{sanitized_username}@{host}"
+        try:
+            # Create a default profile name
+            me = api.me()
+            # Sanitize username for directory name
+            sanitized_username = "".join(
+                c for c in me["username"] if c.isalnum() or c in "-_"
+            ).rstrip()
+            host = urlparse(me["url"]).hostname
+            profile_name = f"{sanitized_username}@{host}"
 
-        # Create the new profile
-        log.debug("Creating profile '%s' after successful login.", profile_name)
-        profile_manager.create_profile(profile_name, env_content)
+            # Create the new profile
+            log.debug("Creating profile '%s' after successful login.", profile_name)
+            profile_manager.create_profile(profile_name, env_content)
 
-        self.load_profile(profile_name)
+            self.load_profile(profile_name)
+        except Exception as e:
+            log.error(f"Error creating profile after login: {e}", exc_info=True)
+            self.notify("Failed to create profile. Please try again.", severity="error")
+            self.call_later(self.show_login_screen)
 
     def show_timelines(self):
         log.info("Showing timelines...")
