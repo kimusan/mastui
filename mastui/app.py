@@ -725,120 +725,107 @@ class Mastui(App):
         target_id_str = str(target_id)
         log.debug(f"Received PostStatusUpdate for post ID {target_id_str}")
 
-        found_widget = False
-        # Search on the active screen (could be a modal) and in the main timelines
-        for container in [self.screen, *self.query(Timelines)]:
-            for post_widget in container.query(Post):
-                original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and str(original_status["id"]) == target_id_str:
-                    log.debug(f"Found matching post widget: {post_widget}")
-                    post_widget.update_from_post(updated_post_data)
-                    found_widget = True
-            for notif_widget in container.query(Notification):
-                notif_status = notif_widget.notif.get("status")
-                if notif_status and hasattr(notif_widget, "update_from_post"):
-                    original_status = notif_status.get("reblog") or notif_status
-                    if (
-                        original_status
-                        and str(original_status.get("id")) == target_id_str
-                    ):
-                        log.debug(f"Found matching notification widget: {notif_widget}")
-                        notif_widget.update_from_post(updated_post_data)
-                        found_widget = True
+        matching_posts = self._find_post_widgets_by_status_id(target_id_str)
+        matching_notifs = self._find_notification_widgets_by_status_id(target_id_str)
 
-        # Fallback: search globally for any Notification widgets (covers nested layouts)
-        if not found_widget:
-            for notif_widget in self.query(Notification):
-                notif_status = notif_widget.notif.get("status")
-                if notif_status and hasattr(notif_widget, "update_from_post"):
-                    original_status = notif_status.get("reblog") or notif_status
-                    if (
-                        original_status
-                        and str(original_status.get("id")) == target_id_str
-                    ):
-                        log.debug(
-                            f"Found matching notification widget via fallback: {notif_widget}"
-                        )
-                        notif_widget.update_from_post(updated_post_data)
-                        found_widget = True
+        for post_widget in matching_posts:
+            log.debug(f"Found matching post widget: {post_widget}")
+            post_widget.update_from_post(updated_post_data)
 
-        if not found_widget:
+        for notif_widget in matching_notifs:
+            if hasattr(notif_widget, "update_from_post"):
+                log.debug(f"Found matching notification widget: {notif_widget}")
+                notif_widget.update_from_post(updated_post_data)
+
+        if not matching_posts and not matching_notifs:
             log.warning(f"Could not find a Post widget to update for ID {target_id}")
 
     @on(PostDeleted)
     def on_post_deleted(self, message: PostDeleted) -> None:
         deleted_id = str(message.post_id)
         log.debug(f"Received PostDeleted for post ID {deleted_id}")
-        for container in [self.screen, *self.query(Timelines)]:
-            for post_widget in list(container.query(Post)):
-                original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and str(original_status["id"]) == deleted_id:
-                    log.debug(
-                        f"Removing post widget {post_widget} for deleted ID {deleted_id}"
-                    )
-                    content_container = post_widget.parent
-                    post_widget.remove()
-                    if (
-                        hasattr(content_container, "selected_item")
-                        and content_container.selected_item is post_widget
-                    ):
-                        content_container.selected_item = None
-                        content_container.select_first_item()
-            for notif_widget in list(container.query(Notification)):
-                notif_status = notif_widget.notif.get("status")
-                if notif_status:
-                    original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == deleted_id:
-                        log.debug(
-                            f"Removing notification widget {notif_widget} for deleted ID {deleted_id}"
-                        )
-                        notif_widget.remove()
+        for post_widget in self._find_post_widgets_by_status_id(deleted_id):
+            log.debug(
+                f"Removing post widget {post_widget} for deleted ID {deleted_id}"
+            )
+            content_container = post_widget.parent
+            post_widget.remove()
+            if (
+                hasattr(content_container, "selected_item")
+                and content_container.selected_item is post_widget
+            ):
+                content_container.selected_item = None
+                content_container.select_first_item()
+
+        for notif_widget in self._find_notification_widgets_by_status_id(deleted_id):
+            log.debug(
+                f"Removing notification widget {notif_widget} for deleted ID {deleted_id}"
+            )
+            notif_widget.remove()
 
     def on_action_failed(self, message: ActionFailed) -> None:
         log.debug(f"Received ActionFailed for post ID {message.post_id}")
-        found_widget = False
-        for container in [self.screen, *self.query(Timelines)]:
-            log.debug(f"Searching for post in container {container}")
-            for post_widget in container.query(Post):
-                original_status = post_widget.post.get("reblog") or post_widget.post
-                if original_status and str(original_status["id"]) == str(
-                    message.post_id
-                ):
-                    log.debug(
-                        f"Found matching post widget to hide spinner: {post_widget}"
-                    )
-                    post_widget.hide_spinner()
-                    found_widget = True
-            for notif_widget in container.query(Notification):
-                notif_status = notif_widget.notif.get("status")
-                if notif_status and hasattr(notif_widget, "hide_spinner"):
-                    original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == str(
-                        message.post_id
-                    ):
-                        log.debug(
-                            f"Found matching notification widget to hide spinner: {notif_widget}"
-                        )
-                        notif_widget.hide_spinner()
-                        found_widget = True
+        target_id = str(message.post_id)
+        matching_posts = self._find_post_widgets_by_status_id(target_id)
+        matching_notifs = self._find_notification_widgets_by_status_id(target_id)
 
-        if not found_widget:
-            for notif_widget in self.query(Notification):
-                notif_status = notif_widget.notif.get("status")
-                if notif_status and hasattr(notif_widget, "hide_spinner"):
-                    original_status = notif_status.get("reblog") or notif_status
-                    if original_status and str(original_status.get("id")) == str(
-                        message.post_id
-                    ):
-                        notif_widget.hide_spinner()
-                        found_widget = True
+        for post_widget in matching_posts:
+            log.debug(
+                f"Found matching post widget to hide spinner: {post_widget}"
+            )
+            post_widget.hide_spinner()
 
-        if not found_widget:
+        for notif_widget in matching_notifs:
+            if hasattr(notif_widget, "hide_spinner"):
+                log.debug(
+                    f"Found matching notification widget to hide spinner: {notif_widget}"
+                )
+                notif_widget.hide_spinner()
+
+        if not matching_posts and not matching_notifs:
             log.warning(
                 f"Could not find a Post widget to hide spinner for ID {message.post_id}"
             )
         else:
             log.debug(f"Spinner hidden for post ID {message.post_id}")
+
+    def _find_post_widgets_by_status_id(self, status_id: str) -> list[Post]:
+        """Return Post widgets whose backing status (or reblog target) matches."""
+        matches: list[Post] = []
+        seen_widget_ids: set[int] = set()
+        for container in [self.screen, *self.query(Timelines)]:
+            for post_widget in container.query(Post):
+                widget_identity = id(post_widget)
+                if widget_identity in seen_widget_ids:
+                    continue
+                seen_widget_ids.add(widget_identity)
+
+                original_status = post_widget.post.get("reblog") or post_widget.post
+                if original_status and str(original_status.get("id")) == status_id:
+                    matches.append(post_widget)
+        return matches
+
+    def _find_notification_widgets_by_status_id(
+        self, status_id: str
+    ) -> list[Notification]:
+        """Return Notification widgets whose status (or reblog target) matches."""
+        matches: list[Notification] = []
+        seen_widget_ids: set[int] = set()
+        for container in [self.screen, *self.query(Timelines)]:
+            for notif_widget in container.query(Notification):
+                widget_identity = id(notif_widget)
+                if widget_identity in seen_widget_ids:
+                    continue
+                seen_widget_ids.add(widget_identity)
+
+                notif_status = notif_widget.notif.get("status")
+                if not notif_status:
+                    continue
+                original_status = notif_status.get("reblog") or notif_status
+                if original_status and str(original_status.get("id")) == status_id:
+                    matches.append(notif_widget)
+        return matches
+
 
     @on(FocusNextTimeline)
     def on_focus_next_timeline(self, message: FocusNextTimeline) -> None:
