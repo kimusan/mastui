@@ -537,6 +537,181 @@ ConfigScreen .collapsible--title {
     padding-top: 1;
 }
 
+#filters-dialog {
+    width: 120;
+    max-width: 95vw;
+    height: auto;
+    max-height: 90%;
+    border: solid $primary;
+    background: $surface;
+    overflow-y: auto;
+    padding: 1;
+}
+
+#filters-loading {
+    display: none;
+    height: 1;
+    margin-bottom: 1;
+}
+
+#filters_rows_list {
+    width: 100%;
+    height: 18;
+    border: tall $panel;
+    background: $surface-darken-1;
+    padding: 0;
+    margin-bottom: 1;
+}
+
+#filters_rows_list ListItem {
+    width: 100%;
+    padding: 0;
+    border: none;
+    height: 3;
+}
+
+.filter-row-item {
+    height: auto;
+    min-height: 2;
+}
+
+.filter-row {
+    width: 100%;
+    min-height: 2;
+    content-align: center middle;
+    border-bottom: solid $background-lighten-1;
+    padding: 0 1 0 0;
+}
+
+.filter-row-label {
+    width: 1fr;
+    text-overflow: ellipsis;
+}
+
+.filter-row-actions {
+    margin-left: 1;
+}
+
+.filter-row-button {
+    min-width: 7;
+    margin-left: 1;
+}
+
+.filter-row-button:first-child {
+    margin-left: 0;
+}
+
+#filters-buttons {
+    width: 100%;
+    align-horizontal: right;
+}
+
+#filter-editor-dialog {
+    width: 95;
+    max-width: 95vw;
+    height: auto;
+    max-height: 90%;
+    border: solid $primary;
+    background: $surface;
+    overflow-y: auto;
+    padding: 1;
+}
+
+.filter-context-group {
+    width: 100%;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+.filter-context-row {
+    width: 100%;
+    height: auto;
+    align-vertical: middle;
+}
+
+.keyword-config-group {
+    layout: vertical;
+    width: 100%;
+    padding-top: 1;
+}
+
+#keyword_rows_list {
+    width: 100%;
+    height: 12;
+    border: tall $panel;
+    background: $surface-darken-1;
+    padding: 0;
+    margin-bottom: 1;
+}
+
+#keyword_rows_list ListItem {
+    width: 100%;
+    padding: 0;
+    border: none;
+    height: 3;
+}
+
+.keyword-row-item {
+    height: auto;
+    min-height: 2;
+}
+
+.keyword-row {
+    width: 100%;
+    min-height: 2;
+    content-align: center middle;
+    border-bottom: solid $background-lighten-1;
+    padding: 0 1 0 0;
+}
+
+.keyword-row-label {
+    width: 1fr;
+    text-overflow: ellipsis;
+}
+
+.keyword-row-actions {
+    margin-left: 1;
+}
+
+.keyword-row-button {
+    min-width: 3;
+    padding: 0 1;
+}
+
+#keyword_add_controls {
+    width: 100%;
+    padding-top: 1;
+    margin-bottom: 1;
+}
+
+#keyword_add_input {
+    width: 1fr;
+    margin-right: 1;
+}
+
+.keyword-toggle-wrap {
+    width: auto;
+    align-vertical: middle;
+    margin-right: 1;
+}
+
+.keyword-toggle-label {
+    width: auto;
+    margin-right: 1;
+}
+
+#filter-editor-buttons {
+    width: 100%;
+    align-horizontal: right;
+    padding-top: 1;
+}
+
+.filter-warning {
+    margin: 0 1;
+    color: $warning;
+    text-style: bold;
+}
+
 .autocomplete-panel {
     width: 100%;
     border: tall $accent;

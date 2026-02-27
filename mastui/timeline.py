@@ -5,6 +5,7 @@ from textual._context import NoActiveAppError
 from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
 from mastui.messages import TimelineUpdate, ViewConversation
 from mastui.timeline_content import TimelineContent
+from mastui.filters import is_notification_hidden_by_filter, is_status_hidden_by_filter
 from mastodon import MastodonNetworkError
 import logging
 from datetime import datetime, timezone, timedelta
@@ -338,6 +339,14 @@ class Timeline(Static, can_focus=True):
 
         new_widgets = []
         for item in posts_data:
+            if self.id in {"home", "local", "federated"}:
+                status = item.get("reblog") or item
+                if is_status_hidden_by_filter(status):
+                    continue
+            elif self.id == "notifications":
+                if is_notification_hidden_by_filter(item):
+                    continue
+
             widget_id = ""
             if self.id == "notifications":
                 status = item.get("status") or {}
@@ -357,6 +366,13 @@ class Timeline(Static, can_focus=True):
                     new_widgets.append(Notification(item, id=widget_id))
                 elif self.id == "direct":
                     new_widgets.append(ConversationSummary(item, id=widget_id))
+
+        if is_initial_load and posts_data and not new_widgets:
+            self.content_container.mount(
+                Static("All fetched items are hidden by your filters.", classes="status-message")
+            )
+            self._notify_initial_render_complete()
+            return
 
         if new_widgets:
             log.info(f"Mounting {len(new_widgets)} new posts in {self.id}")

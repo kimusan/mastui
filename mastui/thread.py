@@ -3,6 +3,7 @@ from textual.widgets import Static
 from textual.containers import VerticalScroll, Container
 from textual.events import Key
 from mastui.widgets import Post, Notification, LikePost, BoostPost
+from mastui.filters import is_status_hidden_by_filter
 from mastui.reply import ReplyScreen
 from mastui.url_selector import URLSelectorScreen
 import logging
@@ -68,19 +69,44 @@ class ThreadScreen(ModalScreen):
             try:
                 ancestors = context.get("ancestors", [])
                 descendants = context.get("descendants", [])
+                mounted_posts = 0
 
                 for post in ancestors:
+                    if is_status_hidden_by_filter(post.get("reblog") or post):
+                        continue
                     container.mount(Post(post, timeline_id="thread"))
+                    mounted_posts += 1
 
-                main_post = Post(main_post_data, timeline_id="thread")
-                main_post.add_class("main-post")
-                container.mount(main_post)
+                if is_status_hidden_by_filter(main_post_data.get("reblog") or main_post_data):
+                    container.mount(
+                        Static(
+                            "The selected post is hidden by your filters.",
+                            classes="status-message",
+                        )
+                    )
+                else:
+                    main_post = Post(main_post_data, timeline_id="thread")
+                    main_post.add_class("main-post")
+                    container.mount(main_post)
+                    mounted_posts += 1
 
                 for post in descendants:
+                    if is_status_hidden_by_filter(post.get("reblog") or post):
+                        continue
                     reply_post = Post(post, timeline_id="thread")
                     reply_post.add_class("reply-post")
                     container.mount(reply_post)
-                self.select_first_item()
+                    mounted_posts += 1
+
+                if mounted_posts:
+                    self.select_first_item()
+                else:
+                    container.mount(
+                        Static(
+                            "No visible posts in this thread due to your filters.",
+                            classes="status-message",
+                        )
+                    )
             finally:
                 self._rendering = False
 

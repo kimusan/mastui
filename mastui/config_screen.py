@@ -21,6 +21,7 @@ from mastui.languages import (
     get_language_label,
     normalize_language_code,
 )
+from mastui.filter_screen import FiltersScreen
 
 
 class LanguageRow(ListItem):
@@ -212,6 +213,7 @@ class ConfigScreen(ModalScreen):
 
             with Horizontal(id="config-buttons"):
                 yield Button("Customize Keys", id="keybinds")
+                yield Button("Manage Filters", id="manage_filters")
                 yield Button("Save", variant="primary", id="save")
                 yield Button("Cancel", id="cancel")
 
@@ -224,6 +226,8 @@ class ConfigScreen(ModalScreen):
             self.app.push_screen(
                 KeybindScreen(self.app.keybind_manager), self.on_keybind_screen_dismiss
             )
+        elif button_id == "manage_filters":
+            self.app.push_screen(FiltersScreen(self.app.api))
         elif button_id == "language_add_button":
             self._add_language_from_controls()
         elif button_id == "language_reset_button":

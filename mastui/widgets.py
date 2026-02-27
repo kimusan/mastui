@@ -13,6 +13,7 @@ from textual.containers import VerticalScroll, Vertical, Horizontal
 from textual import events, on
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime, to_markdown
+from mastui.filters import get_status_filter_warning
 from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
 from mastui.messages import SelectPost, VoteOnPoll, ViewHashtag
@@ -221,6 +222,10 @@ class Post(Vertical):
             self.border_title = safe_markup(spoiler_text)
             self.border_subtitle = author
 
+        filter_warning = get_status_filter_warning(status_to_display)
+        if filter_warning:
+            yield Static(safe_markup(filter_warning), classes="filter-warning")
+
         yield Markdown(get_full_content_md(status_to_display), open_links=False)
 
         if status_to_display.get("poll"):
@@ -285,6 +290,14 @@ class Post(Vertical):
         # Force re-render of the content
         for md in self.query(Markdown):
             md.remove()
+        for warning in self.query(".filter-warning"):
+            warning.remove()
+        filter_warning = get_status_filter_warning(status_to_display)
+        if filter_warning:
+            self.mount(
+                Static(safe_markup(filter_warning), classes="filter-warning"),
+                before=self.query_one(".post-footer"),
+            )
         self.mount(Markdown(get_full_content_md(status_to_display), open_links=False), before=self.query_one(".post-footer"))
 
         # Re-render the poll if it exists
@@ -370,12 +383,15 @@ class Notification(Widget):
         if notif_type == "mention":
             status = self.notif["status"]
             spoiler_text = status.get("spoiler_text")
+            filter_warning = get_status_filter_warning(status)
 
             self.border_title = f"Mention from {author_str}"
             if spoiler_text:
                 self.border_title = safe_markup(spoiler_text)
                 self.border_subtitle = f"Mention from {author_str}"
 
+            if filter_warning:
+                yield Static(safe_markup(filter_warning), classes="filter-warning")
             yield Markdown(get_full_content_md(status), open_links=False)
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
@@ -395,7 +411,10 @@ class Notification(Widget):
 
         elif notif_type == "favourite":
             status = self.notif["status"]
+            filter_warning = get_status_filter_warning(status)
             self.border_title = f"❤️ {author_str} favourited your post:"
+            if filter_warning:
+                yield Static(safe_markup(filter_warning), classes="filter-warning")
             yield Markdown(get_full_content_md(status), open_links=False)
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
@@ -409,7 +428,10 @@ class Notification(Widget):
 
         elif notif_type == "reblog":
             status = self.notif["status"]
+            filter_warning = get_status_filter_warning(status)
             self.border_title = f"🚀 {author_str} boosted your post:"
+            if filter_warning:
+                yield Static(safe_markup(filter_warning), classes="filter-warning")
             yield Markdown(get_full_content_md(status), open_links=False)
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:
@@ -446,10 +468,13 @@ class Notification(Widget):
                 yield Static(format_datetime(created_at), classes="timestamp")
         elif notif_type == "update":
             status = self.notif["status"]
+            filter_warning = get_status_filter_warning(status)
             self.border_title = (
                 f"✍️ A post by {author_str} you interacted with was updated"
             )
             self.border_subtitle = f"{author_str}"
+            if filter_warning:
+                yield Static(safe_markup(filter_warning), classes="filter-warning")
             yield Markdown(get_full_content_md(status))
             if self.app.config.image_support and status.get("media_attachments"):
                 for media in status["media_attachments"]:

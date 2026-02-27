@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.events import Key
 from rich.markup import escape as escape_markup
 from mastui.widgets import Post
+from mastui.filters import is_status_hidden_by_filter
 from mastui.timeline_content import TimelineContent
 import logging
 
@@ -64,10 +65,22 @@ class HashtagTimeline(ModalScreen):
             )
             return
 
+        visible_posts = 0
         for post in posts:
+            if is_status_hidden_by_filter(post.get("reblog") or post):
+                continue
             container.mount(Post(post, timeline_id="hashtag"))
+            visible_posts += 1
 
-        container.select_first_item()
+        if visible_posts:
+            container.select_first_item()
+        else:
+            container.mount(
+                Static(
+                    f"No visible posts for #{self.hashtag} due to your filters.",
+                    classes="status-message",
+                )
+            )
 
     def on_key(self, event: Key) -> None:
         if event.key == "up":

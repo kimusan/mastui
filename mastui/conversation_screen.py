@@ -2,6 +2,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 from textual.containers import VerticalScroll, Container
 from mastui.widgets import Post, LikePost, BoostPost
+from mastui.filters import is_status_hidden_by_filter
 from mastui.messages import ConversationRead
 from mastui.reply import ReplyScreen
 from mastui.edit_post_screen import EditPostScreen
@@ -70,20 +71,44 @@ class ConversationScreen(ModalScreen):
 
         ancestors = context.get("ancestors", [])
         descendants = context.get("descendants", [])
+        mounted_posts = 0
         
         for post in ancestors:
+            if is_status_hidden_by_filter(post.get("reblog") or post):
+                continue
             container.mount(Post(post, timeline_id="conversation"))
+            mounted_posts += 1
 
-        main_post = Post(main_post_data, timeline_id="conversation")
-        main_post.add_class("main-post")
-        container.mount(main_post)
+        if is_status_hidden_by_filter(main_post_data.get("reblog") or main_post_data):
+            container.mount(
+                Static(
+                    "The selected direct message is hidden by your filters.",
+                    classes="status-message",
+                )
+            )
+        else:
+            main_post = Post(main_post_data, timeline_id="conversation")
+            main_post.add_class("main-post")
+            container.mount(main_post)
+            mounted_posts += 1
 
         for post in descendants:
+            if is_status_hidden_by_filter(post.get("reblog") or post):
+                continue
             reply_post = Post(post, timeline_id="conversation")
             reply_post.add_class("reply-post")
             container.mount(reply_post)
+            mounted_posts += 1
         
-        self.select_first_item()
+        if mounted_posts:
+            self.select_first_item()
+        else:
+            container.mount(
+                Static(
+                    "No visible posts in this conversation due to your filters.",
+                    classes="status-message",
+                )
+            )
 
     def select_first_item(self):
         if self.selected_item:
