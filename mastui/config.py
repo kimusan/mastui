@@ -26,7 +26,7 @@ class Config:
         config_values = {}
         if self.env_file.exists():
             config_values = dotenv_values(self.env_file)
-            log.debug(f"Loaded config from {self.env_file}: {config_values}")
+            log.debug(f"Loaded config from {self.env_file}")
         else:
             log.warning(f"Config file not found: {self.env_file}")
 

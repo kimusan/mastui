@@ -367,7 +367,7 @@ class Mastui(App):
         profile_name = f"{sanitized_username}@{host}"
 
         # Create the new profile
-        log.debug(f"Creating profile '{profile_name}' with content:\n{env_content}")
+        log.debug("Creating profile '%s' after successful login.", profile_name)
         profile_manager.create_profile(profile_name, env_content)
 
         self.load_profile(profile_name)

@@ -92,7 +92,7 @@ class LoginScreen(ModalScreen):
             self.run_worker(
                 lambda: (
                     result := create_app(cleaned_host, self.app.ssl_verify),
-                    log.debug(f"create_app() returned: {result}"),
+                    log.debug("create_app() finished for host '%s'.", cleaned_host),
                     self.app.call_from_thread(self.on_auth_link_created, result),
                 ),
                 exclusive=True,
@@ -117,7 +117,7 @@ class LoginScreen(ModalScreen):
                         auth_code,
                         self.app.ssl_verify,
                     ),
-                    log.debug(f"login() returned: {result}"),
+                    log.debug("login() completed for host '%s'.", host),
                     self.app.call_from_thread(self.on_login_complete, result),
                 ),
                 exclusive=True,
@@ -164,7 +164,7 @@ class LoginScreen(ModalScreen):
 
     def on_login_complete(self, result) -> None:
         """Callback for when the login is complete."""
-        log.debug(f"on_login_complete received result: {result}")
+        log.debug("on_login_complete received login result.")
         status = self.query_one("#login-status")
         switcher = self.query_one(ContentSwitcher)
 
