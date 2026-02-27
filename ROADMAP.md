@@ -68,10 +68,9 @@ This is a list of potential features and tasks, categorized by area. Contributio
 - **[High Priority] Bookmark Support:**
   - Implement a `bookmark_post` action and key binding.
   - Create a new `Timeline` type for viewing bookmarked posts (`api.bookmarks()`).
-- **[High Priority] Content Filtering:**
-  - Automatically fetch and respect server-side keyword filters.
-  - Hide posts that match filter criteria.
-  - *Stretch Goal:* An interface within Mastui to add, edit, and delete filters.
+- **[Medium Priority] Advanced Content Filtering:**
+  - Expand support beyond keyword filters (for example status-based filters).
+  - Add additional filter presentation modes where supported by Mastodon APIs.
 - **[Medium Priority] User List Timelines:**
   - Add an interface (perhaps in the profile switcher or a new menu) to view user-created lists as timelines (`api.timeline_list(list_id)`).
 - **[Medium Priority] Post Management:**

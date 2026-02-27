@@ -58,7 +58,7 @@ If you encounter any platform-specific issues, please [open an issue](https://gi
 - **Personalization**
   - Quick theme switches plus custom CSS overrides
   - Keybinding editor with per-profile `keymap.json`
-  - Options modal to toggle timelines, enable image caching, configure auto-refresh cadence, and curate the language list used in the composer
+  - Options modal to toggle timelines, enable image caching, configure auto-refresh cadence, curate the language list used in the composer, and manage server-side Mastodon filters
 - **Productivity niceties**
   - Search panel for people, tags, and posts
   - Hashtag timeline modal
@@ -115,6 +115,7 @@ This is a summary of the most common key bindings. For a full list, press `?` in
 | `d` | Toggle dark/light mode |
 | `u` | Switch user profile |
 | `o` | Open options screen |
+| `i` | Open filter manager |
 | `/` | Open search screen |
 | `?` | Show the full help screen |
 | `up`/`down` | Move selection up/down |
@@ -129,12 +130,29 @@ This is a summary of the most common key bindings. For a full list, press `?` in
 | `p` | View the author's profile |
 | `enter` | View the post's thread |
 
+## 🧹 Server-side Filters
+
+Mastui now supports Mastodon's server-side filters end-to-end.
+
+- Open the filter manager with `i` or via **Options → Manage Filters**.
+- View existing filters and **add / edit / delete** them.
+- Configure:
+  - **Title**
+  - **Expire after**
+  - **Filter Context** (Home and lists, notifications, public timelines, conversations, profiles)
+  - **Filter Action** (`warn` / `hide`)
+  - **Keywords** with optional **Whole word** matching
+- Filters are stored on your Mastodon server, so they apply across clients for the same account.
+- Mastui respects server filtering in timeline and modal views:
+  - `warn` filters show a warning banner
+  - `hide` filters are not rendered in the UI
+
 ## 🗺️ Roadmap
 
 Mastui is actively developed. Here are some of the features planned for future releases:
 
 * **Bookmarks:** Bookmark posts and view them in a dedicated timeline.
-* **Content Filtering:** Support for Mastodon's server-side content and keyword filters.
+* **Advanced Filtering:** Expand filter support (for example status-based filters or additional filter behaviors).
 * **User Lists:** View and interact with your created user lists as timelines.
 * **Post Management:** Delete your own posts.
 * **Profile Management:** Re-authenticate or delete profiles from within the app.

@@ -6,7 +6,10 @@ This changelog is derived from git release tags and commit history on `main`.
 
 ## [Unreleased]
 
-- No changes yet.
+- feat(filters): add server-side filter manager UI (view/add/edit/delete)
+- feat(keybindings): add direct shortcut to open filter manager
+- fix(filters): improve filter editor layout and interaction behavior
+- docs(readme): document filter manager workflow and key binding
 
 ## [1.7.1] - 2026-02-13
 
