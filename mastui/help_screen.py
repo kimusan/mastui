@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import DataTable, Static, Header
+from textual.widgets import DataTable, Static
 from textual.containers import Vertical
 
 class HelpScreen(ModalScreen):

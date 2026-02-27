@@ -1,10 +1,9 @@
 import clipman
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Grid, Vertical
-from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, Header, ContentSwitcher
+from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, ContentSwitcher
 from textual.screen import ModalScreen
 from urllib.parse import urlparse
-from rich.panel import Panel
 
 from mastui.mastodon_api import login, create_app
 import logging

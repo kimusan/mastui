@@ -308,7 +308,6 @@ class ComposerAutocompleteController:
         self._request_serial += 1
         request_id = self._request_serial
 
-        screen = self.screen
         panel = self.panel
         app = self.app
 

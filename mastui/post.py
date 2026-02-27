@@ -1,9 +1,7 @@
-from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, Input, Static, TextArea, Select, Header, Switch
-from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
+from textual.widgets import Button, Label, Input, TextArea, Select, Switch
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual import on, events
-from textual.css.query import NoMatches
 import logging
 
 from mastui.languages import get_language_options, get_default_language_codes

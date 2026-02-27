@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Static, ListView, ListItem, Label
+from textual.widgets import ListView, ListItem, Label
 from textual.containers import Container, VerticalScroll
 from textual.binding import Binding
 from textual import on

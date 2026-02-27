@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Static, Header
+from textual.widgets import Static
 from textual.containers import Container
 from textual.events import Key
 from rich.markup import escape as escape_markup

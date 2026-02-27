@@ -1,10 +1,8 @@
 import html2text
 import re
-from datetime import datetime, timezone
 from dateutil.parser import parse
 from bs4 import BeautifulSoup
 import logging
-import pprint
 
 log = logging.getLogger(__name__)
 

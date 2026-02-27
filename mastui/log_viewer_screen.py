@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Header, Log
+from textual.widgets import Log
 from textual.containers import Vertical
 import logging
 

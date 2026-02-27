@@ -1,5 +1,5 @@
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, Input, Static, Header
+from textual.widgets import Button, Label, Input
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual import on
 from mastui.key_input import KeyInput

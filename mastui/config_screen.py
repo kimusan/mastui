@@ -7,7 +7,6 @@ from textual.widgets import (
     Static,
     Select,
     Collapsible,
-    Header,
     ListView,
     ListItem,
 )

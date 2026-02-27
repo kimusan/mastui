@@ -1,4 +1,3 @@
-import html2text
 from textual.widgets import (
     Static,
     LoadingIndicator,
@@ -9,12 +8,11 @@ from textual.widgets import (
     Markdown,
 )
 from textual.widget import Widget
-from textual.containers import VerticalScroll, Vertical, Horizontal
+from textual.containers import Vertical, Horizontal
 from textual import events, on
 from textual.message import Message
 from mastui.utils import get_full_content_md, format_datetime, to_markdown
 from mastui.filters import get_status_filter_warning
-from mastui.reply import ReplyScreen
 from mastui.image import ImageWidget
 from mastui.messages import SelectPost, VoteOnPoll, ViewHashtag
 import logging
@@ -640,8 +638,7 @@ class ConversationSummary(Widget, can_focus=True):
             if len(snippet) > 100:
                 snippet = snippet[:97] + "..."
             yield Markdown(snippet, open_links=False)
-            
-            timestamp = format_datetime(last_status.get("created_at"))
+
             with Horizontal(classes="post-footer"):
                 yield Static(format_datetime(last_status.get("created_at")), classes="timestamp")
         else:

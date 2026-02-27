@@ -1,10 +1,8 @@
 from textual.screen import ModalScreen
 from textual.widgets import Static
-from textual.containers import Vertical
 from textual.containers import Center
 from rich.panel import Panel
 from rich.markdown import Markdown
-from rich.text import Text
 from rich.markup import escape as escape_markup
 from mastui.utils import to_markdown
 from mastui.image import ImageWidget

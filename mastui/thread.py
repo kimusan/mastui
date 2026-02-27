@@ -2,7 +2,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 from textual.containers import VerticalScroll, Container
 from textual.events import Key
-from mastui.widgets import Post, Notification, LikePost, BoostPost
+from mastui.widgets import Post, LikePost, BoostPost
 from mastui.filters import is_status_hidden_by_filter
 from mastui.reply import ReplyScreen
 from mastui.url_selector import URLSelectorScreen

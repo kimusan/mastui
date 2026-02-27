@@ -1,13 +1,12 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Static
+from textual.widgets import Footer
 from textual import on, events
 from textual.screen import ModalScreen
 from mastui import __version__ as package_version
 from mastui.header import CustomHeader
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
-from mastui.reply import ReplyScreen
 from mastui.edit_post_screen import EditPostScreen
 from mastui.splash import SplashScreen
 from mastui.mastodon_api import get_api
@@ -21,7 +20,6 @@ from mastui.widgets import (
     VoteOnPoll,
     PostDeleted,
 )
-from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
 from mastui.filter_screen import FiltersScreen
@@ -30,7 +28,6 @@ from mastui.search_screen import SearchScreen
 from mastui.hashtag_timeline import HashtagTimeline
 from mastui.conversation_screen import ConversationScreen
 from mastui.keybind_manager import KeybindManager
-from mastui.keybind_screen import KeybindScreen
 from mastui.log_viewer_screen import LogViewerScreen
 from mastui.logging_config import setup_logging
 from mastui.retro import retro_theme_builtin
@@ -44,14 +41,12 @@ from mastui.autocomplete import AutocompleteProvider
 from mastui.messages import (
     PostStatusUpdate,
     ActionFailed,
-    TimelineData,
     FocusNextTimeline,
     FocusPreviousTimeline,
     ViewProfile,
     ViewHashtag,
     ViewConversation,
     ConversationRead,
-    ResumeTimers,
 )
 from mastui.cache import Cache
 from mastui.url_selector import URLSelectorScreen

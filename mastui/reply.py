@@ -1,6 +1,6 @@
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Header, Markdown
+from textual.widgets import Button, Static, TextArea, Input, Switch, Select, Label, Markdown
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual import on, events
 

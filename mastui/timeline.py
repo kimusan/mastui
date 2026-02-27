@@ -1,6 +1,6 @@
 from textual.widgets import Static, LoadingIndicator
 from textual.containers import Horizontal
-from textual import on, events
+from textual import events
 from textual._context import NoActiveAppError
 from mastui.widgets import Post, Notification, GapIndicator, ConversationSummary
 from mastui.messages import TimelineUpdate, ViewConversation

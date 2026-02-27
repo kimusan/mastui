@@ -4,7 +4,6 @@ from textual.screen import ModalScreen
 from mastui.widgets import Post, Notification, LikePost, BoostPost, DeletePost
 from mastui.reply import ReplyScreen
 from mastui.thread import ThreadScreen
-from mastui.profile import ProfileScreen
 from mastui.messages import ViewProfile, SelectPost
 from mastui.url_selector import URLSelectorScreen
 from mastui.confirm_dialog import ConfirmDeleteScreen
