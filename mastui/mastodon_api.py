@@ -1,5 +1,6 @@
 from mastodon import Mastodon, MastodonError
 from requests import Session
+from requests.exceptions import RequestException
 import logging
 
 log = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def login(host, client_id, client_secret, auth_code, ssl_verify=True):
     except MastodonError as e:
         log.error(f"Mastodon API error during login for host '{host}': {e}", exc_info=True)
         return None, None, str(e)
-    except Exception as e:
+    except (RequestException, OSError, ValueError, TypeError) as e:
         log.error(f"Unexpected error during login for host '{host}': {e}", exc_info=True)
         return None, None, str(e)
 
@@ -103,7 +104,7 @@ def create_app(host, ssl_verify=True):
             error_message = f"Could not parse server response from '{host}'. The instance may be offline, misconfigured, or not a Mastodon instance."
 
         return None, None, None, error_message
-    except Exception as e:
+    except (RequestException, OSError, ValueError, TypeError) as e:
         # Catch any other potential errors (e.g., network issues not caught by MastodonError)
         log.error(
             f"Unexpected error during app creation for host '{host}': {e}",
