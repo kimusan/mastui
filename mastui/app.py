@@ -3,6 +3,7 @@ from textual.binding import Binding
 from textual.widgets import Footer, Static
 from textual import on, events
 from textual.screen import ModalScreen
+from mastui import __version__ as package_version
 from mastui.header import CustomHeader
 from mastui.login import LoginScreen
 from mastui.post import PostScreen
@@ -495,7 +496,7 @@ class Mastui(App):
             self.current_version = get_installed_version()
         except Exception as e:
             log.debug(f"Could not detect installed version, using package version: {e}")
-            self.current_version = package_version
+            self.current_version = package_version or "0.0.0"
 
         # Kick off an immediate check (respecting 24h window inside check_for_update)
         self.run_worker(
