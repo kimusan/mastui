@@ -927,6 +927,17 @@ class Mastui(App):
     def action_link_clicked(self, link: str) -> None:
         """Called when a link is clicked."""
         import webbrowser
+        from urllib.parse import urlparse
+
+        parsed = urlparse(link)
+        scheme = parsed.scheme.lower()
+        if scheme not in {"http", "https"}:
+            self.notify(
+                f"Blocked non-web link scheme: {scheme or 'unknown'}",
+                severity="warning",
+            )
+            log.warning("Blocked opening link with scheme '%s': %s", scheme, link)
+            return
 
         webbrowser.open(link)
 
