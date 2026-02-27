@@ -83,6 +83,7 @@ class Mastui(App):
     update_check_timer = None
     _bound_keys: set[str]
     _timelines_widget: Timelines | None
+    _profile_load_generation: int
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
@@ -92,6 +93,7 @@ class Mastui(App):
         self._bound_keys = set()
         self.autocomplete_provider = None
         self._timelines_widget = None
+        self._profile_load_generation = 0
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -148,6 +150,8 @@ class Mastui(App):
 
     def load_profile(self, profile_name: str):
         """Load a profile and start the app."""
+        self._profile_load_generation += 1
+        profile_load_generation = self._profile_load_generation
         log.debug(f"Loading profile: {profile_name}")
         profile_path = profile_manager.get_profile_path(profile_name)
         log.debug(f"Profile path: {profile_path}")
@@ -191,13 +195,26 @@ class Mastui(App):
         self.push_screen(SplashScreen())
         self.api = get_api(self.config)
         if self.api:
-            self.run_worker(self._load_profile_data, thread=True, exclusive=True)
+            self.run_worker(
+                lambda generation=profile_load_generation: self._load_profile_data(
+                    generation
+                ),
+                thread=True,
+                exclusive=True,
+            )
         else:
             log.error("API object could not be created. Forcing login.")
             self.call_later(self.show_login_screen)
 
-    def _load_profile_data(self):
+    def _load_profile_data(self, generation: int):
         """Worker to fetch initial profile data in the background."""
+        if generation != self._profile_load_generation:
+            log.debug(
+                "Ignoring stale profile load worker (generation %s, active %s).",
+                generation,
+                self._profile_load_generation,
+            )
+            return
         splash_screen = self.screen
         try:
             # Update splash screen status
@@ -237,7 +254,7 @@ class Mastui(App):
             self.call_from_thread(splash_screen.update_status, "Loading timelines")
 
         # Once data is loaded, show the timelines
-        self.call_from_thread(self.show_timelines)
+        self.call_from_thread(self.show_timelines, generation)
 
         # Start other background tasks
         if self.config.auto_prune_cache:
@@ -347,8 +364,25 @@ class Mastui(App):
             self.notify("Failed to create profile. Please try again.", severity="error")
             self.call_later(self.show_login_screen)
 
-    def show_timelines(self):
+    def show_timelines(self, generation: int | None = None):
+        if (
+            generation is not None
+            and generation != self._profile_load_generation
+        ):
+            log.debug(
+                "Skipping show_timelines for stale generation %s (active %s).",
+                generation,
+                self._profile_load_generation,
+            )
+            return
+
         log.info("Showing timelines...")
+        for existing_timelines in list(self.query(Timelines)):
+            try:
+                existing_timelines.remove()
+            except Exception as exc:
+                log.warning("Failed to remove existing timelines: %s", exc)
+
         timelines = Timelines()
         self._timelines_widget = timelines
 
@@ -1124,12 +1158,16 @@ class Mastui(App):
     def _tear_down_profile(self):
         """Removes the current profile's UI and data."""
         log.debug("Tearing down current profile.")
+        self._profile_load_generation += 1
+
         if self._timelines_widget:
+            self._timelines_widget = None
+
+        for timelines_widget in list(self.query(Timelines)):
             try:
-                self._timelines_widget.remove()
+                timelines_widget.remove()
             except Exception as e:
                 log.warning(f"Could not remove Timelines widget during tear down: {e}")
-            self._timelines_widget = None
 
         self.api = None
         self.config = None
