@@ -43,7 +43,7 @@ def get_installed_version() -> str:
         root = Path(__file__).resolve().parents[1]
         data = tomllib.loads((root / "pyproject.toml").read_text())
         return data["tool"]["poetry"]["version"]
-    except Exception as e:
+    except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError) as e:
         log.debug(f"Could not read version from pyproject: {e}")
         return "0.0.0"
 
@@ -53,7 +53,7 @@ def _load_state(state_path: Path) -> dict:
         return {}
     try:
         return json.loads(state_path.read_text())
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as e:
         log.debug(f"Could not load update state {state_path}: {e}")
         return {}
 
@@ -61,7 +61,7 @@ def _load_state(state_path: Path) -> dict:
 def _save_state(state_path: Path, state: dict) -> None:
     try:
         state_path.write_text(json.dumps(state))
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         log.debug(f"Could not save update state {state_path}: {e}")
 
 
@@ -72,7 +72,7 @@ def fetch_latest_version() -> str | None:
         resp.raise_for_status()
         data = resp.json()
         return data.get("info", {}).get("version")
-    except Exception as e:
+    except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
         log.debug(f"Failed to fetch latest version from PyPI: {e}")
         return None
 
@@ -96,7 +96,7 @@ def check_for_update(profile_path: Path, current_version: str, force: bool = Fal
     if last_checked_str:
         try:
             last_checked = datetime.fromisoformat(last_checked_str)
-        except Exception:
+        except (TypeError, ValueError):
             last_checked = None
 
     latest_cached = state.get("latest_version")
@@ -106,7 +106,7 @@ def check_for_update(profile_path: Path, current_version: str, force: bool = Fal
     if last_notified_str:
         try:
             last_notified = datetime.fromisoformat(last_notified_str)
-        except Exception:
+        except (TypeError, ValueError):
             last_notified = None
 
     def should_notify_for(latest_version: str) -> bool:
