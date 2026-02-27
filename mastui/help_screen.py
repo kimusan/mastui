@@ -22,6 +22,7 @@ class HelpScreen(ModalScreen):
             table.add_row("d", "Toggle dark/light mode")
             table.add_row("u", "Switch user profile")
             table.add_row("o", "Open options screen")
+            table.add_row("i", "Open filter manager")
             table.add_row("/", "Open search screen")
             table.add_row("?", "Show this help screen")
             table.add_row("escape", "Close dialog/modal or go back")

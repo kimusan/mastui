@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
+    Checkbox,
     Input,
     Label,
     ListItem,
@@ -11,7 +12,6 @@ from textual.widgets import (
     SelectionList,
     Select,
     Static,
-    Switch,
 )
 
 from mastui.filters import (
@@ -80,44 +80,43 @@ class FilterEditorScreen(ModalScreen):
             dialog.border_title = (
                 "Edit Filter" if self.filter_data else "Create Filter"
             )
-            yield Label("Title", classes="config-label")
-            yield Input(self.filter_data.get("title", ""), id="filter_title")
+            with VerticalScroll(id="filter-editor-body"):
+                yield Label("Title", classes="config-label")
+                yield Input(self.filter_data.get("title", ""), id="filter_title")
 
-            yield Label("Expire after", classes="config-label")
-            yield Select(expires_options, value=expires_value, id="filter_expires")
+                yield Label("Expire after", classes="config-label")
+                yield Select(expires_options, value=expires_value, id="filter_expires")
 
-            yield Label("Filter Action", classes="config-label")
-            yield Select(
-                FILTER_ACTION_OPTIONS,
-                value=self.filter_data.get("filter_action", "warn"),
-                id="filter_action",
-            )
-
-            with Vertical(classes="filter-context-group"):
-                yield Static("Filter Context", classes="language-help-text")
-                selected_contexts = set(self.filter_data.get("context", []))
-                yield SelectionList(
-                    *[
-                        (label, value, value in selected_contexts)
-                        for label, value in FILTER_CONTEXT_OPTIONS
-                    ],
-                    id="filter_contexts",
+                yield Label("Filter Action", classes="config-label")
+                yield Select(
+                    FILTER_ACTION_OPTIONS,
+                    value=self.filter_data.get("filter_action", "warn"),
+                    id="filter_action",
                 )
 
-            with Vertical(classes="keyword-config-group"):
-                yield Static(
-                    "Keywords",
-                    classes="language-help-text",
-                )
-                with ListView(id="keyword_rows_list"):
-                    for row in self._keyword_row_widgets():
-                        yield row
-                with Horizontal(id="keyword_add_controls"):
-                    yield Input(placeholder="keyword or phrase", id="keyword_add_input")
-                    with Horizontal(classes="keyword-toggle-wrap"):
-                        yield Label("Whole word", classes="keyword-toggle-label")
-                        yield Switch(id="keyword_add_whole_word")
-                    yield Button("Add", id="keyword_add_button")
+                with Vertical(classes="filter-context-group"):
+                    yield Static("Filter Context", classes="language-help-text")
+                    selected_contexts = set(self.filter_data.get("context", []))
+                    yield SelectionList(
+                        *[
+                            (label, value, value in selected_contexts)
+                            for label, value in FILTER_CONTEXT_OPTIONS
+                        ],
+                        id="filter_contexts",
+                    )
+
+                with Vertical(classes="keyword-config-group"):
+                    yield Static(
+                        "Keywords",
+                        classes="language-help-text",
+                    )
+                    with Horizontal(id="keyword_add_controls"):
+                        yield Input(placeholder="keyword or phrase", id="keyword_add_input")
+                        yield Checkbox("Whole word", id="keyword_add_whole_word")
+                        yield Button("Add", id="keyword_add_button")
+                    with ListView(id="keyword_rows_list"):
+                        for row in self._keyword_row_widgets():
+                            yield row
 
             with Horizontal(id="filter-editor-buttons"):
                 yield Button("Save", variant="primary", id="save")
@@ -182,7 +181,7 @@ class FilterEditorScreen(ModalScreen):
 
     def _add_keyword_from_controls(self) -> None:
         keyword_input = self.query_one("#keyword_add_input", Input)
-        whole_word_switch = self.query_one("#keyword_add_whole_word", Switch)
+        whole_word_switch = self.query_one("#keyword_add_whole_word", Checkbox)
         text = keyword_input.value.strip()
         if not text:
             self.app.notify("Type a keyword or phrase first.", severity="warning")

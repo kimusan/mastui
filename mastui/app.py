@@ -23,6 +23,7 @@ from mastui.widgets import (
 from mastui.thread import ThreadScreen
 from mastui.profile import ProfileScreen
 from mastui.config_screen import ConfigScreen
+from mastui.filter_screen import FiltersScreen
 from mastui.help_screen import HelpScreen
 from mastui.search_screen import SearchScreen
 from mastui.hashtag_timeline import HashtagTimeline
@@ -419,6 +420,13 @@ class Mastui(App):
         self.pause_timers()
         self.push_screen(ConfigScreen(), self.on_config_screen_dismiss)
 
+    def action_open_filters(self) -> None:
+        """An action to open the filter manager screen."""
+        if isinstance(self.screen, ModalScreen):
+            return
+        self.pause_timers()
+        self.push_screen(FiltersScreen(self.api), self.on_filters_screen_dismiss)
+
     def action_show_help(self) -> None:
         """An action to show the help screen."""
         if isinstance(self.screen, ModalScreen):
@@ -440,6 +448,10 @@ class Mastui(App):
 
     def on_help_screen_dismiss(self) -> None:
         """Called when the help screen is dismissed."""
+        self.resume_timers()
+
+    def on_filters_screen_dismiss(self, _) -> None:
+        """Called when the filters screen is dismissed."""
         self.resume_timers()
 
     def on_config_screen_dismiss(self, result: bool) -> None:
