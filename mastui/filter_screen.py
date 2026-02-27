@@ -42,6 +42,17 @@ class FilterRow(ListItem):
                 yield Button("Delete", id=f"filter-delete-{filter_id}", classes="filter-row-button")
 
 
+class FilterPlaceholderRow(ListItem):
+    def __init__(self, message: str) -> None:
+        super().__init__(classes="filter-row-item")
+        self.can_focus = False
+        self.message = message
+
+    def compose(self):
+        with Horizontal(classes="filter-row"):
+            yield Label(self.message, classes="language-empty filter-row-label")
+
+
 class FiltersScreen(ModalScreen):
     BINDINGS = [("escape", "dismiss", "Close Filters")]
 
@@ -59,7 +70,7 @@ class FiltersScreen(ModalScreen):
             )
             yield LoadingIndicator(id="filters-loading")
             with ListView(id="filters_rows_list"):
-                yield Static("Loading filters...", classes="status-message")
+                yield FilterPlaceholderRow("Loading filters...")
             with Horizontal(id="filters-buttons"):
                 yield Button("Add", id="filters-add-button")
                 yield Button("Refresh", id="filters-refresh-button")
@@ -133,7 +144,7 @@ class FiltersScreen(ModalScreen):
         for child in list(list_view.children):
             child.remove()
         if not self.filters:
-            list_view.mount(Static("No filters configured.", classes="language-empty"))
+            list_view.mount(FilterPlaceholderRow("No filters configured."))
             return
         for filter_data in self.filters:
             list_view.mount(FilterRow(filter_data))

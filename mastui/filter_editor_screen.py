@@ -45,6 +45,17 @@ class KeywordRow(ListItem):
                 )
 
 
+class KeywordPlaceholderRow(ListItem):
+    def __init__(self, message: str) -> None:
+        super().__init__(classes="keyword-row-item")
+        self.can_focus = False
+        self.message = message
+
+    def compose(self):
+        with Horizontal(classes="keyword-row"):
+            yield Label(self.message, classes="language-empty keyword-row-label")
+
+
 class FilterEditorScreen(ModalScreen):
     BINDINGS = [("escape", "dismiss", "Cancel")]
 
@@ -151,7 +162,7 @@ class FilterEditorScreen(ModalScreen):
 
     def _keyword_row_widgets(self):
         if not self.keyword_rows:
-            yield Static("No keywords configured yet.", classes="language-empty")
+            yield KeywordPlaceholderRow("No keywords configured yet.")
             return
         for keyword_entry in self.keyword_rows:
             yield KeywordRow(
