@@ -623,10 +623,12 @@ ConfigScreen .collapsible--title {
     margin-bottom: 1;
 }
 
-.filter-context-row {
+#filter_contexts {
     width: 100%;
     height: auto;
-    align-vertical: middle;
+    max-height: 10;
+    border: tall $panel;
+    background: $surface-darken-1;
 }
 
 .keyword-config-group {

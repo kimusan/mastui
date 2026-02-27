@@ -8,6 +8,7 @@ from textual.widgets import (
     Label,
     ListItem,
     ListView,
+    SelectionList,
     Select,
     Static,
     Switch,
@@ -94,13 +95,14 @@ class FilterEditorScreen(ModalScreen):
 
             with Vertical(classes="filter-context-group"):
                 yield Static("Filter Context", classes="language-help-text")
-                for label, value in FILTER_CONTEXT_OPTIONS:
-                    with Horizontal(classes="filter-context-row"):
-                        yield Label(label, classes="config-label")
-                        yield Switch(
-                            value=value in set(self.filter_data.get("context", [])),
-                            id=f"filter-context-{value}",
-                        )
+                selected_contexts = set(self.filter_data.get("context", []))
+                yield SelectionList(
+                    *[
+                        (label, value, value in selected_contexts)
+                        for label, value in FILTER_CONTEXT_OPTIONS
+                    ],
+                    id="filter_contexts",
+                )
 
             with Vertical(classes="keyword-config-group"):
                 yield Static(
@@ -201,12 +203,8 @@ class FilterEditorScreen(ModalScreen):
         self._render_keyword_rows()
 
     def _collect_contexts(self) -> list[str]:
-        selected: list[str] = []
-        for _, value in FILTER_CONTEXT_OPTIONS:
-            switch = self.query_one(f"#filter-context-{value}", Switch)
-            if switch.value:
-                selected.append(value)
-        return selected
+        selection_list = self.query_one("#filter_contexts", SelectionList)
+        return list(selection_list.selected)
 
     def _build_payload(self) -> dict | None:
         title = self.query_one("#filter_title", Input).value.strip()
