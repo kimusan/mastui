@@ -54,6 +54,7 @@ from mastodon.errors import MastodonAPIError
 import logging
 import argparse
 import os
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 # Set up logging
@@ -84,6 +85,7 @@ class Mastui(App):
     _bound_keys: set[str]
     _timelines_widget: Timelines | None
     _profile_load_generation: int
+    _login_cancel_callback: Callable[[str], None] | None
 
     def __init__(self, action=None, ssl_verify=True, debug=False):
         super().__init__()
@@ -94,6 +96,7 @@ class Mastui(App):
         self.autocomplete_provider = None
         self._timelines_widget = None
         self._profile_load_generation = 0
+        self._login_cancel_callback = None
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def compose(self) -> ComposeResult:
@@ -332,14 +335,29 @@ class Mastui(App):
             self.config.preferred_dark_theme = new_theme
         self.config.save_config()
 
-    def show_login_screen(self, host: str = None):
+    def show_login_screen(
+        self, host: str = None, on_cancel: Callable[[str], None] | None = None
+    ):
         log.debug(f"Attempting to show login screen for host: {host}")
         if isinstance(self.screen, SplashScreen):
             self.pop_screen()
+        self._login_cancel_callback = on_cancel or self.on_profile_selected
         self.push_screen(LoginScreen(host=host), self.on_login)
 
-    def on_login(self, result: tuple) -> None:
+    def on_login(self, result: tuple | None) -> None:
         """Called when the login screen is dismissed."""
+        if result is None:
+            log.info("Login canceled.")
+            profiles = profile_manager.get_profiles()
+            callback = self._login_cancel_callback or self.on_profile_selected
+            self._login_cancel_callback = None
+            if profiles:
+                self.push_screen(ProfileSelectionScreen(profiles), callback)
+            else:
+                self.exit()
+            return
+
+        self._login_cancel_callback = None
         api, env_content = result
         log.info("Login successful.")
         self.api = api
@@ -358,6 +376,9 @@ class Mastui(App):
             log.debug("Creating profile '%s' after successful login.", profile_name)
             profile_manager.create_profile(profile_name, env_content)
 
+            # If a profile is currently active, switch cleanly.
+            if self.config is not None:
+                self._tear_down_profile()
             self.load_profile(profile_name)
         except Exception as e:
             log.error(f"Error creating profile after login: {e}", exc_info=True)
@@ -1102,12 +1123,13 @@ class Mastui(App):
             ProfileSelectionScreen(profiles), self.on_profile_selected_for_switch
         )
 
-    def on_profile_selected_for_switch(self, profile_name: str) -> None:
+    def on_profile_selected_for_switch(self, profile_name: str | None) -> None:
         """Called when a profile is selected from the switcher."""
         if profile_name == "add_new_profile":
-            self._tear_down_profile()
-            self.show_login_screen()
-        elif profile_name and profile_name != self.config.profile_path.name:
+            self.show_login_screen(on_cancel=self.on_profile_selected_for_switch)
+        elif not profile_name:
+            self.resume_timers()
+        elif self.config is None or profile_name != self.config.profile_path.name:
             self.switch_profile(profile_name)
         else:
             # If the same profile is chosen, or selection is cancelled, just resume

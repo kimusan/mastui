@@ -1,7 +1,17 @@
 import clipman
+from textual import on
 from textual.app import ComposeResult
-from textual.containers import Grid, Vertical
-from textual.widgets import Button, Label, Input, Static, TextArea, LoadingIndicator, ContentSwitcher
+from textual.containers import Grid, Horizontal, Vertical
+from textual.widgets import (
+    Button,
+    ContentSwitcher,
+    Input,
+    Label,
+    LoadingIndicator,
+    Markdown,
+    Static,
+)
+from textual.css.query import NoMatches
 from textual.screen import ModalScreen
 from urllib.parse import urlparse
 
@@ -13,6 +23,8 @@ log = logging.getLogger(__name__)
 
 class LoginScreen(ModalScreen):
     """Screen for user to login."""
+
+    BINDINGS = [("escape", "dismiss", "Cancel")]
 
     def __init__(self, host: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,16 +41,20 @@ class LoginScreen(ModalScreen):
                     with Grid(id="login-grid"):
                         yield Label("Mastodon Instance:")
                         yield Input(placeholder="mastodon.social", id="host", value=self.host or "")
-                    yield Static() # Spacer
-                    yield Button("Get Auth Link", variant="primary", id="get_auth")
+                    yield Static()  # Spacer
+                    with Horizontal(id="login-initial-buttons"):
+                        yield Button("Get Auth Link", variant="primary", id="get_auth")
+                        yield Button("Cancel", id="cancel")
 
                 with Vertical(id="login-auth-view"):
                     yield Static("1. An authorization link has been copied to your clipboard (if possible).")
                     yield Static("   Open it in your browser to grant Mastui access.")
-                    yield TextArea("", id="auth_link", read_only=True)
+                    yield Markdown("", id="auth_link", open_links=False)
                     yield Static("\n2. Paste the authorization code you received here:")
                     yield Input(placeholder="Authorization Code", id="auth_code")
-                    yield Button("Login", variant="primary", id="login")
+                    with Horizontal(id="login-auth-buttons"):
+                        yield Button("Login", variant="primary", id="login")
+                        yield Button("Cancel", id="cancel")
 
                 with Vertical(id="login-loading-view", classes="centered"):
                      yield Static("Working...")
@@ -60,14 +76,28 @@ class LoginScreen(ModalScreen):
         """Cleans the host input to be a valid domain."""
         if not host_input:
             return ""
-        
+
+        host_input = host_input.strip()
+        if not host_input:
+            return ""
+
         # Prepend a scheme if one isn't present, for urlparse to work correctly.
-        if not host_input.startswith(("http://", "https://")):
-            host_input = 'https://' + host_input
-            
+        if "://" not in host_input:
+            host_input = "https://" + host_input
+
         parsed_url = urlparse(host_input)
-        # netloc contains the domain and potentially the port
-        return parsed_url.netloc
+        hostname = parsed_url.hostname
+        if not hostname or any(ch.isspace() for ch in hostname):
+            return ""
+
+        try:
+            port = parsed_url.port
+        except ValueError:
+            return ""
+
+        if port is not None:
+            return f"{hostname}:{port}"
+        return hostname
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         status = self.query_one("#login-status")
@@ -84,7 +114,7 @@ class LoginScreen(ModalScreen):
             if not cleaned_host:
                 status.update("Invalid instance name.")
                 return
-            
+
             host_input_widget.value = cleaned_host
             switcher.current = "login-loading-view"
             status.update("")
@@ -122,6 +152,8 @@ class LoginScreen(ModalScreen):
                 exclusive=True,
                 thread=True,
             )
+        elif event.button.id == "cancel":
+            self.dismiss(None)
 
     def on_auth_link_created(self, result) -> None:
         """Callback for when the auth link is created."""
@@ -148,15 +180,15 @@ class LoginScreen(ModalScreen):
                     "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`)."
                 )
 
-            auth_link_input = self.query_one("#auth_link")
-            auth_link_input.text = auth_url
+            auth_link = self.query_one("#auth_link", Markdown)
+            auth_link.update(f"[Open authorization link]({auth_url})\n\n`{auth_url}`")
             switcher.current = "login-auth-view"
             self.query_one("#auth_code").focus()
         except (TypeError, ValueError) as e:
             log.error(f"Error unpacking result in on_auth_link_created: {result} - {e}", exc_info=True)
             status.update("An unexpected error occurred. See log for details.")
             switcher.current = "login-initial-view"
-        except Exception as e:
+        except (NoMatches, AttributeError, RuntimeError) as e:
             log.error(f"Unexpected error in on_auth_link_created: {e}", exc_info=True)
             status.update("An unexpected error occurred. See log for details.")
             switcher.current = "login-initial-view"
@@ -175,3 +207,7 @@ class LoginScreen(ModalScreen):
         else:
             status.update(f"Login failed: {error}")
             switcher.current = "login-auth-view"
+
+    @on(Markdown.LinkClicked, "#auth_link")
+    def on_auth_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        self.app.action_link_clicked(event.href)

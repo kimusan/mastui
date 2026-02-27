@@ -979,6 +979,22 @@ LoginScreen {
     margin-top: 1;
 }
 
+#login-initial-buttons,
+#login-auth-buttons {
+    align-horizontal: center;
+    margin-top: 1;
+}
+
+#login-auth-buttons > Button,
+#login-initial-buttons > Button {
+    margin-right: 1;
+}
+
+#auth_link {
+    min-height: 3;
+    margin: 1 0;
+}
+
 #login-status {
     height: 3;
     text-align: center;
