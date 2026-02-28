@@ -6,10 +6,28 @@ This changelog is derived from git release tags and commit history on `main`.
 
 ## [Unreleased]
 
-- feat(filters): add server-side filter manager UI (view/add/edit/delete)
-- feat(keybindings): add direct shortcut to open filter manager
-- fix(filters): improve filter editor layout and interaction behavior
-- docs(readme): document filter manager workflow and key binding
+- No changes yet.
+
+## [1.8.0] - 2026-02-28
+
+- fix(auth): narrow network exception handling
+- fix(login): improve cancel flow and clickable auth link
+- refactor(update): narrow exception handling in version checks
+- fix(profile): prevent duplicate timelines after account switch
+- chore(lint): remove unused imports and variables
+- fix(security): only open http and https links
+- refactor(updates): reduce widget lookup passes across views
+- fix(utils): correct markdown link conversion regex
+- refactor(login): remove duplicate on_login handler
+- fix(security): restrict profile env file permissions
+- fix(security): stop logging auth secrets
+- fix(update): use package version fallback safely
+- fix(login): correctly handle https host input
+- docs(filters): document filter manager workflow
+- feat(filters): add direct shortcut and centered modals
+- fix(filters): make context selection interactive
+- fix(filters): use ListItem placeholders in list views
+- feat(filters): add server-side filter management UI
 
 ## [1.7.1] - 2026-02-13
 
