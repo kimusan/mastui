@@ -315,7 +315,10 @@ class Post(Vertical):
                 Static(safe_markup(filter_warning), classes="filter-warning"),
                 before=self.query_one(".post-footer"),
             )
-        self.mount(Markdown(get_full_content_md(status_to_display), open_links=False), before=self.query_one(".post-footer"))
+        content_md = Markdown(get_full_content_md(status_to_display), open_links=False)
+        content_md.suppress_click = True
+        content_md.can_focus = False
+        self.mount(content_md, before=self.query_one(".post-footer"))
 
         # Re-render the poll if it exists
         for poll_widget in self.query(PollWidget):
