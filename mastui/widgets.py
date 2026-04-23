@@ -263,7 +263,10 @@ class Post(Vertical):
             yield Static(vis_icon, classes="visibility-icon")
 
     def _focus_timeline(self) -> None:
-        timeline = self.query_ancestor("Timeline")
+        try:
+            timeline = self.query_ancestor("Timeline")
+        except Exception:
+            return
         if timeline:
             try:
                 self.app.set_focus(timeline)
@@ -525,7 +528,10 @@ class Notification(Widget):
             event.stop()
 
     def _focus_timeline(self) -> None:
-        timeline = self.query_ancestor("Timeline")
+        try:
+            timeline = self.query_ancestor("Timeline")
+        except Exception:
+            return
         if timeline:
             try:
                 self.app.set_focus(timeline)
@@ -690,7 +696,10 @@ class ConversationSummary(Widget, can_focus=True):
             yield Static("No messages yet.")
 
     def _focus_timeline(self) -> None:
-        timeline = self.query_ancestor("Timeline")
+        try:
+            timeline = self.query_ancestor("Timeline")
+        except Exception:
+            return
         if timeline:
             try:
                 self.app.set_focus(timeline)
