@@ -8,6 +8,10 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.9.0] - 2026-04-23
+
+- refactor(mouse): clicking posts now selects them
+
 ## [1.8.0] - 2026-02-28
 
 - fix(auth): narrow network exception handling
