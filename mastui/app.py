@@ -489,8 +489,14 @@ class Mastui(App):
         """Called when the config screen is dismissed."""
         self.resume_timers()
         if result:
-            self.query_one(Timelines).remove()
-            self.mount(Timelines())
+            for timelines in list(self.query(Timelines)):
+                try:
+                    timelines.remove()
+                except Exception as e:
+                    log.warning("Failed to remove timelines after saving config: %s", e)
+            new_timelines = Timelines()
+            self.mount(new_timelines)
+            self._timelines_widget = new_timelines
             self.call_later(self.check_layout_mode)
 
     def action_refresh_timelines(self) -> None:
