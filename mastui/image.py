@@ -2,12 +2,16 @@ from textual.widgets import Static
 from textual import events
 import httpx
 from io import BytesIO
-from textual_image.renderable import Image, SixelImage, HalfcellImage, TGPImage
+from textual_image.renderable import Image, HalfcellImage, TGPImage
+from textual_image.widget.sixel import Image as SixelWidget
 from PIL import Image as PILImage
 import hashlib
 import logging
+import time
 
 log = logging.getLogger(__name__)
+MAX_IMAGE_RETRIES = 3
+RETRY_BACKOFF_SECONDS = 0.5
 
 
 class ImageWidget(Static):
@@ -19,6 +23,7 @@ class ImageWidget(Static):
         self.config = config
         self.pil_image = None
         self._is_mounted = False
+        self._sixel_widget = None
 
     def on_mount(self) -> None:
         """Load the image when the widget is mounted."""
@@ -41,19 +46,47 @@ class ImageWidget(Static):
                 log.debug(f"Loading image from cache: {self.url}")
                 image_data = cache_path.read_bytes()
             else:
-                log.debug(f"Image not in cache, downloading: {self.url}")
-                with httpx.stream(
-                    "GET", self.url, timeout=30, verify=self.config.ssl_verify
-                ) as response:
-                    response.raise_for_status()
-                    image_data = response.read()
-                cache_path.write_bytes(image_data)
+                image_data = None
+                for attempt in range(1, MAX_IMAGE_RETRIES + 1):
+                    try:
+                        log.debug(
+                            f"Image not in cache, downloading: {self.url} (attempt {attempt}/{MAX_IMAGE_RETRIES})"
+                        )
+                        with httpx.stream(
+                            "GET", self.url, timeout=30, verify=self.config.ssl_verify
+                        ) as response:
+                            response.raise_for_status()
+                            image_data = response.read()
+                        cache_path.write_bytes(image_data)
+                        break
+                    except (httpx.TimeoutException, httpx.NetworkError) as e:
+                        if attempt < MAX_IMAGE_RETRIES:
+                            log.debug(
+                                "Image download retry for %s after network/timeout error: %s",
+                                self.url,
+                                e,
+                            )
+                            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+                            continue
+                        log.debug(
+                            "Image download failed after %s attempts for %s: %s",
+                            MAX_IMAGE_RETRIES,
+                            self.url,
+                            e,
+                        )
+                        raise
+                    except Exception as e:
+                        log.debug("Image download failed for %s: %s", self.url, e)
+                        raise
+
+                if image_data is None:
+                    raise RuntimeError("Image download did not return data")
 
             self.pil_image = PILImage.open(BytesIO(image_data))
             if self._is_mounted:
                 self.app.call_from_thread(self.render_image)
         except Exception as e:
-            log.error(f"Error loading image: {e}", exc_info=True)
+            log.debug(f"Error loading image: {e}")
             if self._is_mounted:
                 self.app.call_from_thread(self.show_error)
 
@@ -63,7 +96,29 @@ class ImageWidget(Static):
 
     def show_error(self):
         """Displays an error message when the image fails to load."""
+        self._remove_sixel_widget()
         self.update("[Image load failed]")
+
+    def _remove_sixel_widget(self):
+        if self._sixel_widget is None:
+            return
+        try:
+            self._sixel_widget.remove()
+        except Exception:
+            pass
+        self._sixel_widget = None
+
+    def _render_sixel_widget(self, width: int):
+        if self._sixel_widget is None:
+            self._sixel_widget = SixelWidget(self.pil_image)
+            self.mount(self._sixel_widget)
+        else:
+            self._sixel_widget.image = self.pil_image
+
+        self.update("")
+        self._sixel_widget.styles.width = width
+        self._sixel_widget.styles.height = "auto"
+        self.styles.height = "auto"
 
     def render_image(self):
         """Renders the image."""
@@ -74,19 +129,23 @@ class ImageWidget(Static):
             self.show_error()
             return
 
+        width = self.size.width - 4
+        if width <= 0:
+            self._remove_sixel_widget()
+            self.update("...")  # Too small to render
+            return
+
+        if self.config.image_renderer == "sixel":
+            self._render_sixel_widget(width)
+            return
+
+        self._remove_sixel_widget()
         renderer_map = {
             "auto": Image,
-            "sixel": SixelImage,
             "ansi": HalfcellImage,
             "tgp": TGPImage,
         }
         renderer_class = renderer_map.get(self.config.image_renderer, Image)
-
-        width = self.size.width - 4
-        if width <= 0:
-            self.update("...")  # Too small to render
-            return
-
         image = renderer_class(self.pil_image, width=width, height="auto")
         self.styles.height = "auto"
         self.update(image)
