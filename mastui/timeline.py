@@ -352,6 +352,8 @@ class Timeline(Static, can_focus=True):
                 status = item.get("status") or {}
                 status_id = status.get("id", "")
                 unique_part = f"{item['type']}-{item['account']['id']}-{status_id}"
+                # Replace periods with underscores to ensure valid HTML id (admin notifications have periods in IDs)
+                unique_part = unique_part.replace(".", "_")
                 widget_id = f"notif-{unique_part}"
             elif self.id == "direct":
                 widget_id = f"conv-{item['id']}"
