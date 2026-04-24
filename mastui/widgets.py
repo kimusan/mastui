@@ -271,6 +271,7 @@ class Post(Vertical):
             try:
                 self.app.set_focus(timeline)
             except Exception:
+                # Focus may fail if widget is being removed or app is shutting down
                 pass
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
@@ -536,6 +537,7 @@ class Notification(Widget):
             try:
                 self.app.set_focus(timeline)
             except Exception:
+                # Focus may fail if widget is being removed or app is shutting down
                 pass
 
     def show_spinner(self):
@@ -704,4 +706,5 @@ class ConversationSummary(Widget, can_focus=True):
             try:
                 self.app.set_focus(timeline)
             except Exception:
+                # Focus may fail if widget is being removed or app is shutting down
                 pass

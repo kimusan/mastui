@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import re
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -29,7 +29,7 @@ class Section:
 
 
 def run(cmd: List[str], *, cwd: Optional[str] = None) -> str:
-    return subprocess.check_output(cmd, cwd=cwd).decode("utf-8", "replace").strip()
+    return subprocess.check_output(cmd, cwd=cwd).decode("utf-8", "replace").strip()  # nosec B603
 
 
 def normalize_version(tag: str) -> str:
