@@ -134,7 +134,7 @@ class Timeline(Static, can_focus=True):
                 try:
                     # Prevent splash deadlocks if startup worker context is unavailable.
                     self.post_message(TimelineUpdate([]))
-                except Exception:
+                except Exception:  # nosec B110
                     pass
             return
 

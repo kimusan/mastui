@@ -104,7 +104,7 @@ class ImageWidget(Static):
             return
         try:
             self._sixel_widget.remove()
-        except Exception:
+        except Exception:  # nosec B110
             # Widget may have already been removed from DOM
             pass
         self._sixel_widget = None

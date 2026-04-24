@@ -270,7 +270,7 @@ class Post(Vertical):
         if timeline:
             try:
                 self.app.set_focus(timeline)
-            except Exception:
+            except Exception:  # nosec B110
                 # Focus may fail if widget is being removed or app is shutting down
                 pass
 
@@ -536,7 +536,7 @@ class Notification(Widget):
         if timeline:
             try:
                 self.app.set_focus(timeline)
-            except Exception:
+            except Exception:  # nosec B110
                 # Focus may fail if widget is being removed or app is shutting down
                 pass
 
@@ -705,6 +705,6 @@ class ConversationSummary(Widget, can_focus=True):
         if timeline:
             try:
                 self.app.set_focus(timeline)
-            except Exception:
+            except Exception:  # nosec B110
                 # Focus may fail if widget is being removed or app is shutting down
                 pass
