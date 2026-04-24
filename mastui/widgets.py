@@ -244,10 +244,10 @@ class Post(Vertical):
         with Horizontal(classes="post-footer"):
             yield LoadingIndicator(classes="action-spinner")
             yield Static(
-                f"Boosts: {status_to_display.get('reblogs_count', 0)}", id="boost-count"
+                f"🚀 {status_to_display.get('reblogs_count', 0)}", id="boost-count"
             )
             yield Static(
-                f"Likes: {status_to_display.get('favourites_count', 0)}",
+                f"❤️ {status_to_display.get('favourites_count', 0)}",
                 id="like-count",
             )
             yield Static(format_datetime(status_to_display["created_at"]), classes="timestamp")
@@ -300,10 +300,10 @@ class Post(Vertical):
 
         # Update stats
         self.query_one("#boost-count").update(
-            f"Boosts: {status_to_display.get('reblogs_count', 0)}"
+            f"🚀 {status_to_display.get('reblogs_count', 0)}"
         )
         self.query_one("#like-count").update(
-            f"Likes: {status_to_display.get('favourites_count', 0)}"
+            f"❤️ {status_to_display.get('favourites_count', 0)}"
         )
         self.hide_spinner()
 
@@ -425,10 +425,10 @@ class Notification(Widget):
                 spinner.display = False
                 yield spinner
                 yield Static(
-                    f"Boosts: {status.get('reblogs_count', 0)}", id="boost-count"
+                    f"🚀 {status.get('reblogs_count', 0)}", id="boost-count"
                 )
                 yield Static(
-                    f"Likes: {status.get('favourites_count', 0)}", id="like-count"
+                    f"❤️ {status.get('favourites_count', 0)}", id="like-count"
                 )
                 yield Static(format_datetime(created_at), classes="timestamp")
 
@@ -560,10 +560,10 @@ class Notification(Widget):
 
         if self.notif["type"] == "mention":
             self.query_one("#boost-count").update(
-                f"Boosts: {status.get('reblogs_count', 0)}"
+                f"🚀 {status.get('reblogs_count', 0)}"
             )
             self.query_one("#like-count").update(
-                f"Likes: {status.get('favourites_count', 0)}"
+                f"❤️ {status.get('favourites_count', 0)}"
             )
         self.hide_spinner()
 
