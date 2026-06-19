@@ -15,6 +15,7 @@ from textual import on
 
 from mastui.keybind_screen import KeybindScreen
 from mastui.languages import (
+    LANGUAGE_SELECT_BLANK,
     get_available_language_options,
     get_default_language_codes,
     get_language_label,
@@ -284,7 +285,7 @@ class ConfigScreen(ModalScreen):
     def _add_language_from_controls(self) -> None:
         select = self.query_one("#language_add_select", Select)
         manual_input = self.query_one("#language_add_input", Input)
-        select_value = None if select.value is Select.BLANK else select.value
+        select_value = None if select.value is LANGUAGE_SELECT_BLANK else select.value
         candidate = select_value or manual_input.value
         normalized = normalize_language_code(candidate)
         if not normalized:

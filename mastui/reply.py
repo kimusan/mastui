@@ -6,7 +6,12 @@ from textual import on, events
 
 from rich.markup import escape as escape_markup
 
-from mastui.languages import get_language_options, get_default_language_codes
+from mastui.languages import (
+    LANGUAGE_SELECT_BLANK,
+    get_language_options,
+    get_default_language_codes,
+    selected_language_or_none,
+)
 from mastui.utils import get_full_content_md, VISIBILITY_OPTIONS
 from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
 
@@ -60,11 +65,16 @@ class ReplyScreen(ModalScreen):
                 language_options = get_language_options(
                     preferred, extra_codes=[language_source] if language_source else None
                 )
-                default_language = language_source or (language_options[0][1] if language_options else "en")
+                default_language = language_source or LANGUAGE_SELECT_BLANK
 
                 with Horizontal(id="reply_language_container"):
                     yield Static("Language:", classes="reply_option_label")
-                    yield Select(language_options, id="language_select", value=default_language)
+                    yield Select(
+                        language_options,
+                        prompt="Automatic detection",
+                        id="language_select",
+                        value=default_language,
+                    )
                 with Horizontal(id="reply_visibility_container"):
                     yield Static("Visibility:", classes="reply_option_label")
                     yield Select(
@@ -128,7 +138,9 @@ class ReplyScreen(ModalScreen):
         if event.button.id == "post_button":
             content = self.query_one("#reply_content").text
             cw_text = self.query_one("#cw_input").value
-            language = self.query_one("#language_select").value
+            language = selected_language_or_none(
+                self.query_one("#language_select", Select).value
+            )
             visibility = self.query_one("#visibility_select").value
             
             if content:

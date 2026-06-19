@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Iterable, Sequence
 
+from textual.widgets import Select
+
+LANGUAGE_SELECT_BLANK = getattr(Select, "NULL", Select.BLANK)
+
 # Catalog loosely follows Mastodon's supported languages.
 LANGUAGE_CATALOG: list[tuple[str, str]] = [
     ("Arabic", "ar"),
@@ -54,7 +58,6 @@ LANGUAGE_CATALOG: list[tuple[str, str]] = [
 ]
 
 DEFAULT_LANGUAGE_CODES: list[str] = [
-    "zh",
     "da",
     "en",
     "fr",
@@ -62,6 +65,7 @@ DEFAULT_LANGUAGE_CODES: list[str] = [
     "ja",
     "ko",
     "es",
+    "zh",
 ]
 
 _LANGUAGE_NAME_MAP = {code: label for label, code in LANGUAGE_CATALOG}
@@ -72,6 +76,11 @@ def normalize_language_code(code: str | None) -> str | None:
     if not code:
         return None
     return code.strip().lower()
+
+
+def selected_language_or_none(value: object) -> str | None:
+    """Convert a language Select value to an API-safe language code."""
+    return normalize_language_code(value) if isinstance(value, str) else None
 
 
 def get_language_label(code: str) -> str:

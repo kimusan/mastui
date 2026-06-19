@@ -4,7 +4,12 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual import on, events
 import logging
 
-from mastui.languages import get_language_options, get_default_language_codes
+from mastui.languages import (
+    LANGUAGE_SELECT_BLANK,
+    get_language_options,
+    get_default_language_codes,
+    selected_language_or_none,
+)
 from mastui.utils import VISIBILITY_OPTIONS
 from mastui.widgets import PollChoice, RemovePollChoice, PollChoiceMounted
 from mastui.autocomplete import AutocompletePanel, ComposerAutocompleteController
@@ -34,11 +39,14 @@ class PostScreen(ModalScreen):
                     yield Input(placeholder="Content warning", id="cw_input")
                 languages = self.app.config.post_languages or get_default_language_codes()
                 language_options = get_language_options(languages)
-                default_language = language_options[0][1] if language_options else "en"
-
                 with Horizontal(id="post_language_container"):
                     yield Label("Language:", classes="post_option_label")
-                    yield Select(language_options, value=default_language, id="language_select")
+                    yield Select(
+                        language_options,
+                        prompt="Automatic detection",
+                        value=LANGUAGE_SELECT_BLANK,
+                        id="language_select",
+                    )
                 
                 with Horizontal(id="post_visibility_container"):
                     yield Label("Visibility:", classes="post_option_label")
@@ -154,7 +162,9 @@ class PostScreen(ModalScreen):
         if event.button.id == "post":
             content = self.query_one("#post_content").text
             spoiler_text = self.query_one("#cw_input").value
-            language = self.query_one("#language_select").value
+            language = selected_language_or_none(
+                self.query_one("#language_select", Select).value
+            )
             visibility = self.query_one("#visibility_select").value
             
             result = {
