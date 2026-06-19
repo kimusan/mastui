@@ -8,6 +8,19 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.10.0] - 2026-06-19
+
+- fix(Issue#19): support Pillow on Python 3.14
+- fix(timeline): keep mouse scroll position in sync
+- fix(security): add nosec comments for Bandit B110 alerts
+- fix(security): address Bandit code scanning alerts
+- fix(Issue#18): replace periods in notification IDs with underscores
+- fix(ui): replace Boosts/Likes text with icons
+- fix(layout): preserve forced single-column after options save
+- fix(widgets): avoid timeline focus crash outside timeline views
+- fix(image): use sixel widget and quiet retry handling
+- fix(widgets): preserve click-select behavior after post refresh
+
 ## [1.9.0] - 2026-04-23
 
 - refactor(mouse): clicking posts now selects them
