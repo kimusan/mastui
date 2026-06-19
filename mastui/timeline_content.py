@@ -220,7 +220,8 @@ class TimelineContent(VerticalScroll):
 
     def go_to_top(self) -> None:
         """Scrolls the timeline to the top and selects the first item."""
-        self.scroll_y = 0
+        # Keep Textual's scroll position and pointer-scroll target in sync.
+        self.scroll_to(y=0, animate=False)
         self.select_first_item()
 
     def show_urls(self):
