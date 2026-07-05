@@ -65,6 +65,22 @@ log = logging.getLogger(__name__)
 css_path = os.path.join(os.path.dirname(__file__), "app.css")
 
 
+def _mastodon_api_status_code(error: MastodonAPIError) -> int | None:
+    """Return the HTTP status code embedded in Mastodon.py API errors."""
+    for arg in error.args:
+        if isinstance(arg, int):
+            return arg
+    return None
+
+
+def _mastodon_api_error_message(error: MastodonAPIError) -> str:
+    """Return the server-provided Mastodon.py error message, if available."""
+    for arg in reversed(error.args):
+        if isinstance(arg, str) and arg:
+            return arg
+    return str(error)
+
+
 class Mastui(App):
     """A Textual app to interact with Mastodon."""
 
@@ -705,9 +721,25 @@ class Mastui(App):
             else:
                 post_data = self.api.status_reblog(post_id)
             self.post_message(PostStatusUpdate(post_data))
+        except MastodonAPIError as e:
+            self.post_message(ActionFailed(post_id))
+            if not already_reblogged and _mastodon_api_status_code(e) == 403:
+                message = _mastodon_api_error_message(e)
+                log.info("Boost rejected for post %s: %s", post_id, message)
+                self.notify(
+                    "This post cannot be boosted because boosting is not allowed.",
+                    severity="warning",
+                )
+                return
+            log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
+            self.notify(
+                f"Error boosting post: {_mastodon_api_error_message(e)}",
+                severity="error",
+            )
         except Exception as e:
             log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
+            self.notify(f"Error boosting post: {e}", severity="error")
 
     @on(DeletePost)
     def handle_delete_post(self, message: DeletePost):
