@@ -8,6 +8,11 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.11.0] - 2026-07-30
+
+- fix(boost): handle forbidden boost errors
+- fix(Issue#20): allow automatic post language detection
+
 ## [1.10.0] - 2026-06-19
 
 - fix(Issue#19): support Pillow on Python 3.14
