@@ -8,6 +8,10 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.12.0] - 2026-08-25
+
+- feat(packaging): add build system and release workflow for deb, rpm, appImage, arch and windows
+
 ## [1.11.0] - 2026-07-30
 
 - fix(boost): handle forbidden boost errors
