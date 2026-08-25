@@ -48,7 +48,7 @@ def test_pyinstaller_spec_exists():
     spec_file = ROOT / "mastui.spec"
     assert spec_file.exists()
     content = spec_file.read_text(encoding="utf-8")
-    assert "mastui/app.py" in content
+    assert "mastui/__main__.py" in content
     assert "Analysis" in content
     assert "EXE" in content
 
