@@ -135,7 +135,20 @@ WEB_HTML = r"""<!DOCTYPE html>
         if (codepoint === 0x200D || (codepoint >= 0xFE00 && codepoint <= 0xFE0F) || (codepoint >= 0xE0100 && codepoint <= 0xE01EF)) {
           return 0;
         }
-        // All SMP Emoji blocks (U+1F000 to U+1FFFF: emoticons, symbols, objects, flags, food, animals, gestures)
+        // Regional Indicator Symbols (U+1F1E6 to U+1F1FF: Country Flags like 🇮🇹, 🇩🇰)
+        // Each indicator is width 1 so a pair of indicators forms a 2-cell flag
+        if (codepoint >= 0x1F1E6 && codepoint <= 0x1F1FF) {
+          return 1;
+        }
+        // Enclosed Alphanumeric, Squared Latin, and Alchemical/Geometric symbols (width 1)
+        if ((codepoint >= 0x1F100 && codepoint <= 0x1F16F) || (codepoint >= 0x1F190 && codepoint <= 0x1F1AC) || (codepoint >= 0x1F700 && codepoint <= 0x1F8FF) || (codepoint >= 0x1F000 && codepoint <= 0x1F09F)) {
+          return 1;
+        }
+        // Primary Emoji Blocks (U+1F300..U+1F6FF, U+1F900..U+1FAFF, U+1F200..U+1F251, U+1F0A0..U+1F0FF)
+        if ((codepoint >= 0x1F300 && codepoint <= 0x1F6FF) || (codepoint >= 0x1F900 && codepoint <= 0x1FAFF) || (codepoint >= 0x1F200 && codepoint <= 0x1F251) || (codepoint >= 0x1F0A0 && codepoint <= 0x1F0FF)) {
+          return 2;
+        }
+        // Remaining Supplementary Multilingual Plane
         if (codepoint >= 0x1F000 && codepoint <= 0x1FFFF) {
           return 2;
         }
