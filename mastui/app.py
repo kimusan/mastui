@@ -133,6 +133,22 @@ class Mastui(App):
         self._login_cancel_callback = None
         log.debug(f"Mastui app initialized with action: {self.action}")
 
+    def get_driver_class(self):
+        """Return PipeDriver when running on Android or when TEXTUAL_DRIVER / MASTUI_WEB is configured."""
+        if (
+            hasattr(sys, "getandroidapilevel")
+            or "ANDROID_DATA" in os.environ
+            or "ANDROID_ROOT" in os.environ
+            or bool(os.environ.get("TEXTUAL_DRIVER"))
+            or bool(os.environ.get("MASTUI_WEB"))
+        ):
+            try:
+                from mastui.web import PipeDriver
+                return PipeDriver
+            except Exception:
+                pass
+        return super().get_driver_class()
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield CustomHeader()
@@ -362,12 +378,16 @@ class Mastui(App):
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""
         new_theme = event.name
-        self.config.theme = new_theme
-        if "light" in new_theme:
-            self.config.preferred_light_theme = new_theme
-        else:
-            self.config.preferred_dark_theme = new_theme
-        self.config.save_config()
+        if self.config is not None:
+            self.config.theme = new_theme
+            if "light" in new_theme:
+                self.config.preferred_light_theme = new_theme
+            else:
+                self.config.preferred_dark_theme = new_theme
+            try:
+                self.config.save_config()
+            except Exception as e:
+                log.debug(f"Could not save config on theme change: {e}")
 
     def show_login_screen(
         self, host: str = None, on_cancel: Callable[[str], None] | None = None

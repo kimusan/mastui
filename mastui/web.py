@@ -529,14 +529,15 @@ class MastuiWebBridge:
                 add_account = "--add-account" in self.cli_args
                 action = "add_account" if add_account else None
 
-                log_file_path = setup_logging(debug=debug)
-                app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
-                app.log_file_path = log_file_path
                 if use_pipes or is_android:
                     PipeDriver.in_fd = in_r if in_r is not None else 0
                     PipeDriver.out_fd = out_w if out_w is not None else 1
-                    app.get_driver_class = lambda: PipeDriver
+                    os.environ["MASTUI_WEB"] = "1"
                     os.environ["TEXTUAL_DRIVER"] = "mastui.web:PipeDriver"
+
+                log_file_path = setup_logging(debug=debug)
+                app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
+                app.log_file_path = log_file_path
                 self.app_instance = app
                 app.run(size=(self.cols, self.rows))
             except Exception as ex:
