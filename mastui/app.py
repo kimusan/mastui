@@ -54,6 +54,7 @@ from mastodon.errors import MastodonAPIError
 import logging
 import argparse
 import os
+import sys
 from collections.abc import Callable
 from urllib.parse import urlparse
 
