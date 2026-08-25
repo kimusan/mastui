@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import codecs
 import fcntl
 import hashlib
 import json
@@ -17,6 +18,7 @@ import logging
 import os
 import pty
 import select
+import selectors
 import struct
 import sys
 import termios
@@ -26,9 +28,8 @@ import webbrowser
 from typing import TYPE_CHECKING, Optional, Set
 
 from textual import events
+from textual._xterm_parser import XTermParser
 from textual.driver import Driver
-from textual.drivers._byte_stream import ByteStream
-from textual.drivers._input_reader_linux import InputReader
 from textual.geometry import Size
 
 if TYPE_CHECKING:
@@ -351,6 +352,9 @@ class WebSocketConnection:
 class PipeDriver(Driver):
     """Custom Driver for running Textual over pipes or in worker threads without signal.signal or termios requirements."""
 
+    in_fd: int = 0
+    out_fd: int = 1
+
     def __init__(
         self,
         app: App,
@@ -364,12 +368,11 @@ class PipeDriver(Driver):
         self._key_thread: Optional[threading.Thread] = None
 
     def start_application_mode(self) -> None:
-        loop = asyncio.get_running_loop()
         cols = int(os.environ.get("COLUMNS", self._size[0] if self._size else 120))
         rows = int(os.environ.get("LINES", self._size[1] if self._size else 35))
         sz = Size(cols, rows)
         ev = events.Resize(sz, sz)
-        asyncio.run_coroutine_threadsafe(self._app._post_message(ev), loop=loop)
+        self.send_message(ev)
 
         # Enter alternate screen buffer & hide cursor
         self.write("\x1b[?1049h\x1b[?25l")
@@ -378,24 +381,45 @@ class PipeDriver(Driver):
             self.write("\x1b[?1000h\x1b[?1002h\x1b[?1006h")
         self.flush()
 
+        in_fileno = self.in_fd
+
         def _run_input() -> None:
+            parser = XTermParser(self._debug)
+            decoder = codecs.getincrementaldecoder("utf-8")().decode
+            sel = selectors.SelectSelector()
+            sel.register(in_fileno, selectors.EVENT_READ)
             try:
-                reader = InputReader(0)
-                parser = ByteStream()
-                for key_event in parser.feed(reader.read()):
-                    asyncio.run_coroutine_threadsafe(
-                        self._app._post_message(key_event),
-                        loop=loop,
-                    )
+                while not self.exit_event.is_set():
+                    for key, mask in sel.select(0.05):
+                        if mask & selectors.EVENT_READ:
+                            chunk = os.read(in_fileno, 4096)
+                            if not chunk:
+                                return
+                            u_data = decoder(chunk)
+                            for event in parser.feed(u_data):
+                                self.process_message(event)
+                    for event in parser.tick():
+                        self.process_message(event)
             except Exception:
                 pass
+            finally:
+                try:
+                    sel.close()
+                except Exception:
+                    pass
 
         self._key_thread = threading.Thread(target=_run_input, name="pipe-input", daemon=True)
         self._key_thread.start()
 
+    def stop_application_mode(self) -> None:
+        self.close()
+
+    def disable_input(self) -> None:
+        pass
+
     def write(self, data: str) -> None:
         try:
-            os.write(1, data.encode("utf-8"))
+            os.write(self.out_fd, data.encode("utf-8"))
         except Exception:
             pass
 
@@ -403,6 +427,7 @@ class PipeDriver(Driver):
         pass
 
     def close(self) -> None:
+        self.exit_event.set()
         if self._mouse:
             self.write("\x1b[?1000l\x1b[?1002l\x1b[?1006l")
         self.write("\x1b[?25h\x1b[?1049l")
@@ -508,7 +533,10 @@ class MastuiWebBridge:
                 app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
                 app.log_file_path = log_file_path
                 if use_pipes or is_android:
-                    app.driver_class = PipeDriver
+                    PipeDriver.in_fd = in_r if in_r is not None else 0
+                    PipeDriver.out_fd = out_w if out_w is not None else 1
+                    app.get_driver_class = lambda: PipeDriver
+                    os.environ["TEXTUAL_DRIVER"] = "mastui.web:PipeDriver"
                 self.app_instance = app
                 app.run(size=(self.cols, self.rows))
             except Exception as ex:
