@@ -23,7 +23,16 @@ import termios
 import threading
 import time
 import webbrowser
-from typing import Optional, Set
+from typing import TYPE_CHECKING, Optional, Set
+
+from textual import events
+from textual.driver import Driver
+from textual.drivers._byte_stream import ByteStream
+from textual.drivers._input_reader_linux import InputReader
+from textual.geometry import Size
+
+if TYPE_CHECKING:
+    from textual.app import App
 
 log = logging.getLogger(__name__)
 
@@ -339,6 +348,67 @@ class WebSocketConnection:
             return None
 
 
+class PipeDriver(Driver):
+    """Custom Driver for running Textual over pipes or in worker threads without signal.signal or termios requirements."""
+
+    def __init__(
+        self,
+        app: App,
+        *,
+        debug: bool = False,
+        mouse: bool = True,
+        size: tuple[int, int] | None = None,
+    ) -> None:
+        super().__init__(app, debug=debug, mouse=mouse, size=size)
+        self.exit_event = threading.Event()
+        self._key_thread: Optional[threading.Thread] = None
+
+    def start_application_mode(self) -> None:
+        loop = asyncio.get_running_loop()
+        cols = int(os.environ.get("COLUMNS", self._size[0] if self._size else 120))
+        rows = int(os.environ.get("LINES", self._size[1] if self._size else 35))
+        sz = Size(cols, rows)
+        ev = events.Resize(sz, sz)
+        asyncio.run_coroutine_threadsafe(self._app._post_message(ev), loop=loop)
+
+        # Enter alternate screen buffer & hide cursor
+        self.write("\x1b[?1049h\x1b[?25l")
+        if self._mouse:
+            # Enable standard & SGR mouse tracking
+            self.write("\x1b[?1000h\x1b[?1002h\x1b[?1006h")
+        self.flush()
+
+        def _run_input() -> None:
+            try:
+                reader = InputReader(0)
+                parser = ByteStream()
+                for key_event in parser.feed(reader.read()):
+                    asyncio.run_coroutine_threadsafe(
+                        self._app._post_message(key_event),
+                        loop=loop,
+                    )
+            except Exception:
+                pass
+
+        self._key_thread = threading.Thread(target=_run_input, name="pipe-input", daemon=True)
+        self._key_thread.start()
+
+    def write(self, data: str) -> None:
+        try:
+            os.write(1, data.encode("utf-8"))
+        except Exception:
+            pass
+
+    def flush(self) -> None:
+        pass
+
+    def close(self) -> None:
+        if self._mouse:
+            self.write("\x1b[?1000l\x1b[?1002l\x1b[?1006l")
+        self.write("\x1b[?25h\x1b[?1049l")
+        self.flush()
+
+
 class MastuiWebBridge:
     """Manages pseudo-terminal session running Mastui and bridges to WebSockets."""
 
@@ -437,6 +507,8 @@ class MastuiWebBridge:
                 log_file_path = setup_logging(debug=debug)
                 app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
                 app.log_file_path = log_file_path
+                if use_pipes or is_android:
+                    app.driver_class = PipeDriver
                 self.app_instance = app
                 app.run(size=(self.cols, self.rows))
             except Exception as ex:
