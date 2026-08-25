@@ -347,19 +347,36 @@ class MastuiWebBridge:
         self.rows = rows
         self.cli_args = args or []
         self.master_fd: Optional[int] = None
+        self.in_pipe_w: Optional[int] = None
+        self.out_pipe_r: Optional[int] = None
         self.pid: Optional[int] = None
         self.clients: Set[WebSocketConnection] = set()
         self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.app_instance = None
         self._running = False
 
     def start_pty(self) -> None:
-        """Spawn mastui inside a pseudo-terminal (fork or in-process thread)."""
-        self.master_fd, slave_fd = pty.openpty()
+        """Spawn mastui inside a pseudo-terminal (fork, in-process PTY, or pipe fallback)."""
+        use_pipes = False
+        slave_fd: Optional[int] = None
+        in_r: Optional[int] = None
+        out_w: Optional[int] = None
+
+        try:
+            self.master_fd, slave_fd = pty.openpty()
+        except Exception as e:
+            log.warning(f"pty.openpty unavailable ({e}), using pipe fallback for terminal I/O")
+            use_pipes = True
+            in_r, in_w = os.pipe()
+            out_r, out_w = os.pipe()
+            self.in_pipe_w = in_w
+            self.out_pipe_r = out_r
+
         self.resize_pty(self.cols, self.rows)
 
         is_android = hasattr(sys, "getandroidapilevel") or "ANDROID_DATA" in os.environ or "ANDROID_ROOT" in os.environ
 
-        if not is_android and hasattr(os, "fork"):
+        if not is_android and not use_pipes and hasattr(os, "fork") and self.master_fd is not None and slave_fd is not None:
             try:
                 pid = os.fork()
                 if pid == 0:  # Child process
@@ -390,18 +407,25 @@ class MastuiWebBridge:
             except Exception as e:
                 log.warning(f"os.fork failed ({e}), falling back to in-process execution")
 
-        # In-process runner for Android / embedded environments
+        # In-process runner for Android / embedded / pipe fallback environments
         def run_in_process() -> None:
             orig_stdin = os.dup(0)
             orig_stdout = os.dup(1)
             orig_stderr = os.dup(2)
             try:
-                os.dup2(slave_fd, 0)
-                os.dup2(slave_fd, 1)
-                os.dup2(slave_fd, 2)
+                if not use_pipes and slave_fd is not None:
+                    os.dup2(slave_fd, 0)
+                    os.dup2(slave_fd, 1)
+                    os.dup2(slave_fd, 2)
+                elif in_r is not None and out_w is not None:
+                    os.dup2(in_r, 0)
+                    os.dup2(out_w, 1)
+                    os.dup2(out_w, 2)
 
                 os.environ["TERM"] = "xterm-256color"
                 os.environ["COLORTERM"] = "truecolor"
+                os.environ["COLUMNS"] = str(self.cols)
+                os.environ["LINES"] = str(self.rows)
 
                 from mastui.app import Mastui, setup_logging
 
@@ -413,7 +437,8 @@ class MastuiWebBridge:
                 log_file_path = setup_logging(debug=debug)
                 app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
                 app.log_file_path = log_file_path
-                app.run()
+                self.app_instance = app
+                app.run(size=(self.cols, self.rows))
             except Exception as ex:
                 print(f"Error in in-process Mastui execution: {ex}", file=sys.stderr)
             finally:
@@ -424,7 +449,13 @@ class MastuiWebBridge:
                     os.close(orig_stdin)
                     os.close(orig_stdout)
                     os.close(orig_stderr)
-                    os.close(slave_fd)
+                    if not use_pipes and slave_fd is not None:
+                        os.close(slave_fd)
+                    elif use_pipes:
+                        if in_r is not None:
+                            os.close(in_r)
+                        if out_w is not None:
+                            os.close(out_w)
                 except Exception:
                     pass
 
@@ -435,6 +466,8 @@ class MastuiWebBridge:
     def resize_pty(self, cols: int, rows: int) -> None:
         self.cols = max(20, cols)
         self.rows = max(10, rows)
+        os.environ["COLUMNS"] = str(self.cols)
+        os.environ["LINES"] = str(self.rows)
         if self.master_fd is not None:
             try:
                 winsize = struct.pack("HHHH", self.rows, self.cols, 0, 0)
@@ -443,11 +476,17 @@ class MastuiWebBridge:
                 log.debug(f"Could not resize PTY: {e}")
 
     def write_input(self, data: str) -> None:
+        raw = data.encode("utf-8")
         if self.master_fd is not None:
             try:
-                os.write(self.master_fd, data.encode("utf-8"))
+                os.write(self.master_fd, raw)
             except Exception as e:
                 log.debug(f"Error writing to master PTY: {e}")
+        elif self.in_pipe_w is not None:
+            try:
+                os.write(self.in_pipe_w, raw)
+            except Exception as e:
+                log.debug(f"Error writing to input pipe: {e}")
 
     def start_reader_thread(self, loop: asyncio.AbstractEventLoop) -> None:
         self.loop = loop
@@ -455,12 +494,13 @@ class MastuiWebBridge:
         thread.start()
 
     def _read_loop(self) -> None:
-        """Continuously read output from master PTY and broadcast to connected clients."""
-        while self._running and self.master_fd is not None:
+        """Continuously read output from master PTY or output pipe and broadcast to connected clients."""
+        read_fd = self.master_fd if self.master_fd is not None else self.out_pipe_r
+        while self._running and read_fd is not None:
             try:
-                r, _, _ = select.select([self.master_fd], [], [], 0.05)
+                r, _, _ = select.select([read_fd], [], [], 0.05)
                 if r:
-                    chunk = os.read(self.master_fd, 4096)
+                    chunk = os.read(read_fd, 4096)
                     if not chunk:
                         break
                     text = chunk.decode("utf-8", errors="replace")
@@ -609,6 +649,16 @@ def run_server(
         if bridge.master_fd is not None:
             try:
                 os.close(bridge.master_fd)
+            except Exception:
+                pass
+        if bridge.in_pipe_w is not None:
+            try:
+                os.close(bridge.in_pipe_w)
+            except Exception:
+                pass
+        if bridge.out_pipe_r is not None:
+            try:
+                os.close(bridge.out_pipe_r)
             except Exception:
                 pass
         if bridge.pid is not None:
