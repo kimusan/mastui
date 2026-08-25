@@ -455,41 +455,11 @@ def generate_checksums() -> Path:
     return checksums_file
 
 
-def build_android(version: str) -> Optional[Path]:
-    """Build Android APK using Gradle."""
-    print(f"\n--- Building Android APK for v{version} ---")
-    ensure_dirs()
-    android_dir = ROOT_DIR / "android"
-    if not android_dir.exists():
-        raise FileNotFoundError(f"Android directory not found: {android_dir}")
-    
-    gradle_cmd = android_dir / ("gradlew.bat" if platform.system() == "Windows" else "gradlew")
-    if not gradle_cmd.exists():
-        system_gradle = shutil.which("gradle")
-        if system_gradle:
-            cmd = [system_gradle, "assembleRelease"]
-        else:
-            print("Notice: Gradle or gradlew not found in local environment.")
-            print("Android project layout is configured under android/ and ready for CI build.")
-            return None
-    else:
-        cmd = [str(gradle_cmd), "assembleRelease"]
-    
-    run_cmd(cmd, cwd=android_dir)
-    apk_candidates = list((android_dir / "app" / "build" / "outputs" / "apk").rglob("*.apk"))
-    if apk_candidates:
-        apk_dest = DIST_DIR / f"mastui-{version}-android.apk"
-        shutil.copy2(apk_candidates[0], apk_dest)
-        print(f"Successfully built Android APK: {apk_dest}")
-        return apk_dest
-    return None
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build mastui binary and distribution packages.")
     parser.add_argument(
         "--target",
-        choices=["binary", "deb", "rpm", "appimage", "arch", "windows", "android", "checksums", "all-linux"],
+        choices=["binary", "deb", "rpm", "appimage", "arch", "windows", "checksums", "all-linux"],
         default="all-linux",
         help="Target package to build (default: all-linux)",
     )
@@ -523,8 +493,6 @@ def main() -> None:
         build_arch(version)
     elif target == "windows":
         build_windows(version)
-    elif target == "android":
-        build_android(version)
     elif target == "checksums":
         generate_checksums()
     elif target == "all-linux":

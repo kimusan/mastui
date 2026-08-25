@@ -100,8 +100,6 @@ Download pre-built standalone packages directly from [GitHub Releases](https://g
   ```
 - **Windows**:
   Download `mastui-<version>-windows-x86_64.zip`, extract, and run `mastui.exe` in Windows Terminal or PowerShell.
-- **Android (`.apk`)**:
-  Download `mastui-<version>-android.apk` from GitHub Releases and install on Android 8.0+ devices.
 
 ### 🌐 Web Browser Mode
 
