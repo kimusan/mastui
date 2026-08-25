@@ -1277,3 +1277,7 @@ def main():
 
     if app.log_file_path:
         print(f"Log file written to: {app.log_file_path}")
+
+
+if __name__ == "__main__":
+    main()
