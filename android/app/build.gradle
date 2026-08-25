@@ -64,6 +64,10 @@ tasks.register('copyPythonSources', Copy) {
     exclude '**/__pycache__', '**/*.pyc'
 }
 
+tasks.matching { it.name.contains('PythonSources') }.configureEach {
+    dependsOn 'copyPythonSources'
+}
+
 tasks.named('preBuild') {
     dependsOn 'copyPythonSources'
 }

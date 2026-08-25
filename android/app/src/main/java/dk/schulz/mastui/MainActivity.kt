@@ -87,7 +87,9 @@ class MainActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 progressBar.visibility = View.GONE
-                webView.loadUrl("http://127.0.0.1:$serverPort")
+                if (ready) {
+                    webView.loadUrl("http://127.0.0.1:$serverPort")
+                }
             }
         }
     }
