@@ -49,7 +49,6 @@ WEB_HTML = r"""<!DOCTYPE html>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-canvas@0.5.0/lib/xterm-addon-canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -197,14 +196,6 @@ WEB_HTML = r"""<!DOCTYPE html>
 
     const container = document.getElementById('terminal-container');
     term.open(container);
-
-    if (typeof CanvasAddon !== 'undefined' && CanvasAddon.CanvasAddon) {
-      try {
-        term.loadAddon(new CanvasAddon.CanvasAddon());
-      } catch (e) {
-        console.warn('CanvasAddon load error, falling back to DOM renderer', e);
-      }
-    }
 
     fitAddon.fit();
 
@@ -449,6 +440,9 @@ class MastuiWebBridge:
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.app_instance = None
         self._running = False
+        self.history_buffer: list[str] = []
+        self._history_lock = threading.Lock()
+        self._max_history_chars = 500000
 
     def start_pty(self) -> None:
         """Spawn mastui inside a pseudo-terminal (fork, in-process PTY, or pipe fallback)."""
@@ -575,6 +569,12 @@ class MastuiWebBridge:
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
             except Exception as e:
                 log.debug(f"Could not resize PTY: {e}")
+        if self.app_instance is not None:
+            try:
+                sz = Size(self.cols, self.rows)
+                self.app_instance.post_message(events.Resize(sz, sz))
+            except Exception as e:
+                log.debug(f"Could not post Resize event to app: {e}")
 
     def write_input(self, data: str) -> None:
         raw = data.encode("utf-8")
@@ -605,6 +605,14 @@ class MastuiWebBridge:
                     if not chunk:
                         break
                     text = chunk.decode("utf-8", errors="replace")
+                    with self._history_lock:
+                        self.history_buffer.append(text)
+                        # Keep history buffer bounded
+                        total = sum(len(c) for c in self.history_buffer)
+                        while total > self._max_history_chars and len(self.history_buffer) > 1:
+                            removed = self.history_buffer.pop(0)
+                            total -= len(removed)
+
                     msg = json.dumps({"type": "output", "data": text})
                     if self.loop and self.clients:
                         asyncio.run_coroutine_threadsafe(self._broadcast(msg), self.loop)
@@ -668,6 +676,20 @@ async def handle_http_and_ws(
 
             ws = WebSocketConnection(reader, writer)
             bridge.clients.add(ws)
+
+            # Replay history buffer to the newly connected browser / webview
+            with bridge._history_lock:
+                if bridge.history_buffer:
+                    replay_text = "".join(bridge.history_buffer)
+                    await ws.send_text(json.dumps({"type": "output", "data": replay_text}))
+
+            # Trigger a full redraw from Textual if running
+            if bridge.app_instance is not None:
+                try:
+                    sz = Size(bridge.cols, bridge.rows)
+                    bridge.app_instance.post_message(events.Resize(sz, sz))
+                except Exception:
+                    pass
 
             # Process incoming messages
             while not ws.closed:

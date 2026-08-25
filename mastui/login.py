@@ -1,4 +1,8 @@
-import clipman
+try:
+    import clipman
+except ImportError:
+    clipman = None
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Grid, Horizontal, Vertical
@@ -59,18 +63,6 @@ class LoginScreen(ModalScreen):
                 with Vertical(id="login-loading-view", classes="centered"):
                      yield Static("Working...")
                      yield LoadingIndicator()
-
-            yield Static(id="login-status")
-
-
-    def on_mount(self) -> None:
-        """Called when the screen is mounted."""
-        host_input = self.query_one("#host")
-        if self.host:
-            host_input.disabled = True
-            self.query_one("#get_auth").focus()
-        else:
-            host_input.focus()
 
     def clean_host(self, host_input: str) -> str:
         """Cleans the host input to be a valid domain."""
@@ -170,15 +162,16 @@ class LoginScreen(ModalScreen):
                 switcher.current = "login-initial-view"
                 return
 
-            try:
-                clipman.init()
-                clipman.set(auth_url)
-            except clipman.exceptions.ClipmanBaseException as e:
-                log.warning(f"Could not copy to clipboard: {e}")
-                status.update(
-                    "Link copied to clipboard: failed.\n"
-                    "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`)."
-                )
+            if clipman is not None:
+                try:
+                    clipman.init()
+                    clipman.set(auth_url)
+                except Exception as e:
+                    log.warning(f"Could not copy to clipboard: {e}")
+                    status.update(
+                        "Link copied to clipboard: failed.\n"
+                        "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`)."
+                    )
 
             auth_link = self.query_one("#auth_link", Markdown)
             auth_link.update(f"[Open authorization link]({auth_url})\n\n`{auth_url}`")
