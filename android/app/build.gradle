@@ -58,6 +58,16 @@ android {
     }
 }
 
+tasks.register('copyPythonSources', Copy) {
+    from '../../mastui'
+    into 'src/main/python/mastui'
+    exclude '**/__pycache__', '**/*.pyc'
+}
+
+tasks.named('preBuild') {
+    dependsOn 'copyPythonSources'
+}
+
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

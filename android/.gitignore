@@ -4,3 +4,4 @@ app/build/
 *.iml
 .idea/
 local.properties
+app/src/main/python/
