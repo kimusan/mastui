@@ -32,7 +32,7 @@ class Config:
         self.profile_name = self.profile_path.name
 
         self.image_cache_dir = self.profile_path / "image_cache"
-        self.image_cache_dir.mkdir(exist_ok=True)
+        self.image_cache_dir.mkdir(parents=True, exist_ok=True)
         self.env_file = self.profile_path / ".env"
         
         config_values = {}

@@ -12,6 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mastui"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true">
         <activity
             android:name=".MainActivity"

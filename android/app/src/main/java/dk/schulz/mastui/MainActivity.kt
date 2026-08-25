@@ -52,15 +52,23 @@ class MainActivity : AppCompatActivity() {
         isServerStarted = true
 
         serverPort = findAvailablePort()
+        val filesDirPath = applicationContext.filesDir.absolutePath
 
-        thread(isDaemon = true, name = "MastuiPythonServer") {
-            if (!Python.isStarted()) {
-                Python.start(AndroidPlatform(applicationContext))
-            }
-            val py = Python.getInstance()
-            val webModule = py.getModule("mastui.web")
-
+        thread(name = "MastuiPythonServer") {
             try {
+                if (!Python.isStarted()) {
+                    Python.start(AndroidPlatform(applicationContext))
+                }
+                val py = Python.getInstance()
+
+                // Set writable home directory and terminal env for Python
+                val osModule = py.getModule("os")
+                val environ = osModule.get("environ")
+                environ?.callAttr("__setitem__", "HOME", filesDirPath)
+                environ?.callAttr("__setitem__", "TERM", "xterm-256color")
+                environ?.callAttr("__setitem__", "COLORTERM", "truecolor")
+
+                val webModule = py.getModule("mastui.web")
                 webModule.callAttr(
                     "run_server",
                     "127.0.0.1",
@@ -69,19 +77,20 @@ class MainActivity : AppCompatActivity() {
                     arrayOf<String>()
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("Mastui", "Error in Python thread", e)
             }
         }
 
         // Poll for server readiness and load url
         thread {
             var ready = false
-            for (i in 1..40) {
+            for (i in 1..60) {
                 Thread.sleep(250)
                 try {
                     val s = java.net.Socket("127.0.0.1", serverPort)
                     s.close()
                     ready = true
+                    android.util.Log.d("Mastui", "Connected to Python server on port $serverPort")
                     break
                 } catch (ignored: Exception) {}
             }
@@ -89,6 +98,8 @@ class MainActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 if (ready) {
                     webView.loadUrl("http://127.0.0.1:$serverPort")
+                } else {
+                    android.util.Log.e("Mastui", "Python server readiness timeout on port $serverPort")
                 }
             }
         }
