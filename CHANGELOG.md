@@ -8,6 +8,23 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.13.0] - 2026-08-25
+
+### 🌐 Web Browser Interface (`--web`)
+- **Interactive Web Mode**: Launch Mastui directly in your default browser with `mastui --web`.
+- **Zero-Dependency WebSocket Server**: Embedded RFC 6455 WebSocket terminal streaming server with rolling terminal history replay.
+- **Customizable Host and Port**: Added `--web-host` and `--web-port` for hosting on remote servers, headless VPS, or Raspberry Pi.
+- **Headless Mode**: Added `--no-browser` flag to run as a background service without opening a local window.
+- **Responsive Terminal**: Dynamic viewport resize handling with Xterm.js FitAddon and mobile touch/keyboard support.
+
+### ✨ Emojis & Unicode Alignment
+- **Modern Unicode 15+ Provider**: Full support for emojis, skin-tone modifiers, and Regional Indicator country flag sequences (2-cell width pairs) without gaps or column misalignment.
+- **Sparkling Heart (💖)**: Native emoji-plane heart (`U+1F496`) for vibrant, accurate rendering across all terminal emulators and web clients.
+
+### 🛠️ Improvements & Fixes
+- **Robust Clipboard Fallback**: Made clipboard integration optional with graceful fallbacks when `wl-clipboard` or `xclip` are not installed.
+- **Theme Switcher Stability**: Guarded theme switching when running headless or during startup before full config mount.
+
 ## [1.12.0] - 2026-08-25
 
 - feat(packaging): add build system and release workflow for deb, rpm, appImage, arch and windows
