@@ -127,6 +127,29 @@ poetry install
 poetry run mastui --debug
 ```
 
+### Building Packages Locally
+
+You can build standalone executables and distribution packages locally with the unified build script:
+
+```bash
+# Build standalone single-file binary with PyInstaller
+poetry run python scripts/build_packages.py --target binary
+
+# Build all Linux packages (.deb, .rpm, .AppImage, .pkg.tar.zst) and checksums
+poetry run python scripts/build_packages.py --all-linux
+
+# Build specific package targets
+poetry run python scripts/build_packages.py --target deb
+poetry run python scripts/build_packages.py --target rpm
+poetry run python scripts/build_packages.py --target appimage
+poetry run python scripts/build_packages.py --target arch
+
+# Build Windows zip package (on Windows)
+poetry run python scripts/build_packages.py --target windows
+```
+
+All built packages and checksums are placed into the `dist/` directory.
+
 Mastui stores profile data under `~/.config/mastui/<profile>` (or the platform equivalent). Remove those directories to wipe a profile, or use the built-in profile manager.
 
 ## ⌨️ Key Bindings

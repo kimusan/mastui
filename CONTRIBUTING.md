@@ -56,6 +56,18 @@ We love pull requests! If you're ready to contribute code, here's how to get sta
     poetry run mastui --debug
     ```
 
+5. **Run tests**:
+
+    ```bash
+    poetry run pytest
+    ```
+
+6. **Build distribution packages (optional)**:
+
+    ```bash
+    poetry run python scripts/build_packages.py --all-linux
+    ```
+
 #### Making Changes
 
 1. Create a new branch for your feature or bug fix:
