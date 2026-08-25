@@ -98,6 +98,50 @@ Download pre-built standalone packages directly from [GitHub Releases](https://g
   ```bash
   sudo pacman -U mastui-<version>-1-x86_64.pkg.tar.zst
   ```
+- **Nix (Flakes):**
+  Temporarily build and install via nix flakes
+  ```sh
+  nix run github:kimusan/mastui
+  ```
+  Or add to flake inputs and install:
+
+  flake.nix
+  ```nix
+  {
+    inputs = {
+      nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+      mastui = {
+        url = "github:kimusan/mastui";
+      };
+    };
+
+    outputs =
+      inputs@{
+      self,
+      nixpkgs,
+      ...
+      }:
+      {
+        # ...flake outputs
+      };
+  }
+  ```
+
+  configuration.nix
+  ```nix
+  environment.systemPackages = with pkgs; [
+    inputs.mastui."${pkgs.stdenv.hostPlatform.system}".default
+  ]
+  ```
+
+  or
+
+  home.nix
+  ```nix
+  home.packages = with pkgs; [
+    inputs.mastui."${pkgs.stdenv.hostPlatform.system}".default
+  ]
+  ```
 - **Windows**:
   Download `mastui-<version>-windows-x86_64.zip`, extract, and run `mastui.exe` in Windows Terminal or PowerShell.
 
@@ -222,7 +266,7 @@ Have an idea? Feel free to [open an issue](https://github.com/kimusan/mastui/iss
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read `CONTRIBUTING.md` for details on our code of conduct and the process for submitting pull requests.
+Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## 🛠️ Technology Stack
 
