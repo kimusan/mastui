@@ -80,6 +80,17 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+if [ ! -s "$CLASSPATH" ]; then
+    echo "Downloading gradle-wrapper.jar..."
+    mkdir -p "$APP_HOME/gradle/wrapper"
+    JAR_URL="https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$JAR_URL" -o "$CLASSPATH"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$JAR_URL" -O "$CLASSPATH"
+    fi
+fi
+
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
     if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
