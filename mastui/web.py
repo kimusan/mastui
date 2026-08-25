@@ -39,6 +39,7 @@ WEB_HTML = r"""<!DOCTYPE html>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-canvas@0.5.0/lib/xterm-addon-canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -51,10 +52,16 @@ WEB_HTML = r"""<!DOCTYPE html>
     #terminal-container {
       width: 100%;
       height: 100%;
-      padding: 4px;
+      padding: 2px;
     }
     .xterm {
       height: 100%;
+    }
+    .xterm .xterm-screen {
+      image-rendering: pixelated;
+    }
+    .xterm .xterm-rows {
+      line-height: 1.0 !important;
     }
     #status-bar {
       position: fixed;
@@ -94,15 +101,18 @@ WEB_HTML = r"""<!DOCTYPE html>
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
-      fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", monospace',
+      fontFamily: '"Cascadia Code", "Fira Code", "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace',
       fontSize: window.innerWidth < 600 ? 12 : 14,
+      lineHeight: 1.0,
+      letterSpacing: 0,
+      customGlyphs: true,
+      allowProposedApi: true,
       theme: {
         background: '#0d1117',
         foreground: '#c9d1d9',
         cursor: '#58a6ff',
         selectionBackground: '#1f6feb44',
-      },
-      allowProposedApi: true
+      }
     });
 
     const fitAddon = new FitAddon.FitAddon();
@@ -118,6 +128,15 @@ WEB_HTML = r"""<!DOCTYPE html>
 
     const container = document.getElementById('terminal-container');
     term.open(container);
+
+    if (typeof CanvasAddon !== 'undefined' && CanvasAddon.CanvasAddon) {
+      try {
+        term.loadAddon(new CanvasAddon.CanvasAddon());
+      } catch (e) {
+        console.warn('CanvasAddon load error, falling back to DOM renderer', e);
+      }
+    }
+
     fitAddon.fit();
 
     let ws = null;
