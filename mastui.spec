@@ -5,6 +5,8 @@ import os
 block_cipher = None
 
 datas = [
+    ('mastui/app.css', 'mastui'),
+    ('mastui/app.css', '.'),
     ('pyproject.toml', '.'),
     ('assets', 'assets'),
     ('LICENSE', '.'),
@@ -57,7 +59,7 @@ if not os.path.exists(icon_path):
     icon_path = None
 
 a = Analysis(
-    ['mastui/app.py'],
+    ['mastui/__main__.py'],
     pathex=['.'],
     binaries=[],
     datas=datas,

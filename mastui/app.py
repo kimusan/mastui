@@ -61,8 +61,25 @@ from urllib.parse import urlparse
 log = logging.getLogger(__name__)
 
 
+def _resolve_css_path() -> str:
+    """Resolve the path to app.css across development runs and PyInstaller bundles."""
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "app.css"),
+        os.path.join(os.path.dirname(__file__), "mastui", "app.css"),
+    ]
+    if hasattr(sys, "_MEIPASS"):
+        candidates.extend([
+            os.path.join(sys._MEIPASS, "mastui", "app.css"),
+            os.path.join(sys._MEIPASS, "app.css"),
+        ])
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
+
+
 # Get the absolute path to the CSS file
-css_path = os.path.join(os.path.dirname(__file__), "app.css")
+css_path = _resolve_css_path()
 
 
 def _mastodon_api_status_code(error: MastodonAPIError) -> int | None:
