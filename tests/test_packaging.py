@@ -73,3 +73,14 @@ def test_normalize_tree_permissions(tmp_path):
     assert oct(d.stat().st_mode & 0o777) == "0o755"
     assert oct(exe_file.stat().st_mode & 0o777) == "0o755"
     assert oct(data_file.stat().st_mode & 0o777) == "0o644"
+
+
+def test_android_project_structure():
+    android_dir = ROOT / "android"
+    assert android_dir.exists()
+    assert (android_dir / "build.gradle.kts").exists()
+    assert (android_dir / "settings.gradle.kts").exists()
+    assert (android_dir / "app" / "build.gradle.kts").exists()
+    assert (android_dir / "app" / "src" / "main" / "AndroidManifest.xml").exists()
+    assert (android_dir / "app" / "src" / "main" / "java" / "dk" / "schulz" / "mastui" / "MainActivity.kt").exists()
+

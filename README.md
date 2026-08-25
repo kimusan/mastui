@@ -100,6 +100,20 @@ Download pre-built standalone packages directly from [GitHub Releases](https://g
   ```
 - **Windows**:
   Download `mastui-<version>-windows-x86_64.zip`, extract, and run `mastui.exe` in Windows Terminal or PowerShell.
+- **Android (`.apk`)**:
+  Download `mastui-<version>-android.apk` from GitHub Releases and install on Android 8.0+ devices.
+
+### 🌐 Web Browser Mode
+
+You can also run Mastui as a local web application and interact with it in your browser:
+
+```bash
+# Launch Mastui web interface (opens default browser at http://127.0.0.1:8000)
+mastui --web
+
+# Or bind to custom host/port (e.g. for remote server or headless Raspberry Pi)
+mastui --web --web-host 0.0.0.0 --web-port 8080 --no-browser
+```
 
 ### pipx (recommended for Python users)
 

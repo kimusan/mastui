@@ -1284,7 +1284,30 @@ def main():
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
     parser.add_argument("--add-account", action="store_true", help="Add a new account.")
+    parser.add_argument("--web", action="store_true", help="Run Mastui in web browser / WebView mode.")
+    parser.add_argument("--web-host", default="127.0.0.1", help="Host address for web interface (default: 127.0.0.1).")
+    parser.add_argument("--web-port", type=int, default=8000, help="Port for web interface (default: 8000).")
+    parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser.")
     args = parser.parse_args()
+
+    if args.web:
+        from mastui.web import run_server
+
+        forwarded = []
+        if not args.ssl_verify:
+            forwarded.append("--no-ssl-verify")
+        if args.debug:
+            forwarded.append("--debug")
+        if args.add_account:
+            forwarded.append("--add-account")
+
+        run_server(
+            host=args.web_host,
+            port=args.web_port,
+            open_browser=not args.no_browser,
+            cli_args=forwarded,
+        )
+        return
 
     log_file_path = setup_logging(debug=args.debug)
 
