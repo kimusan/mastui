@@ -52,6 +52,15 @@ jobs:
         run: |
           poetry run python scripts/build_packages.py --all-linux
 
+      - name: Upload PyPI distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -165,3 +174,27 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [publish-release]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mastui
+    permissions:
+      id-token: write  # Mandatory for PyPI Trusted Publishing (OIDC)
+    steps:
+      - name: Download PyPI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist-pypi
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-pypi/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
