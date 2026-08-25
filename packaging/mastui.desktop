@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=mastui
+GenericName=Mastodon TUI Client
+Comment=A terminal user interface client for Mastodon
+Exec=mastui
+Icon=mastui
+Terminal=true
+Categories=Network;ConsoleOnly;
+Keywords=mastodon;fediverse;tui;social;
+StartupNotify=false

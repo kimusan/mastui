@@ -1,0 +1,26 @@
+# Maintainer: Kim Schulz
+pkgname=mastui-bin
+_pkgname=mastui
+pkgver=1.11.0
+pkgrel=1
+pkgdesc="A Textual-based terminal user interface client for Mastodon"
+arch=('x86_64')
+url="https://github.com/kimusan/mastui"
+license=('MIT')
+provides=('mastui')
+conflicts=('mastui')
+source=("https://github.com/kimusan/mastui/releases/download/v${pkgver}/mastui")
+sha256sums=('SKIP')
+
+package() {
+    install -Dm755 "${srcdir}/mastui" "${pkgdir}/usr/bin/mastui"
+    if [ -f "${srcdir}/mastui.desktop" ]; then
+        install -Dm644 "${srcdir}/mastui.desktop" "${pkgdir}/usr/share/applications/mastui.desktop"
+    fi
+    if [ -f "${srcdir}/mastui.png" ]; then
+        install -Dm644 "${srcdir}/mastui.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/mastui.png"
+    fi
+    if [ -f "${srcdir}/LICENSE" ]; then
+        install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${_pkgname}/LICENSE"
+    fi
+}

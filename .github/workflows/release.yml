@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm zstd libfuse2
+
+      - name: Download appimagetool and runtime
+        run: |
+          mkdir -p build
+          curl -fsSL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o build/appimagetool
+          chmod +x build/appimagetool
+          curl -fsSL https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 -o build/runtime-x86_64
+
+      - name: Install Poetry
+        run: |
+          pip install --upgrade pip poetry
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+
+      - name: Build Python wheel and sdist
+        run: |
+          poetry build
+
+      - name: Build Linux packages (.deb, .rpm, .AppImage, .pkg.tar.zst)
+        run: |
+          poetry run python scripts/build_packages.py --all-linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-dist
+          path: dist/*
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          pip install --upgrade pip poetry
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+
+      - name: Build Windows zip package
+        run: |
+          poetry run python scripts/build_packages.py --target windows
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-dist
+          path: dist
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-dist
+          path: dist
+
+      - name: Re-generate comprehensive SHA256 checksums
+        run: |
+          python scripts/build_packages.py --target checksums
+
+      - name: Extract Release Notes from CHANGELOG.md
+        id: release_notes
+        run: |
+          python - <<'EOF'
+          import re, os
+          from pathlib import Path
+
+          tag = os.environ.get("GITHUB_REF_NAME", "")
+          version = tag.lstrip("v")
+          changelog_path = Path("CHANGELOG.md")
+          notes = []
+          
+          if changelog_path.exists() and version:
+              lines = changelog_path.read_text(encoding="utf-8").splitlines()
+              in_section = False
+              section_re = re.compile(rf"^## \[{re.escape(version)}\]")
+              any_section_re = re.compile(r"^## \[")
+              
+              for line in lines:
+                  if section_re.match(line):
+                      in_section = True
+                      continue
+                  if in_section:
+                      if any_section_re.match(line):
+                          break
+                      notes.append(line)
+                      
+          body = "\n".join(notes).strip()
+          if not body:
+              body = f"Release {tag}"
+          
+          Path("release_notes.txt").write_text(body, encoding="utf-8")
+          EOF
+
+      - name: Publish Release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.txt
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

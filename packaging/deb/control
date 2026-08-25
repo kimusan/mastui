@@ -1,0 +1,10 @@
+Package: mastui
+Version: ${VERSION}
+Section: net
+Priority: optional
+Architecture: amd64
+Maintainer: Kim Schulz
+Homepage: https://github.com/kimusan/mastui
+Description: A Mastodon TUI client
+ Mastui is a modern, terminal user interface (TUI) client for Mastodon
+ built with Textual and Python.

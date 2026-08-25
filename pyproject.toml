@@ -23,6 +23,7 @@ beautifulsoup4 = "^4.13.4"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 pytest-asyncio = "^0.23.7"
+pyinstaller = { version = ">=6.10.0", python = ">=3.9,<3.14" }
 
 [build-system]
 requires = ["poetry-core"]

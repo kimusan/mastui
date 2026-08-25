@@ -77,7 +77,31 @@ If you encounter any platform-specific issues, please [open an issue](https://gi
 
 ## 🚀 Installation
 
-### pipx (recommended)
+### Pre-built Packages (GitHub Releases)
+
+Download pre-built standalone packages directly from [GitHub Releases](https://github.com/kimusan/mastui/releases):
+
+- **Debian / Ubuntu (`.deb`)**:
+  ```bash
+  sudo dpkg -i mastui_<version>_amd64.deb
+  ```
+- **Fedora / RHEL / openSUSE (`.rpm`)**:
+  ```bash
+  sudo rpm -i mastui-<version>-1.x86_64.rpm
+  ```
+- **Universal Linux (`.AppImage`)**:
+  ```bash
+  chmod +x mastui-<version>-x86_64.AppImage
+  ./mastui-<version>-x86_64.AppImage
+  ```
+- **Arch Linux (`.pkg.tar.zst`)**:
+  ```bash
+  sudo pacman -U mastui-<version>-1-x86_64.pkg.tar.zst
+  ```
+- **Windows**:
+  Download `mastui-<version>-windows-x86_64.zip`, extract, and run `mastui.exe` in Windows Terminal or PowerShell.
+
+### pipx (recommended for Python users)
 
 ```bash
 pipx install mastui
