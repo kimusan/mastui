@@ -247,7 +247,7 @@ class Post(Vertical):
                 f"🚀 {status_to_display.get('reblogs_count', 0)}", id="boost-count"
             )
             yield Static(
-                f"❤️ {status_to_display.get('favourites_count', 0)}",
+                f"💖 {status_to_display.get('favourites_count', 0)}",
                 id="like-count",
             )
             yield Static(format_datetime(status_to_display["created_at"]), classes="timestamp")
@@ -304,7 +304,7 @@ class Post(Vertical):
             f"🚀 {status_to_display.get('reblogs_count', 0)}"
         )
         self.query_one("#like-count").update(
-            f"❤️ {status_to_display.get('favourites_count', 0)}"
+            f"💖 {status_to_display.get('favourites_count', 0)}"
         )
         self.hide_spinner()
 
@@ -429,14 +429,14 @@ class Notification(Widget):
                     f"🚀 {status.get('reblogs_count', 0)}", id="boost-count"
                 )
                 yield Static(
-                    f"❤️ {status.get('favourites_count', 0)}", id="like-count"
+                    f"💖 {status.get('favourites_count', 0)}", id="like-count"
                 )
                 yield Static(format_datetime(created_at), classes="timestamp")
 
         elif notif_type == "favourite":
             status = self.notif["status"]
             filter_warning = get_status_filter_warning(status)
-            self.border_title = f"❤️ {author_str} favourited your post:"
+            self.border_title = f"💖 {author_str} favourited your post:"
             if filter_warning:
                 yield Static(safe_markup(filter_warning), classes="filter-warning")
             fav_md = Markdown(get_full_content_md(status), open_links=False)
@@ -565,7 +565,7 @@ class Notification(Widget):
                 f"🚀 {status.get('reblogs_count', 0)}"
             )
             self.query_one("#like-count").update(
-                f"❤️ {status.get('favourites_count', 0)}"
+                f"💖 {status.get('favourites_count', 0)}"
             )
         self.hide_spinner()
 

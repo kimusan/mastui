@@ -120,43 +120,10 @@ WEB_HTML = r"""<!DOCTYPE html>
     if (typeof WebLinksAddon !== 'undefined' && WebLinksAddon.WebLinksAddon) {
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
     }
-    let unicode11Instance = null;
     if (typeof Unicode11Addon !== 'undefined' && Unicode11Addon.Unicode11Addon) {
-      unicode11Instance = new Unicode11Addon.Unicode11Addon();
-      term.loadAddon(unicode11Instance);
+      const unicode11 = new Unicode11Addon.Unicode11Addon();
+      term.loadAddon(unicode11);
       term.unicode.activeVersion = '11';
-    }
-
-    // Register Rich/Textual compatible unicode provider to align U+2764 heart & emoji widths with Python rich
-    const richUnicodeProvider = {
-      version: 'rich-compat',
-      wcwidth: function(codepoint) {
-        if (codepoint === 0x2764 || codepoint === 0x2705 || codepoint === 0x2728 || codepoint === 0x274C || codepoint === 0x274E || (codepoint >= 0x2753 && codepoint <= 0x2757) || (codepoint >= 0x1F000 && codepoint <= 0x1FAFF)) {
-          return 2;
-        }
-        if (unicode11Instance && typeof unicode11Instance.wcwidth === 'function') {
-          return unicode11Instance.wcwidth(codepoint);
-        }
-        return (codepoint >= 0x1100 && (
-          codepoint <= 0x115F ||
-          codepoint === 0x2329 || codepoint === 0x232A ||
-          (codepoint >= 0x2E80 && codepoint <= 0xA4CF && codepoint !== 0x303F) ||
-          (codepoint >= 0xAC00 && codepoint <= 0xD7A3) ||
-          (codepoint >= 0xF900 && codepoint <= 0xFAFF) ||
-          (codepoint >= 0xFE10 && codepoint <= 0xFE19) ||
-          (codepoint >= 0xFE30 && codepoint <= 0xFE6F) ||
-          (codepoint >= 0xFF00 && codepoint <= 0xFF60) ||
-          (codepoint >= 0xFFE0 && codepoint <= 0xFFE6) ||
-          (codepoint >= 0x20000 && codepoint <= 0x2FFFD) ||
-          (codepoint >= 0x30000 && codepoint <= 0x3FFFD)
-        )) ? 2 : 1;
-      }
-    };
-    try {
-      term.unicode.register(richUnicodeProvider);
-      term.unicode.activeVersion = 'rich-compat';
-    } catch (e) {
-      console.warn('Could not register custom unicode provider:', e);
     }
 
     const container = document.getElementById('terminal-container');
