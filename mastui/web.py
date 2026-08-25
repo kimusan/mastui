@@ -38,6 +38,7 @@ WEB_HTML = r"""<!DOCTYPE html>
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -93,7 +94,7 @@ WEB_HTML = r"""<!DOCTYPE html>
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
-      fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace',
+      fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", monospace',
       fontSize: window.innerWidth < 600 ? 12 : 14,
       theme: {
         background: '#0d1117',
@@ -108,6 +109,11 @@ WEB_HTML = r"""<!DOCTYPE html>
     term.loadAddon(fitAddon);
     if (typeof WebLinksAddon !== 'undefined' && WebLinksAddon.WebLinksAddon) {
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    }
+    if (typeof Unicode11Addon !== 'undefined' && Unicode11Addon.Unicode11Addon) {
+      const unicode11 = new Unicode11Addon.Unicode11Addon();
+      term.loadAddon(unicode11);
+      term.unicode.activeVersion = '11';
     }
 
     const container = document.getElementById('terminal-container');

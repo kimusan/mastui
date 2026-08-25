@@ -7,6 +7,7 @@ from mastui.web import MastuiWebBridge, WEB_HTML, WebSocketConnection
 def test_web_html_template():
     assert "xterm" in WEB_HTML
     assert "FitAddon" in WEB_HTML
+    assert "Unicode11Addon" in WEB_HTML
     assert "terminal-container" in WEB_HTML
     assert "WebSocket" in WEB_HTML
 
