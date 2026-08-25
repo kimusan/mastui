@@ -78,9 +78,9 @@ def test_normalize_tree_permissions(tmp_path):
 def test_android_project_structure():
     android_dir = ROOT / "android"
     assert android_dir.exists()
-    assert (android_dir / "build.gradle.kts").exists()
-    assert (android_dir / "settings.gradle.kts").exists()
-    assert (android_dir / "app" / "build.gradle.kts").exists()
+    assert (android_dir / "build.gradle").exists()
+    assert (android_dir / "settings.gradle").exists()
+    assert (android_dir / "app" / "build.gradle").exists()
     assert (android_dir / "app" / "src" / "main" / "AndroidManifest.xml").exists()
     assert (android_dir / "app" / "src" / "main" / "java" / "dk" / "schulz" / "mastui" / "MainActivity.kt").exists()
 
