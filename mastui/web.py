@@ -120,10 +120,56 @@ WEB_HTML = r"""<!DOCTYPE html>
     if (typeof WebLinksAddon !== 'undefined' && WebLinksAddon.WebLinksAddon) {
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
     }
+    let unicode11Instance = null;
     if (typeof Unicode11Addon !== 'undefined' && Unicode11Addon.Unicode11Addon) {
-      const unicode11 = new Unicode11Addon.Unicode11Addon();
-      term.loadAddon(unicode11);
+      unicode11Instance = new Unicode11Addon.Unicode11Addon();
+      term.loadAddon(unicode11Instance);
       term.unicode.activeVersion = '11';
+    }
+
+    // Register comprehensive modern Unicode provider matching Python Rich / Textual (Unicode 15+)
+    const modernUnicodeProvider = {
+      version: 'unicode-modern',
+      wcwidth: function(codepoint) {
+        // Zero-width characters (ZWJ, variation selectors, combining marks)
+        if (codepoint === 0x200D || (codepoint >= 0xFE00 && codepoint <= 0xFE0F) || (codepoint >= 0xE0100 && codepoint <= 0xE01EF)) {
+          return 0;
+        }
+        // All SMP Emoji blocks (U+1F000 to U+1FFFF: emoticons, symbols, objects, flags, food, animals, gestures)
+        if (codepoint >= 0x1F000 && codepoint <= 0x1FFFF) {
+          return 2;
+        }
+        // BMP Symbols and Dingbats with emoji presentation (U+2600..U+27BF, stars U+2B50..U+2B55, symbols)
+        if ((codepoint >= 0x2600 && codepoint <= 0x27BF) || (codepoint >= 0x2B50 && codepoint <= 0x2B55) || codepoint === 0x231A || codepoint === 0x231B || (codepoint >= 0x23E9 && codepoint <= 0x23F3) || (codepoint >= 0x23F8 && codepoint <= 0x23FA) || (codepoint >= 0x25AA && codepoint <= 0x25AB) || (codepoint >= 0x25FB && codepoint <= 0x25FE)) {
+          return 2;
+        }
+        // Standard CJK and Fullwidth ranges
+        if (codepoint >= 0x1100 && (
+          codepoint <= 0x115F ||
+          codepoint === 0x2329 || codepoint === 0x232A ||
+          (codepoint >= 0x2E80 && codepoint <= 0xA4CF && codepoint !== 0x303F) ||
+          (codepoint >= 0xAC00 && codepoint <= 0xD7A3) ||
+          (codepoint >= 0xF900 && codepoint <= 0xFAFF) ||
+          (codepoint >= 0xFE10 && codepoint <= 0xFE19) ||
+          (codepoint >= 0xFE30 && codepoint <= 0xFE6F) ||
+          (codepoint >= 0xFF00 && codepoint <= 0xFF60) ||
+          (codepoint >= 0xFFE0 && codepoint <= 0xFFE6) ||
+          (codepoint >= 0x20000 && codepoint <= 0x2FFFD) ||
+          (codepoint >= 0x30000 && codepoint <= 0x3FFFD)
+        )) {
+          return 2;
+        }
+        if (unicode11Instance && typeof unicode11Instance.wcwidth === 'function') {
+          return unicode11Instance.wcwidth(codepoint);
+        }
+        return 1;
+      }
+    };
+    try {
+      term.unicode.register(modernUnicodeProvider);
+      term.unicode.activeVersion = 'unicode-modern';
+    } catch (e) {
+      console.warn('Could not register modern unicode provider:', e);
     }
 
     const container = document.getElementById('terminal-container');
