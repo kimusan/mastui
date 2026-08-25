@@ -353,34 +353,83 @@ class MastuiWebBridge:
         self._running = False
 
     def start_pty(self) -> None:
-        """Spawn mastui inside a pseudo-terminal."""
+        """Spawn mastui inside a pseudo-terminal (fork or in-process thread)."""
         self.master_fd, slave_fd = pty.openpty()
         self.resize_pty(self.cols, self.rows)
 
-        pid = os.fork()
-        if pid == 0:  # Child process
-            os.close(self.master_fd)
-            os.setsid()
-            os.dup2(slave_fd, 0)
-            os.dup2(slave_fd, 1)
-            os.dup2(slave_fd, 2)
-            if slave_fd > 2:
-                os.close(slave_fd)
+        is_android = hasattr(sys, "getandroidapilevel") or "ANDROID_DATA" in os.environ or "ANDROID_ROOT" in os.environ
 
-            env = os.environ.copy()
-            env["TERM"] = "xterm-256color"
-            env["COLORTERM"] = "truecolor"
-
-            cmd = [sys.executable, "-m", "mastui.app"] + self.cli_args
+        if not is_android and hasattr(os, "fork"):
             try:
-                os.execvpe(cmd[0], cmd, env)
-            except Exception as e:
-                print(f"Failed to execute mastui: {e}", file=sys.stderr)
-                os._exit(1)
+                pid = os.fork()
+                if pid == 0:  # Child process
+                    os.close(self.master_fd)
+                    os.setsid()
+                    os.dup2(slave_fd, 0)
+                    os.dup2(slave_fd, 1)
+                    os.dup2(slave_fd, 2)
+                    if slave_fd > 2:
+                        os.close(slave_fd)
 
-        # Parent process
-        os.close(slave_fd)
-        self.pid = pid
+                    env = os.environ.copy()
+                    env["TERM"] = "xterm-256color"
+                    env["COLORTERM"] = "truecolor"
+
+                    cmd = [sys.executable, "-m", "mastui.app"] + self.cli_args
+                    try:
+                        os.execvpe(cmd[0], cmd, env)
+                    except Exception as e:
+                        print(f"Failed to execute mastui: {e}", file=sys.stderr)
+                        os._exit(1)
+
+                # Parent process
+                os.close(slave_fd)
+                self.pid = pid
+                self._running = True
+                return
+            except Exception as e:
+                log.warning(f"os.fork failed ({e}), falling back to in-process execution")
+
+        # In-process runner for Android / embedded environments
+        def run_in_process() -> None:
+            orig_stdin = os.dup(0)
+            orig_stdout = os.dup(1)
+            orig_stderr = os.dup(2)
+            try:
+                os.dup2(slave_fd, 0)
+                os.dup2(slave_fd, 1)
+                os.dup2(slave_fd, 2)
+
+                os.environ["TERM"] = "xterm-256color"
+                os.environ["COLORTERM"] = "truecolor"
+
+                from mastui.app import Mastui, setup_logging
+
+                debug = "--debug" in self.cli_args
+                ssl_verify = "--no-ssl-verify" not in self.cli_args
+                add_account = "--add-account" in self.cli_args
+                action = "add_account" if add_account else None
+
+                log_file_path = setup_logging(debug=debug)
+                app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
+                app.log_file_path = log_file_path
+                app.run()
+            except Exception as ex:
+                print(f"Error in in-process Mastui execution: {ex}", file=sys.stderr)
+            finally:
+                try:
+                    os.dup2(orig_stdin, 0)
+                    os.dup2(orig_stdout, 1)
+                    os.dup2(orig_stderr, 2)
+                    os.close(orig_stdin)
+                    os.close(orig_stdout)
+                    os.close(orig_stderr)
+                    os.close(slave_fd)
+                except Exception:
+                    pass
+
+        thread = threading.Thread(target=run_in_process, name="MastuiInProcess", daemon=True)
+        thread.start()
         self._running = True
 
     def resize_pty(self, cols: int, rows: int) -> None:
