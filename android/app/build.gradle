@@ -64,7 +64,7 @@ tasks.register('copyPythonSources', Copy) {
     exclude '**/__pycache__', '**/*.pyc'
 }
 
-tasks.matching { it.name.contains('PythonSources') }.configureEach {
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('PythonSources') }.configureEach {
     dependsOn 'copyPythonSources'
 }
 
