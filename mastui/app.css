@@ -821,7 +821,7 @@ ImageWidget {
     color: $text-muted;
 }
 
-LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen, URLSelectorScreen, FiltersScreen, FilterEditorScreen {
+LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, SearchScreen, HashtagTimeline, ConversationScreen, URLSelectorScreen, FiltersScreen, FilterEditorScreen, LogViewerScreen {
     align: center middle;
 }
 
@@ -839,6 +839,22 @@ LoginScreen, PostScreen, ReplyScreen, ThreadScreen, ProfileScreen, HelpScreen, S
 #login-dialog,
 #profile-selection-dialog {
     border-title-align: center;
+}
+
+#log-viewer-dialog {
+    width: 90%;
+    height: 85%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+}
+
+#log-filter-input {
+    margin-bottom: 1;
+}
+
+#log-viewer {
+    height: 1fr;
 }
 
 
