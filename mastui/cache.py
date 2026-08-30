@@ -24,7 +24,9 @@ class Cache:
     def _get_conn(self):
         """Get a new database connection."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, timeout=10.0)
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA busy_timeout=10000;")
             conn.row_factory = sqlite3.Row
             return conn
         except sqlite3.Error as e:
@@ -55,6 +57,7 @@ class Cache:
                 )
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeline_id ON posts (timeline_id, id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_posts_timeline_created ON posts (timeline_id, created_at DESC)")
             conn.commit()
         except sqlite3.Error as e:
             log.error(f"Failed to create tables: {e}", exc_info=True)
