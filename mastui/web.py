@@ -597,6 +597,12 @@ class MastuiWebBridge:
             except (ProcessLookupError, ChildProcessError, OSError):
                 pass
             self.pid = None
+        if hasattr(self, "_broadcast_task") and self._broadcast_task is not None:
+            try:
+                self._broadcast_task.cancel()
+            except Exception:
+                pass
+            self._broadcast_task = None
 
         # In-process runner for Android / embedded / pipe fallback environments
         def run_in_process() -> None:
@@ -693,8 +699,34 @@ class MastuiWebBridge:
 
     def start_reader_thread(self, loop: asyncio.AbstractEventLoop) -> None:
         self.loop = loop
+        self._output_queue = asyncio.Queue(maxsize=1000)
+        self._broadcast_task = loop.create_task(self._broadcast_loop())
         thread = threading.Thread(target=self._read_loop, daemon=True)
         thread.start()
+
+    def _queue_message(self, msg: str) -> None:
+        if self._output_queue is not None and not self._output_queue.full():
+            self._output_queue.put_nowait(msg)
+
+    async def _broadcast_loop(self) -> None:
+        while self._running:
+            try:
+                if self._output_queue is None:
+                    break
+                msg = await self._output_queue.get()
+                dead = []
+                for client in list(self.clients):
+                    if client.closed:
+                        dead.append(client)
+                    else:
+                        await client.send_text(msg)
+                for client in dead:
+                    self.clients.discard(client)
+                self._output_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                log.debug(f"Error in broadcast loop: {e}")
 
     def _read_loop(self) -> None:
         """Continuously read output from master PTY or output pipe and broadcast to connected clients."""
@@ -719,20 +751,13 @@ class MastuiWebBridge:
 
                     msg = json.dumps({"type": "output", "data": text})
                     if self.loop and self.clients:
-                        asyncio.run_coroutine_threadsafe(self._broadcast(msg), self.loop)
+                        try:
+                            self.loop.call_soon_threadsafe(self._queue_message, msg)
+                        except RuntimeError:
+                            pass
             except (OSError, ValueError):
                 break
         self._running = False
-
-    async def _broadcast(self, msg: str) -> None:
-        dead = []
-        for client in self.clients:
-            if client.closed:
-                dead.append(client)
-            else:
-                await client.send_text(msg)
-        for client in dead:
-            self.clients.discard(client)
 
 
 async def handle_http_and_ws(
