@@ -1,19 +1,30 @@
-from textual.screen import ModalScreen
-from textual.widgets import Input, TabbedContent, TabPane, Static, LoadingIndicator
+import logging
+from textual import events, on
 from textual.containers import Vertical, VerticalScroll
-from textual import on, events
+from textual.screen import ModalScreen
 from textual.widget import Widget
-from mastui.widgets import AccountResult, HashtagResult, StatusResult, SearchResult
+from textual.widgets import Input, LoadingIndicator, Static, TabbedContent, TabPane
+from mastui.conversation_screen import ConversationScreen
+from mastui.hashtag_timeline import HashtagTimeline
 from mastui.messages import ViewProfile
 from mastui.thread import ThreadScreen
-from mastui.hashtag_timeline import HashtagTimeline
+from mastui.widgets import (
+    AccountResult,
+    ConversationSummary,
+    HashtagResult,
+    SearchResult,
+    StatusResult,
+)
+
+log = logging.getLogger(__name__)
+
 
 class SearchScreen(ModalScreen):
     """A modal screen for searching."""
 
     BINDINGS = [
         ("escape", "app.pop_screen", "Close Search"),
-        ("up", "cursor_up", "Cursor Up",),
+        ("up", "cursor_up", "Cursor Up"),
         ("down", "cursor_down", "Cursor Down"),
         ("enter", "select_result", "Select"),
         ("p", "view_profile", "View Profile"),
@@ -26,7 +37,10 @@ class SearchScreen(ModalScreen):
     def compose(self):
         with Vertical(id="search-dialog") as sd:
             sd.border_title = "Search"
-            yield Input(placeholder="Search for users, hashtags, or posts...", id="search-input")
+            yield Input(
+                placeholder="Search for users, hashtags, posts, or messages...",
+                id="search-input",
+            )
             yield LoadingIndicator(classes="hidden")
             with TabbedContent(id="search-results"):
                 with TabPane("Accounts", id="search-accounts"):
@@ -38,6 +52,9 @@ class SearchScreen(ModalScreen):
                 with TabPane("Statuses", id="search-statuses"):
                     with VerticalScroll():
                         yield Static("Press Enter to search.", classes="search-status")
+                with TabPane("Messages", id="search-dms"):
+                    with VerticalScroll():
+                        yield Static("Press Enter to search.", classes="search-status")
 
     def on_mount(self):
         """Focus the search input when the screen is mounted."""
@@ -46,7 +63,7 @@ class SearchScreen(ModalScreen):
     @on(Input.Submitted)
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle the search input being submitted."""
-        query = event.value
+        query = event.value.strip()
         if not query:
             return
 
@@ -54,7 +71,7 @@ class SearchScreen(ModalScreen):
         active_tab = self.query_one(TabbedContent).active
         if active_tab == "search-hashtags" and not query.startswith("#"):
             query = f"#{query}"
-        
+
         self.query_one(LoadingIndicator).remove_class("hidden")
         self.run_worker(lambda: self.do_search(query), exclusive=True, thread=True)
 
@@ -62,10 +79,37 @@ class SearchScreen(ModalScreen):
         """Worker method to perform the search."""
         try:
             results = self.api.search_v2(query)
+            # Search conversations if cached
+            conv_results = []
+            try:
+                if hasattr(self.app, "cache") and self.app.cache:
+                    cached_convs = self.app.cache.get_conversations()
+                    q_lower = query.lower().lstrip("@")
+                    for c in cached_convs:
+                        accs = c.get("accounts", [])
+                        last_st = c.get("last_status", {})
+                        content = last_st.get("content", "") if last_st else ""
+                        if (
+                            any(
+                                q_lower in a.get("acct", "").lower()
+                                or q_lower in a.get("display_name", "").lower()
+                                for a in accs
+                            )
+                            or q_lower in content.lower()
+                        ):
+                            conv_results.append(c)
+            except Exception as e:
+                log.debug(f"Could not search cached conversations: {e}")
+
+            results["conversations"] = conv_results
             self.app.call_from_thread(self.render_results, results)
         except Exception as e:
-            self.app.notify(f"Error searching: {e}", severity="error")
-            self.query_one(LoadingIndicator).add_class("hidden")
+            self.app.call_from_thread(
+                self.app.notify, f"Error searching: {e}", severity="error"
+            )
+            self.app.call_from_thread(
+                self.query_one(LoadingIndicator).add_class, "hidden"
+            )
 
     def render_results(self, results: dict):
         """Render the search results."""
@@ -73,10 +117,12 @@ class SearchScreen(ModalScreen):
         accounts_pane = self.query_one("#search-accounts VerticalScroll")
         hashtags_pane = self.query_one("#search-hashtags VerticalScroll")
         statuses_pane = self.query_one("#search-statuses VerticalScroll")
+        dms_pane = self.query_one("#search-dms VerticalScroll")
 
         accounts_pane.query("*").remove()
         hashtags_pane.query("*").remove()
         statuses_pane.query("*").remove()
+        dms_pane.query("*").remove()
 
         if results.get("accounts"):
             for account in results["accounts"]:
@@ -96,6 +142,12 @@ class SearchScreen(ModalScreen):
         else:
             statuses_pane.mount(Static("No status results.", classes="search-status"))
 
+        if results.get("conversations"):
+            for conv in results["conversations"]:
+                dms_pane.mount(ConversationSummary(conv))
+        else:
+            dms_pane.mount(Static("No direct message results.", classes="search-status"))
+
     @on(events.Click, ".search-result")
     def on_search_result_click(self, event: events.Click) -> None:
         """Handle a click on a search result."""
@@ -112,7 +164,7 @@ class SearchScreen(ModalScreen):
     def action_select_result(self) -> None:
         """Select the currently focused result."""
         focused = self.query_one("*:focus")
-        if isinstance(focused, SearchResult):
+        if isinstance(focused, (SearchResult, ConversationSummary)):
             self.select_result(focused)
 
     def action_view_profile(self) -> None:
@@ -135,3 +187,10 @@ class SearchScreen(ModalScreen):
         elif isinstance(result_widget, HashtagResult):
             self.dismiss()
             self.app.push_screen(HashtagTimeline(result_widget.hashtag["name"], self.app.api))
+        elif isinstance(result_widget, ConversationSummary):
+            self.dismiss()
+            conv = result_widget.conversation
+            last_status_id = (
+                conv.get("last_status", {}).get("id") if conv.get("last_status") else None
+            )
+            self.app.push_screen(ConversationScreen(conv["id"], last_status_id))
