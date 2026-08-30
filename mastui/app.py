@@ -681,68 +681,99 @@ class Mastui(App):
         """Called when the post screen is dismissed."""
         self.resume_timers()
         if result:
-            try:
-                log.info("Sending post...")
-                self.api.status_post(
-                    status=result["content"],
-                    spoiler_text=result["spoiler_text"],
-                    language=result["language"],
-                    poll=result["poll"],
-                    visibility=result["visibility"],
-                )
-                log.info("Post sent successfully.")
-                self.notify("Post sent successfully!", severity="information")
-                self.action_refresh_timelines()
-            except Exception as e:
-                log.error(f"Error sending post: {e}", exc_info=True)
-                self.notify(f"Error sending post: {e}", severity="error")
+            self.run_worker(
+                lambda: self._do_post_status(result),
+                thread=True,
+            )
+
+    def _do_post_status(self, result: dict) -> None:
+        try:
+            log.info("Sending post...")
+            self.api.status_post(
+                status=result["content"],
+                spoiler_text=result["spoiler_text"],
+                language=result["language"],
+                poll=result["poll"],
+                visibility=result["visibility"],
+            )
+            log.info("Post sent successfully.")
+            self.call_from_thread(
+                self.notify, "Post sent successfully!", severity="information"
+            )
+            self.call_from_thread(self.action_refresh_timelines)
+        except Exception as e:
+            log.error(f"Error sending post: {e}", exc_info=True)
+            self.call_from_thread(
+                self.notify, f"Error sending post: {e}", severity="error"
+            )
 
     def on_reply_screen_dismiss(self, result: dict) -> None:
         """Called when the reply screen is dismissed."""
         self.resume_timers()
         if result:
-            try:
-                log.info(f"Sending reply to post {result['in_reply_to_id']}...")
-                self.api.status_post(
-                    status=result["content"],
-                    spoiler_text=result["spoiler_text"],
-                    language=result["language"],
-                    in_reply_to_id=result["in_reply_to_id"],
-                    visibility=result["visibility"],
-                )
-                log.info("Reply sent successfully.")
-                self.notify("Reply sent successfully!", severity="information")
-                self.action_refresh_timelines()
-            except Exception as e:
-                log.error(f"Error sending reply: {e}", exc_info=True)
-                self.notify(f"Error sending reply: {e}", severity="error")
+            self.run_worker(
+                lambda: self._do_reply_status(result),
+                thread=True,
+            )
+
+    def _do_reply_status(self, result: dict) -> None:
+        try:
+            log.info(f"Sending reply to post {result['in_reply_to_id']}...")
+            self.api.status_post(
+                status=result["content"],
+                spoiler_text=result["spoiler_text"],
+                language=result["language"],
+                in_reply_to_id=result["in_reply_to_id"],
+                visibility=result["visibility"],
+            )
+            log.info("Reply sent successfully.")
+            self.call_from_thread(
+                self.notify, "Reply sent successfully!", severity="information"
+            )
+            self.call_from_thread(self.action_refresh_timelines)
+        except Exception as e:
+            log.error(f"Error sending reply: {e}", exc_info=True)
+            self.call_from_thread(
+                self.notify, f"Error sending reply: {e}", severity="error"
+            )
 
     def on_edit_post_screen_dismiss(self, result: tuple) -> None:
         """Called when the edit post screen is dismissed."""
         self.resume_timers()
         if result and result[0] is not None:
             new_content, post_id = result
-            try:
-                log.info(f"Updating post {post_id}...")
-                updated_post = self.api.status_update(
-                    id=post_id,
-                    status=new_content["content"],
-                    spoiler_text=new_content["spoiler_text"],
-                )
-                log.info(f"Post {post_id} updated successfully.")
-                self.notify("Post updated successfully!", severity="information")
+            self.run_worker(
+                lambda: self._do_edit_post(new_content, post_id),
+                thread=True,
+            )
 
-                # Update the post in the cache for all timelines it might be in
+    def _do_edit_post(self, new_content: dict, post_id: str) -> None:
+        try:
+            log.info(f"Updating post {post_id}...")
+            updated_post = self.api.status_update(
+                id=post_id,
+                status=new_content["content"],
+                spoiler_text=new_content["spoiler_text"],
+            )
+            log.info(f"Post {post_id} updated successfully.")
+            self.call_from_thread(
+                self.notify, "Post updated successfully!", severity="information"
+            )
+
+            # Update the post in the cache for all timelines it might be in
+            if self.cache:
                 for timeline_id in [
                     "home",
                     "notifications",
-                ]:  # Add other relevant timelines
+                ]:
                     self.cache.bulk_insert_posts(timeline_id, [updated_post])
 
-                self.post_message(PostStatusUpdate(updated_post))
-            except Exception as e:
-                log.error(f"Error updating post: {e}", exc_info=True)
-                self.notify(f"Error updating post: {e}", severity="error")
+            self.call_from_thread(self.post_message, PostStatusUpdate(updated_post))
+        except Exception as e:
+            log.error(f"Error updating post {post_id}: {e}", exc_info=True)
+            self.call_from_thread(
+                self.notify, f"Error updating post: {e}", severity="error"
+            )
 
     @on(LikePost)
     def handle_like_post(self, message: LikePost):
