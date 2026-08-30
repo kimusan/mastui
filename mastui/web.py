@@ -53,19 +53,32 @@ WEB_HTML = r"""<!DOCTYPE html>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
       background: #0d1117;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
     }
     #terminal-container {
-      width: 100%;
-      height: 100%;
-      padding: 2px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
     }
     .xterm {
-      height: 100%;
+      width: 100% !important;
+      height: 100% !important;
+      padding: 0;
+    }
+    .xterm-viewport {
+      width: 100% !important;
+      height: 100% !important;
     }
     .xterm .xterm-screen {
       image-rendering: pixelated;
@@ -199,8 +212,6 @@ WEB_HTML = r"""<!DOCTYPE html>
     const container = document.getElementById('terminal-container');
     term.open(container);
 
-    fitAddon.fit();
-
     let ws = null;
     let resizeTimeout = null;
     let reconnectAttempts = 0;
@@ -210,8 +221,7 @@ WEB_HTML = r"""<!DOCTYPE html>
     const statusBar = document.getElementById('status-bar');
 
     function notifyResize() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        fitAddon.fit();
+      if (ws && ws.readyState === WebSocket.OPEN && term.cols && term.rows) {
         ws.send(JSON.stringify({
           type: 'resize',
           cols: term.cols,
@@ -220,12 +230,40 @@ WEB_HTML = r"""<!DOCTYPE html>
       }
     }
 
+    function fitTerminal() {
+      try {
+        if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+          fitAddon.fit();
+          notifyResize();
+        }
+      } catch (err) {
+        console.warn('fitTerminal error:', err);
+      }
+    }
+
+    fitTerminal();
+
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => {
+        fitTerminal();
+      });
+      ro.observe(container);
+    }
+
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        fitAddon.fit();
-        notifyResize();
-      }, 150);
+      resizeTimeout = setTimeout(fitTerminal, 50);
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        fitTerminal();
+      });
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(fitTerminal, 50);
+      setTimeout(fitTerminal, 250);
     });
 
     function scheduleReconnect() {
@@ -267,9 +305,10 @@ WEB_HTML = r"""<!DOCTYPE html>
           reconnectTimer = null;
         }
         statusBar.classList.remove('show');
-        fitAddon.fit();
-        notifyResize();
+        fitTerminal();
         term.focus();
+        setTimeout(fitTerminal, 50);
+        setTimeout(fitTerminal, 200);
 
         if (pingInterval) clearInterval(pingInterval);
         pingInterval = setInterval(() => {
@@ -550,23 +589,21 @@ class MastuiWebBridge:
 
         self.resize_pty(self.cols, self.rows)
 
-        is_android = hasattr(sys, "getandroidapilevel") or "ANDROID_DATA" in os.environ or "ANDROID_ROOT" in os.environ
+        is_android = (
+            hasattr(sys, "getandroidapilevel")
+            or "ANDROID_DATA" in os.environ
+            or "ANDROID_ROOT" in os.environ
+        )
 
-        if not is_android and not use_pipes and hasattr(os, "fork") and self.master_fd is not None and slave_fd is not None:
+        if not is_android and not use_pipes and hasattr(pty, "fork"):
             try:
-                pid = os.fork()
+                pid, master_fd = pty.fork()
                 if pid == 0:  # Child process
-                    os.close(self.master_fd)
-                    os.setsid()
-                    os.dup2(slave_fd, 0)
-                    os.dup2(slave_fd, 1)
-                    os.dup2(slave_fd, 2)
-                    if slave_fd > 2:
-                        os.close(slave_fd)
-
                     env = os.environ.copy()
                     env["TERM"] = "xterm-256color"
                     env["COLORTERM"] = "truecolor"
+                    env["COLUMNS"] = str(self.cols)
+                    env["LINES"] = str(self.rows)
 
                     cmd = [sys.executable, "-m", "mastui.app"] + self.cli_args
                     try:
@@ -576,13 +613,14 @@ class MastuiWebBridge:
                         os._exit(1)
 
                 # Parent process
-                os.close(slave_fd)
+                self.master_fd = master_fd
                 self.pid = pid
                 self._running = True
+                self.resize_pty(self.cols, self.rows)
                 self._start_child_reaper()
                 return
             except Exception as e:
-                log.warning(f"os.fork failed ({e}), falling back to in-process execution")
+                log.warning(f"pty.fork failed ({e}), falling back to in-process execution")
 
     def _start_child_reaper(self) -> None:
         """Start a daemon thread to reap the child process when it terminates."""
@@ -716,6 +754,12 @@ class MastuiWebBridge:
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
             except Exception as e:
                 log.debug(f"Could not resize PTY: {e}")
+        if self.pid is not None:
+            try:
+                import signal
+                os.kill(self.pid, signal.SIGWINCH)
+            except Exception as e:
+                log.debug(f"Could not send SIGWINCH to pid {self.pid}: {e}")
         if self.app_instance is not None:
             try:
                 sz = Size(self.cols, self.rows)
