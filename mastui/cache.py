@@ -159,7 +159,12 @@ class Cache:
                 if isinstance(created_at_str, datetime):
                     created_at = created_at_str
                 else:
-                    created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                    try:
+                        created_at = datetime.fromisoformat(
+                            str(created_at_str).replace("Z", "+00:00")
+                        )
+                    except (ValueError, TypeError):
+                        created_at = datetime.now(timezone.utc)
                 
                 posts_to_insert.append((
                     post['id'],
@@ -173,24 +178,27 @@ class Cache:
                 posts_to_insert
             )
             conn.commit()
-            log.info(f"Inserted/updated {len(posts_to_insert)} posts for timeline '{timeline_id}'")
+            log.info(f"Saved {len(posts_to_insert)} posts for timeline '{timeline_id}' to cache.")
         except sqlite3.Error as e:
-            log.error(f"Failed to bulk insert posts: {e}", exc_info=True)
+            log.error(f"Failed to save posts for timeline '{timeline_id}' to cache: {e}", exc_info=True)
         finally:
             if conn:
                 conn.close()
 
     def get_latest_post_timestamp(self, timeline_id: str) -> datetime | None:
-        """Get the timestamp of the latest post in the cache for a timeline."""
+        """Get the timestamp of the latest post for a timeline."""
         conn = self._get_conn()
         if not conn:
             return None
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT MAX(created_at) FROM posts WHERE timeline_id = ?", (timeline_id,))
-            row = cursor.fetchone()
-            if row and row[0]:
-                return datetime.fromisoformat(row[0])
+            result = cursor.fetchone()
+            if result and result[0]:
+                try:
+                    return datetime.fromisoformat(result[0])
+                except (ValueError, TypeError):
+                    return None
             return None
         except sqlite3.Error as e:
             log.error(f"Failed to get latest post timestamp: {e}", exc_info=True)
@@ -199,8 +207,10 @@ class Cache:
             if conn:
                 conn.close()
 
-    def get_posts(self, timeline_id: str, limit: int = 20, max_id: str = None):
-        """Get posts from the database, ordered by ID."""
+    def get_posts(
+        self, timeline_id: str, limit: int = 20, max_id: str | None = None
+    ) -> list[dict]:
+        """Get posts from the database for a timeline, ordered by created_at DESC."""
         conn = self._get_conn()
         if not conn:
             return []
@@ -213,12 +223,12 @@ class Cache:
                 query += " AND id < ?"
                 params.append(max_id)
 
-            query += " ORDER BY id DESC LIMIT ?"
+            query += " ORDER BY created_at DESC, id DESC LIMIT ?"
             params.append(limit)
 
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            return [json.loads(row['data']) for row in rows]
+            return [json.loads(row["data"]) for row in rows]
         except sqlite3.Error as e:
             log.error(f"Failed to get posts: {e}", exc_info=True)
             return []
@@ -255,10 +265,17 @@ class Cache:
             file_path = image_cache_dir / filename
             try:
                 if file_path.is_file():
-                    modified_time = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
+                    stat_res = file_path.stat()
+                    modified_time = datetime.fromtimestamp(
+                        stat_res.st_mtime, tz=timezone.utc
+                    )
                     if modified_time < cutoff:
-                        file_path.unlink()
+                        file_path.unlink(missing_ok=True)
                         count += 1
+            except FileNotFoundError:
+                continue
+            except OSError as e:
+                log.debug(f"Could not prune cache file {file_path}: {e}")
             except Exception as e:
                 log.error(f"Error pruning cache file {file_path}: {e}", exc_info=True)
         
