@@ -132,6 +132,7 @@ class Mastui(App):
         self._profile_load_generation = 0
         self._login_cancel_callback = None
         self.notified_dm_ids = set()
+        self._pending_post_actions = set()
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def get_driver_class(self):
@@ -779,9 +780,16 @@ class Mastui(App):
 
     @on(LikePost)
     def handle_like_post(self, message: LikePost):
+        action_key = ("like", message.post_id)
+        if action_key in self._pending_post_actions:
+            self.notify(
+                "You're pressing like too fast! Action is still processing...",
+                severity="warning",
+            )
+            return
+        self._pending_post_actions.add(action_key)
         self.run_worker(
             lambda: self.do_like_post(message.post_id, message.favourited),
-            exclusive=True,
             thread=True,
         )
 
@@ -792,15 +800,51 @@ class Mastui(App):
             else:
                 post_data = self.api.status_favourite(post_id)
             self.post_message(PostStatusUpdate(post_data))
+        except MastodonAPIError as e:
+            self.post_message(ActionFailed(post_id))
+            err_msg = _mastodon_api_error_message(e)
+            err_lower = err_msg.lower()
+            if any(
+                k in err_lower
+                for k in ("already", "exist", "duplicate", "too fast", "favourited", "favorited")
+            ):
+                log.info("Duplicate like/unlike ignored for post %s: %s", post_id, err_msg)
+                self.call_from_thread(
+                    self.notify,
+                    "You're pressing like too fast! Status was already updated.",
+                    severity="warning",
+                )
+                try:
+                    fresh_post = self.api.status(post_id)
+                    self.post_message(PostStatusUpdate(fresh_post))
+                except Exception:
+                    pass
+                return
+            log.error(f"Error liking/unliking post {post_id}: {e}", exc_info=True)
+            self.call_from_thread(
+                self.notify, f"Error liking post: {err_msg}", severity="error"
+            )
         except Exception as e:
             log.error(f"Error liking/unliking post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
+            self.call_from_thread(
+                self.notify, f"Error liking post: {e}", severity="error"
+            )
+        finally:
+            self._pending_post_actions.discard(("like", post_id))
 
     @on(BoostPost)
     def handle_boost_post(self, message: BoostPost):
+        action_key = ("boost", message.post_id)
+        if action_key in self._pending_post_actions:
+            self.notify(
+                "You're pressing boost too fast! Action is still processing...",
+                severity="warning",
+            )
+            return
+        self._pending_post_actions.add(action_key)
         self.run_worker(
             lambda: self.do_boost_post(message.post_id, message.reblogged),
-            exclusive=True,
             thread=True,
         )
 
@@ -813,23 +857,46 @@ class Mastui(App):
             self.post_message(PostStatusUpdate(post_data))
         except MastodonAPIError as e:
             self.post_message(ActionFailed(post_id))
+            err_msg = _mastodon_api_error_message(e)
+            err_lower = err_msg.lower()
             if not already_reblogged and _mastodon_api_status_code(e) == 403:
-                message = _mastodon_api_error_message(e)
-                log.info("Boost rejected for post %s: %s", post_id, message)
-                self.notify(
+                log.info("Boost rejected for post %s: %s", post_id, err_msg)
+                self.call_from_thread(
+                    self.notify,
                     "This post cannot be boosted because boosting is not allowed.",
                     severity="warning",
                 )
                 return
+            if any(
+                k in err_lower
+                for k in ("already", "exist", "duplicate", "too fast", "reblogged", "repost")
+            ):
+                log.info("Duplicate boost/unboost ignored for post %s: %s", post_id, err_msg)
+                self.call_from_thread(
+                    self.notify,
+                    "You're pressing boost too fast! Status was already updated.",
+                    severity="warning",
+                )
+                try:
+                    fresh_post = self.api.status(post_id)
+                    self.post_message(PostStatusUpdate(fresh_post))
+                except Exception:
+                    pass
+                return
             log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
-            self.notify(
-                f"Error boosting post: {_mastodon_api_error_message(e)}",
+            self.call_from_thread(
+                self.notify,
+                f"Error boosting post: {err_msg}",
                 severity="error",
             )
         except Exception as e:
             log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
             self.post_message(ActionFailed(post_id))
-            self.notify(f"Error boosting post: {e}", severity="error")
+            self.call_from_thread(
+                self.notify, f"Error boosting post: {e}", severity="error"
+            )
+        finally:
+            self._pending_post_actions.discard(("boost", post_id))
 
     @on(DeletePost)
     def handle_delete_post(self, message: DeletePost):
@@ -1349,6 +1416,7 @@ class Mastui(App):
         self.cache = None
         self.me = None
         self.notified_dm_ids = set()
+        self._pending_post_actions.clear()
         self.sub_title = ""
         self.autocomplete_provider = None
 
