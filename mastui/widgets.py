@@ -182,7 +182,19 @@ class Post(Vertical):
         self._rendered_poll = None
         self._rendered_filter_warning = None
         status_to_display = self.post.get("reblog") or self.post
-        self.created_at_str = format_datetime(status_to_display["created_at"])
+        raw_created_at = status_to_display.get("created_at")
+        if isinstance(raw_created_at, datetime):
+            self._created_at_dt = raw_created_at
+        elif raw_created_at:
+            try:
+                self._created_at_dt = datetime.fromisoformat(
+                    str(raw_created_at).replace("Z", "+00:00")
+                )
+            except Exception:
+                self._created_at_dt = None
+        else:
+            self._created_at_dt = None
+        self.created_at_str = format_datetime(raw_created_at) if raw_created_at else ""
 
     def on_mount(self):
         status_to_display = self.post.get("reblog") or self.post
@@ -369,13 +381,7 @@ class Post(Vertical):
         self.app.action_link_clicked(href)
 
     def get_created_at(self) -> datetime | None:
-        status = self.post.get("reblog") or self.post
-        if status and "created_at" in status:
-            ts = status["created_at"]
-            if isinstance(ts, datetime):
-                return ts
-            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        return None
+        return self._created_at_dt
 
 
 class GapIndicator(Widget):
@@ -398,12 +404,25 @@ class Notification(Widget):
         self.add_class("timeline-item")
         self.capture_mouse = True
 
-        created_at = None
-        if self.notif["type"] == "mention":
-            created_at = self.notif["status"]["created_at"]
+        raw_created_at = None
+        if self.notif.get("type") == "mention" and self.notif.get("status"):
+            raw_created_at = self.notif["status"].get("created_at")
         else:
-            created_at = self.notif["created_at"]
-        self.created_at_str = format_datetime(created_at)
+            raw_created_at = self.notif.get("created_at")
+
+        if isinstance(raw_created_at, datetime):
+            self._created_at_dt = raw_created_at
+        elif raw_created_at:
+            try:
+                self._created_at_dt = datetime.fromisoformat(
+                    str(raw_created_at).replace("Z", "+00:00")
+                )
+            except Exception:
+                self._created_at_dt = None
+        else:
+            self._created_at_dt = None
+
+        self.created_at_str = format_datetime(raw_created_at) if raw_created_at else ""
 
     def compose(self):
         notif_type = self.notif["type"]
@@ -587,21 +606,8 @@ class Notification(Widget):
         self.hide_spinner()
 
     def get_created_at(self) -> datetime | None:
-        """Expose the creation time for timeline sorting and gap detection."""
-        created_at = None
-        if self.notif["type"] == "mention" and self.notif.get("status"):
-            created_at = self.notif["status"].get("created_at")
-        else:
-            created_at = self.notif.get("created_at")
-
-        if not created_at:
-            return None
-        if isinstance(created_at, datetime):
-            return created_at
-        try:
-            return datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
-        except Exception:
-            return None
+        """Expose the cached creation time for timeline sorting and gap detection."""
+        return self._created_at_dt
 
     @on(Markdown.LinkClicked)
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
