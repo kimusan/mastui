@@ -154,20 +154,26 @@ class ProfileScreen(ModalScreen):
         """Follow or unfollow the user."""
         if not self.profile:
             return
+        self.run_worker(self._do_follow, thread=True, exclusive=True)
 
+    def _do_follow(self):
         try:
             if self.profile.get("following"):
                 self.api.account_unfollow(self.account_id)
                 self.profile["following"] = False
-                self.app.notify(f"Unfollowed @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Unfollowed @{self.profile.get('acct', '')}"
+                )
             else:
                 self.api.account_follow(self.account_id)
                 self.profile["following"] = True
                 self.profile.pop("follow_forbidden", None)
-                self.app.notify(f"Followed @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Followed @{self.profile.get('acct', '')}"
+                )
 
-            self.run_worker(self.load_profile, thread=True)
-            self._refresh_status_widget()
+            self.load_profile()
+            self.app.call_from_thread(self._refresh_status_widget)
 
         except MastodonAPIError as error:
             self._handle_api_error("follow", error)
@@ -176,19 +182,25 @@ class ProfileScreen(ModalScreen):
         """Mute or unmute the user."""
         if not self.profile:
             return
+        self.run_worker(self._do_mute, thread=True, exclusive=True)
 
+    def _do_mute(self):
         try:
             if self.profile.get("muting"):
                 self.api.account_unmute(self.account_id)
                 self.profile["muting"] = False
-                self.app.notify(f"Unmuted @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Unmuted @{self.profile.get('acct', '')}"
+                )
             else:
                 self.api.account_mute(self.account_id)
                 self.profile["muting"] = True
-                self.app.notify(f"Muted @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Muted @{self.profile.get('acct', '')}"
+                )
 
-            self.run_worker(self.load_profile, thread=True)
-            self._refresh_status_widget()
+            self.load_profile()
+            self.app.call_from_thread(self._refresh_status_widget)
 
         except MastodonAPIError as error:
             self._handle_api_error("mute", error)
@@ -197,19 +209,25 @@ class ProfileScreen(ModalScreen):
         """Block or unblock the user."""
         if not self.profile:
             return
+        self.run_worker(self._do_block, thread=True, exclusive=True)
 
+    def _do_block(self):
         try:
             if self.profile.get("blocking"):
                 self.api.account_unblock(self.account_id)
                 self.profile["blocking"] = False
-                self.app.notify(f"Unblocked @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Unblocked @{self.profile.get('acct', '')}"
+                )
             else:
                 self.api.account_block(self.account_id)
                 self.profile["blocking"] = True
-                self.app.notify(f"Blocked @{self.profile['acct']}")
+                self.app.call_from_thread(
+                    self.app.notify, f"Blocked @{self.profile.get('acct', '')}"
+                )
 
-            self.run_worker(self.load_profile, thread=True)
-            self._refresh_status_widget()
+            self.load_profile()
+            self.app.call_from_thread(self._refresh_status_widget)
 
         except MastodonAPIError as error:
             self._handle_api_error("block", error)
@@ -220,10 +238,12 @@ class ProfileScreen(ModalScreen):
             details = error.args[-1]
         message = details or str(error)
         log.error(f"Error attempting to {action}: {message}", exc_info=True)
-        self.app.notify(f"Unable to {action}: {message}", severity="error")
-        if action == "follow":
+        self.app.call_from_thread(
+            self.app.notify, f"Unable to {action}: {message}", severity="error"
+        )
+        if action == "follow" and self.profile is not None:
             self.profile["follow_forbidden"] = True
-            self._refresh_status_widget(message)
+            self.app.call_from_thread(self._refresh_status_widget, message)
 
     def _format_relationship_status(self, error_message: str | None = None) -> str:
         profile = self.profile or {}
