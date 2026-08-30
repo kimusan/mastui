@@ -43,6 +43,7 @@ hiddenimports = [
     'dateutil.parser',
     'html2text',
     'toml',
+    'mastui.web',
 ]
 
 # Collect all resources from textual and textual_image

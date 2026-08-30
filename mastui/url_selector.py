@@ -3,7 +3,10 @@ from textual.widgets import ListView, ListItem, Label
 from textual.containers import Container, VerticalScroll
 from textual.binding import Binding
 from textual import on
-import clipman
+try:
+    import clipman
+except ImportError:
+    clipman = None
 from urllib.parse import urlparse
 import re
 import logging
@@ -156,21 +159,24 @@ class URLSelectorScreen(ModalScreen):
     def copy_url(self, url: str):
         """Copy the URL to clipboard and dismiss the screen."""
         log.info(f"Copying URL to clipboard: {url}")
-        try:
+        if clipman is not None:
             try:
-                clipman.init()
-            except clipman.exceptions.ClipmanBaseException as e:
-                log.debug(f"Clipboard init issue (continuing): {e}", exc_info=True)
+                try:
+                    clipman.init()
+                except Exception as e:
+                    log.debug(f"Clipboard init issue (continuing): {e}", exc_info=True)
 
-            clipman.set(url)
-        except Exception as e:
-            log.error(f"Failed to copy URL to clipboard: {e}", exc_info=True)
-            self.app.notify(
-                "Failed to copy to clipboard. "
-                "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`).",
-                severity="error",
-            )
-            return
+                clipman.set(url)
+            except Exception as e:
+                log.error(f"Failed to copy URL to clipboard: {e}", exc_info=True)
+                self.app.notify(
+                    "Failed to copy to clipboard. "
+                    "Wayland users may need wl-clipboard (e.g., `sudo apt install wl-clipboard`).",
+                    severity="error",
+                )
+                return
+        else:
+            log.warning("clipman not available on this platform")
 
         self.app.notify(f"Copied to clipboard: {url[:50]}...", severity="information")
         self.dismiss()

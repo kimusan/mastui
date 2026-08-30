@@ -133,6 +133,22 @@ class Mastui(App):
         self._login_cancel_callback = None
         log.debug(f"Mastui app initialized with action: {self.action}")
 
+    def get_driver_class(self):
+        """Return PipeDriver when running on Android or when TEXTUAL_DRIVER / MASTUI_WEB is configured."""
+        if (
+            hasattr(sys, "getandroidapilevel")
+            or "ANDROID_DATA" in os.environ
+            or "ANDROID_ROOT" in os.environ
+            or bool(os.environ.get("TEXTUAL_DRIVER"))
+            or bool(os.environ.get("MASTUI_WEB"))
+        ):
+            try:
+                from mastui.web import PipeDriver
+                return PipeDriver
+            except Exception:
+                pass
+        return super().get_driver_class()
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield CustomHeader()
@@ -362,12 +378,16 @@ class Mastui(App):
     def on_theme_changed(self, event) -> None:
         """Called when the app's theme is changed."""
         new_theme = event.name
-        self.config.theme = new_theme
-        if "light" in new_theme:
-            self.config.preferred_light_theme = new_theme
-        else:
-            self.config.preferred_dark_theme = new_theme
-        self.config.save_config()
+        if self.config is not None:
+            self.config.theme = new_theme
+            if "light" in new_theme:
+                self.config.preferred_light_theme = new_theme
+            else:
+                self.config.preferred_dark_theme = new_theme
+            try:
+                self.config.save_config()
+            except Exception as e:
+                log.debug(f"Could not save config on theme change: {e}")
 
     def show_login_screen(
         self, host: str = None, on_cancel: Callable[[str], None] | None = None
@@ -1284,7 +1304,30 @@ def main():
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
     parser.add_argument("--add-account", action="store_true", help="Add a new account.")
+    parser.add_argument("--web", action="store_true", help="Run Mastui in web browser / WebView mode.")
+    parser.add_argument("--web-host", default="127.0.0.1", help="Host address for web interface (default: 127.0.0.1).")
+    parser.add_argument("--web-port", type=int, default=8000, help="Port for web interface (default: 8000).")
+    parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser.")
     args = parser.parse_args()
+
+    if args.web:
+        from mastui.web import run_server
+
+        forwarded = []
+        if not args.ssl_verify:
+            forwarded.append("--no-ssl-verify")
+        if args.debug:
+            forwarded.append("--debug")
+        if args.add_account:
+            forwarded.append("--add-account")
+
+        run_server(
+            host=args.web_host,
+            port=args.web_port,
+            open_browser=not args.no_browser,
+            cli_args=forwarded,
+        )
+        return
 
     log_file_path = setup_logging(debug=args.debug)
 

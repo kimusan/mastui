@@ -73,3 +73,4 @@ def test_normalize_tree_permissions(tmp_path):
     assert oct(d.stat().st_mode & 0o777) == "0o755"
     assert oct(exe_file.stat().st_mode & 0o777) == "0o755"
     assert oct(data_file.stat().st_mode & 0o777) == "0o644"
+
