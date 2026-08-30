@@ -90,7 +90,11 @@ class Timeline(Static, can_focus=True):
         if anchor_candidate and anchor_candidate.id:
             self.scroll_anchor_id = anchor_candidate.id
         else:
-            all_items = container.query("Post, Notification, ConversationSummary")
+            all_items = [
+                child
+                for child in container.children
+                if isinstance(child, (Post, Notification, ConversationSummary))
+            ]
             if not all_items:
                 return  # Nothing to anchor to
             scroll_y = container.scroll_y
@@ -381,9 +385,12 @@ class Timeline(Static, can_focus=True):
             if max_id:  # older posts
                 # Check for gap
                 first_new_post_ts = new_widgets[0].get_created_at()
-                last_old_post = self.content_container.query(
-                    "Post, Notification"
-                ).last()
+                existing_posts = [
+                    child
+                    for child in self.content_container.children
+                    if isinstance(child, (Post, Notification))
+                ]
+                last_old_post = existing_posts[-1] if existing_posts else None
 
                 if last_old_post and first_new_post_ts:
                     last_old_post_ts = last_old_post.get_created_at()
@@ -475,9 +482,11 @@ class Timeline(Static, can_focus=True):
 
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""
-        all_posts = self.content_container.query(
-            "Post, Notification, ConversationSummary"
-        )
+        all_posts = [
+            child
+            for child in self.content_container.children
+            if isinstance(child, (Post, Notification, ConversationSummary))
+        ]
         if len(all_posts) > MAX_POSTS_IN_UI:
             log.info(
                 f"Pruning posts in {self.id} from the {direction}. Have {len(all_posts)}, max {MAX_POSTS_IN_UI}"
