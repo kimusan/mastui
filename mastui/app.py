@@ -131,6 +131,7 @@ class Mastui(App):
         self._timelines_widget = None
         self._profile_load_generation = 0
         self._login_cancel_callback = None
+        self.notified_dm_ids = set()
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def get_driver_class(self):
@@ -312,42 +313,60 @@ class Mastui(App):
         # Start other background tasks
         if self.config.auto_prune_cache:
             self.run_worker(self.prune_cache, thread=True, exclusive=True)
-        self.set_interval(300, self.check_for_dms)  # Check for DMs every 5 minutes
-        self.call_from_thread(self.check_for_dms)  # Also check right after startup
+        self.set_interval(
+            300,
+            lambda: self.run_worker(self.check_for_dms, thread=True, exclusive=True),
+        )  # Check for DMs every 5 minutes
+        self.run_worker(self.check_for_dms, thread=True, exclusive=True)  # Also check right after startup
 
     def check_for_dms(self):
         """Background worker to check for new direct messages."""
-        header = self.query_one(CustomHeader)
-        if not self.api or self.config.direct_timeline_enabled:
-            header.hide_dm_notification()
+        if not self.api or (self.config and self.config.direct_timeline_enabled):
+            try:
+                header = self.query_one(CustomHeader)
+                self.call_from_thread(header.hide_dm_notification)
+            except Exception:
+                pass
             return
 
         log.debug("Checking for new direct messages in the background...")
         try:
             all_convos = self.api.conversations()  # Fetches up to 20 by default
+            try:
+                header = self.query_one(CustomHeader)
+            except Exception:
+                header = None
+
             if not all_convos:
-                header.hide_dm_notification()
+                if header:
+                    self.call_from_thread(header.hide_dm_notification)
                 return
 
             unread_convos = [c for c in all_convos if c.get("unread")]
 
             if not unread_convos:
-                header.hide_dm_notification()
+                if header:
+                    self.call_from_thread(header.hide_dm_notification)
                 return
 
-            header.show_dm_notification()
+            if header:
+                self.call_from_thread(header.show_dm_notification)
 
             for convo in unread_convos:
                 if convo["id"] not in self.notified_dm_ids:
                     # Find the other participant
                     other_participants = [
-                        acc for acc in convo["accounts"] if acc["id"] != self.me["id"]
+                        acc for acc in convo["accounts"] if self.me and acc["id"] != self.me.get("id")
                     ]
                     if other_participants:
                         participant_name = other_participants[0]["acct"]
-                        self.notify(f"New DM from @{participant_name}", title="New DM")
+                        self.call_from_thread(
+                            self.notify, f"New DM from @{participant_name}", title="New DM"
+                        )
                     else:  # Should not happen, but as a fallback
-                        self.notify("You have a new Direct Message", title="New DM")
+                        self.call_from_thread(
+                            self.notify, "You have a new Direct Message", title="New DM"
+                        )
 
                     self.notified_dm_ids.add(convo["id"])
 
