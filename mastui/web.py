@@ -572,30 +572,13 @@ class MastuiWebBridge:
 
     def start_pty(self) -> None:
         """Spawn mastui inside a pseudo-terminal (fork, in-process PTY, or pipe fallback)."""
-        use_pipes = False
-        slave_fd: Optional[int] = None
-        in_r: Optional[int] = None
-        out_w: Optional[int] = None
-
-        try:
-            self.master_fd, slave_fd = pty.openpty()
-        except Exception as e:
-            log.warning(f"pty.openpty unavailable ({e}), using pipe fallback for terminal I/O")
-            use_pipes = True
-            in_r, in_w = os.pipe()
-            out_r, out_w = os.pipe()
-            self.in_pipe_w = in_w
-            self.out_pipe_r = out_r
-
-        self.resize_pty(self.cols, self.rows)
-
         is_android = (
             hasattr(sys, "getandroidapilevel")
             or "ANDROID_DATA" in os.environ
             or "ANDROID_ROOT" in os.environ
         )
 
-        if not is_android and not use_pipes and hasattr(pty, "fork"):
+        if not is_android and hasattr(pty, "fork"):
             try:
                 pid, master_fd = pty.fork()
                 if pid == 0:  # Child process
@@ -621,6 +604,23 @@ class MastuiWebBridge:
                 return
             except Exception as e:
                 log.warning(f"pty.fork failed ({e}), falling back to in-process execution")
+
+        use_pipes = False
+        slave_fd: Optional[int] = None
+        in_r: Optional[int] = None
+        out_w: Optional[int] = None
+
+        try:
+            self.master_fd, slave_fd = pty.openpty()
+        except Exception as e:
+            log.warning(f"pty.openpty unavailable ({e}), using pipe fallback for terminal I/O")
+            use_pipes = True
+            in_r, in_w = os.pipe()
+            out_r, out_w = os.pipe()
+            self.in_pipe_w = in_w
+            self.out_pipe_r = out_r
+
+        self.resize_pty(self.cols, self.rows)
 
     def _start_child_reaper(self) -> None:
         """Start a daemon thread to reap the child process when it terminates."""
@@ -750,7 +750,9 @@ class MastuiWebBridge:
         os.environ["LINES"] = str(self.rows)
         if self.master_fd is not None:
             try:
-                winsize = struct.pack("HHHH", self.rows, self.cols, 0, 0)
+                winsize = struct.pack(
+                    "HHHH", self.rows, self.cols, self.cols * 10, self.rows * 20
+                )
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
             except Exception as e:
                 log.debug(f"Could not resize PTY: {e}")
