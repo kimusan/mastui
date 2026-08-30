@@ -428,7 +428,8 @@ class PipeDriver(Driver):
             sel.register(in_fileno, selectors.EVENT_READ)
             try:
                 while not self.exit_event.is_set():
-                    for key, mask in sel.select(0.05):
+                    events = sel.select(0.15)
+                    for key, mask in events:
                         if mask & selectors.EVENT_READ:
                             chunk = os.read(in_fileno, 4096)
                             if not chunk:
@@ -733,7 +734,7 @@ class MastuiWebBridge:
         read_fd = self.master_fd if self.master_fd is not None else self.out_pipe_r
         while self._running and read_fd is not None:
             try:
-                r, _, _ = select.select([read_fd], [], [], 0.05)
+                r, _, _ = select.select([read_fd], [], [], 0.2)
                 if r:
                     chunk = os.read(read_fd, 4096)
                     if not chunk:
