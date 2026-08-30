@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
 
+
 def setup_logging(debug=False):
     """Set up logging to a file if debug mode is enabled."""
     if not debug:
-        logging.basicConfig(level=logging.WARNING)
+        logging.basicConfig(level=logging.WARNING, force=True)
         return None
 
     config_dir = Path.home() / ".config" / "mastui"
@@ -17,6 +18,7 @@ def setup_logging(debug=False):
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         filename=log_file,
         filemode="w",  # Overwrite the log file on each run
+        force=True,
     )
 
     # Set logging level for noisy libraries to INFO to reduce noise
