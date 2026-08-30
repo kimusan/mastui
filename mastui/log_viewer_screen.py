@@ -1,9 +1,13 @@
+from collections import deque
 from textual.screen import ModalScreen
 from textual.widgets import Log
 from textual.containers import Vertical
 import logging
 
 log = logging.getLogger(__name__)
+
+MAX_LOG_LINES = 1000
+
 
 class LogViewerScreen(ModalScreen):
     """A modal screen to display the application's log file."""
@@ -25,8 +29,9 @@ class LogViewerScreen(ModalScreen):
         """Load the log file content when the screen is mounted."""
         log_widget = self.query_one(Log)
         try:
-            with open(self.log_file_path, "r") as f:
-                log_widget.write(f.read())
+            with open(self.log_file_path, "r", encoding="utf-8", errors="replace") as f:
+                tail_lines = deque(f, maxlen=MAX_LOG_LINES)
+            log_widget.write("".join(tail_lines))
             log_widget.scroll_end(animate=False)
         except FileNotFoundError:
             log_widget.write(f"ERROR: Log file not found at {self.log_file_path}")
