@@ -492,9 +492,63 @@ class MastuiWebBridge:
                 os.close(slave_fd)
                 self.pid = pid
                 self._running = True
+                self._start_child_reaper()
                 return
             except Exception as e:
                 log.warning(f"os.fork failed ({e}), falling back to in-process execution")
+
+    def _start_child_reaper(self) -> None:
+        """Start a daemon thread to reap the child process when it terminates."""
+        if self.pid is None:
+            return
+
+        def _reap() -> None:
+            try:
+                if self.pid is not None:
+                    os.waitpid(self.pid, 0)
+            except (ChildProcessError, OSError):
+                pass
+            finally:
+                self._running = False
+
+        reaper_thread = threading.Thread(target=_reap, daemon=True, name="pty-child-reaper")
+        reaper_thread.start()
+
+    def stop(self) -> None:
+        """Clean up pseudo-terminal descriptors and gracefully terminate child processes."""
+        self._running = False
+        if self.master_fd is not None:
+            try:
+                os.close(self.master_fd)
+            except Exception:
+                pass
+            self.master_fd = None
+        if self.in_pipe_w is not None:
+            try:
+                os.close(self.in_pipe_w)
+            except Exception:
+                pass
+            self.in_pipe_w = None
+        if self.out_pipe_r is not None:
+            try:
+                os.close(self.out_pipe_r)
+            except Exception:
+                pass
+            self.out_pipe_r = None
+        if self.pid is not None:
+            try:
+                os.kill(self.pid, 15)  # SIGTERM
+                for _ in range(10):
+                    reaped_pid, _ = os.waitpid(self.pid, os.WNOHANG)
+                    if reaped_pid != 0:
+                        break
+                    time.sleep(0.05)
+                else:
+                    os.kill(self.pid, 9)  # SIGKILL
+                    os.waitpid(self.pid, 0)
+            except (ProcessLookupError, ChildProcessError, OSError):
+                pass
+            self.pid = None
 
         # In-process runner for Android / embedded / pipe fallback environments
         def run_in_process() -> None:
@@ -769,23 +823,4 @@ def run_server(
     except (KeyboardInterrupt, SystemExit):
         print("\nStopping Mastui web server...")
     finally:
-        if bridge.master_fd is not None:
-            try:
-                os.close(bridge.master_fd)
-            except Exception:
-                pass
-        if bridge.in_pipe_w is not None:
-            try:
-                os.close(bridge.in_pipe_w)
-            except Exception:
-                pass
-        if bridge.out_pipe_r is not None:
-            try:
-                os.close(bridge.out_pipe_r)
-            except Exception:
-                pass
-        if bridge.pid is not None:
-            try:
-                os.kill(bridge.pid, 9)
-            except Exception:
-                pass
+        bridge.stop()
