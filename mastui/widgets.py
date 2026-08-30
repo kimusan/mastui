@@ -178,6 +178,9 @@ class Post(Vertical):
         self.timeline_id = timeline_id
         self.add_class("timeline-item")
         self.capture_mouse = True
+        self._rendered_content = None
+        self._rendered_poll = None
+        self._rendered_filter_warning = None
         status_to_display = self.post.get("reblog") or self.post
         self.created_at_str = format_datetime(status_to_display["created_at"])
 
@@ -222,16 +225,19 @@ class Post(Vertical):
             self.border_subtitle = author
 
         filter_warning = get_status_filter_warning(status_to_display)
+        self._rendered_filter_warning = filter_warning
         if filter_warning:
             yield Static(safe_markup(filter_warning), classes="filter-warning")
-        content_md = Markdown(get_full_content_md(status_to_display), open_links=False)
+        self._rendered_content = get_full_content_md(status_to_display)
+        content_md = Markdown(self._rendered_content, open_links=False)
         content_md.suppress_click = True
         content_md.can_focus = False
         yield content_md
 
-        if status_to_display.get("poll"):
+        self._rendered_poll = status_to_display.get("poll")
+        if self._rendered_poll:
             yield PollWidget(
-                status_to_display["poll"],
+                self._rendered_poll,
                 timeline_id=self.timeline_id,
                 post_id=status_to_display["id"],
             )
@@ -239,7 +245,7 @@ class Post(Vertical):
         if self.app.config.image_support and status_to_display.get("media_attachments"):
             for media in status_to_display["media_attachments"]:
                 if media["type"] == "image":
-                    yield ImageWidget(media["url"], self.app.config)
+                    yield ImageWidget(media["url"], config=self.app.config, classes="post-image")
 
         with Horizontal(classes="post-footer"):
             yield LoadingIndicator(classes="action-spinner")
@@ -288,54 +294,65 @@ class Post(Vertical):
     def hide_spinner(self):
         self.query_one(".action-spinner").display = False
 
-    def update_from_post(self, post):
+    def update_from_post(self, post, force_content_update: bool = False):
         self.post = post
         status_to_display = self.post.get("reblog") or self.post
 
         # Update classes
-        self.remove_class("favourited", "reblogged")
-        if status_to_display.get("favourited"):
-            self.add_class("favourited")
-        if status_to_display.get("reblogged"):
-            self.add_class("reblogged")
+        self.set_class(bool(status_to_display.get("favourited")), "favourited")
+        self.set_class(bool(status_to_display.get("reblogged")), "reblogged")
 
         # Update stats
-        self.query_one("#boost-count").update(
-            f"🚀 {status_to_display.get('reblogs_count', 0)}"
-        )
-        self.query_one("#like-count").update(
-            f"💖 {status_to_display.get('favourites_count', 0)}"
-        )
+        try:
+            self.query_one("#boost-count").update(
+                f"🚀 {status_to_display.get('reblogs_count', 0)}"
+            )
+            self.query_one("#like-count").update(
+                f"💖 {status_to_display.get('favourites_count', 0)}"
+            )
+        except Exception:
+            pass
         self.hide_spinner()
 
-        # Force re-render of the content
-        for md in self.query(Markdown):
-            md.remove()
-        for warning in self.query(".filter-warning"):
-            warning.remove()
-        filter_warning = get_status_filter_warning(status_to_display)
-        if filter_warning:
-            self.mount(
-                Static(safe_markup(filter_warning), classes="filter-warning"),
-                before=self.query_one(".post-footer"),
-            )
-        content_md = Markdown(get_full_content_md(status_to_display), open_links=False)
-        content_md.suppress_click = True
-        content_md.can_focus = False
-        self.mount(content_md, before=self.query_one(".post-footer"))
+        new_content = get_full_content_md(status_to_display)
+        new_warning = get_status_filter_warning(status_to_display)
+        new_poll = status_to_display.get("poll")
 
-        # Re-render the poll if it exists
-        for poll_widget in self.query(PollWidget):
-            poll_widget.remove()
-        if status_to_display.get("poll"):
-            self.mount(
-                PollWidget(
-                    status_to_display["poll"],
-                    timeline_id=self.timeline_id,
-                    post_id=status_to_display["id"],
-                ),
-                after=self.query_one(".post-footer"),
-            )
+        # Only rebuild markdown and poll subtrees if content actually changed
+        if (
+            force_content_update
+            or new_content != self._rendered_content
+            or new_warning != self._rendered_filter_warning
+        ):
+            self._rendered_content = new_content
+            self._rendered_filter_warning = new_warning
+            for md in self.query(Markdown):
+                md.remove()
+            for warning in self.query(".filter-warning"):
+                warning.remove()
+            if new_warning:
+                self.mount(
+                    Static(safe_markup(new_warning), classes="filter-warning"),
+                    before=self.query_one(".post-footer"),
+                )
+            content_md = Markdown(new_content, open_links=False)
+            content_md.suppress_click = True
+            content_md.can_focus = False
+            self.mount(content_md, before=self.query_one(".post-footer"))
+
+        if force_content_update or new_poll != self._rendered_poll:
+            self._rendered_poll = new_poll
+            for poll_widget in self.query(PollWidget):
+                poll_widget.remove()
+            if new_poll:
+                self.mount(
+                    PollWidget(
+                        new_poll,
+                        timeline_id=self.timeline_id,
+                        post_id=status_to_display["id"],
+                    ),
+                    after=self.query_one(".post-footer"),
+                )
 
     @on(Markdown.LinkClicked)
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
