@@ -554,6 +554,10 @@ class Timeline(Static, can_focus=True):
         """Proxy view_profile to the content container."""
         self.content_container.view_profile()
 
+    def copy_link(self) -> None:
+        """Proxy copy_link to the content container."""
+        self.content_container.copy_link()
+
     def go_to_top(self) -> None:
         """Proxy go_to_top to the content container."""
         self.content_container.go_to_top()

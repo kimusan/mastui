@@ -240,3 +240,26 @@ class TimelineContent(VerticalScroll):
             self.app.notify(
                 "No post selected or post has no content.", severity="warning"
             )
+
+    def copy_link(self) -> None:
+        """Copy the URL of the selected post to clipboard."""
+        status = self._get_status_for_action()
+        if not status:
+            self.app.notify("No post selected to copy link.", severity="warning")
+            return
+        url = status.get("url") or status.get("uri")
+        if not url:
+            self.app.notify("Selected post has no URL.", severity="warning")
+            return
+
+        try:
+            import clipman
+            try:
+                clipman.init()
+            except Exception:
+                pass
+            clipman.set(url)
+            self.app.notify(f"Copied link to clipboard: {url}")
+        except Exception as e:
+            log.debug(f"Failed to copy to clipboard via clipman: {e}")
+            self.app.notify(f"Link: {url}")

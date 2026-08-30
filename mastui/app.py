@@ -1241,6 +1241,31 @@ class Mastui(App):
         else:
             self.notify("No post selected or post has no content.", severity="warning")
 
+    def action_copy_link(self) -> None:
+        """An action to copy the selected post link to clipboard."""
+        if isinstance(self.screen, ModalScreen) and hasattr(
+            self.screen, "selected_item"
+        ):
+            selected_item = self.screen.selected_item
+            if isinstance(selected_item, Post):
+                status = selected_item.post.get("reblog") or selected_item.post
+                url = status.get("url") or status.get("uri")
+                if url:
+                    try:
+                        import clipman
+                        try:
+                            clipman.init()
+                        except Exception:
+                            pass
+                        clipman.set(url)
+                    except Exception:
+                        pass
+                    self.notify(f"Copied link to clipboard: {url}")
+                    return
+        focused = self.query("Timeline:focus")
+        if focused:
+            focused.first().copy_link()
+
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
         if isinstance(self.screen, ModalScreen):
