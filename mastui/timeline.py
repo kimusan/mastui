@@ -446,19 +446,32 @@ class Timeline(Static, can_focus=True):
         if self.id != "notifications" or not notifications:
             return
 
-        config = self.app.config
+        config = getattr(self.app, "config", None)
+        if not config:
+            return
+
         for notif in notifications:
             acct = notif["account"]["acct"]
             if notif["type"] == "mention" and config.notifications_popups_mentions:
-                self.app.notify(f"New mention from @{acct}", title="New Mention")
+                self.app.call_from_thread(
+                    self.app.notify, f"New mention from @{acct}", title="New Mention"
+                )
             elif notif["type"] == "follow" and config.notifications_popups_follows:
-                self.app.notify(f"@{acct} followed you", title="New Follower")
+                self.app.call_from_thread(
+                    self.app.notify, f"@{acct} followed you", title="New Follower"
+                )
             elif notif["type"] == "reblog" and config.notifications_popups_reblogs:
-                self.app.notify(f"@{acct} boosted your post", title="New Boost")
+                self.app.call_from_thread(
+                    self.app.notify, f"@{acct} boosted your post", title="New Boost"
+                )
             elif (
                 notif["type"] == "favourite" and config.notifications_popups_favourites
             ):
-                self.app.notify(f"@{acct} favourited your post", title="New Favourite")
+                self.app.call_from_thread(
+                    self.app.notify,
+                    f"@{acct} favourited your post",
+                    title="New Favourite",
+                )
 
     def prune_posts(self, direction: str = "bottom"):
         """Removes posts from the UI if there are too many."""
