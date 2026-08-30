@@ -102,7 +102,7 @@ WEB_HTML = r"""<!DOCTYPE html>
 <body>
   <div id="status-bar">
     <span id="status-msg">Connecting to Mastui...</span>
-    <button id="reconnect-btn" onclick="connect()">Reconnect</button>
+    <button id="reconnect-btn" onclick="manualReconnect()">Reconnect</button>
   </div>
   <div id="terminal-container"></div>
 
@@ -201,6 +201,9 @@ WEB_HTML = r"""<!DOCTYPE html>
 
     let ws = null;
     let resizeTimeout = null;
+    let reconnectAttempts = 0;
+    let reconnectTimer = null;
+    let pingInterval = null;
     const statusMsg = document.getElementById('status-msg');
     const statusBar = document.getElementById('status-bar');
 
@@ -223,20 +226,55 @@ WEB_HTML = r"""<!DOCTYPE html>
       }, 150);
     });
 
+    function scheduleReconnect() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pingInterval) clearInterval(pingInterval);
+      const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 10000);
+      reconnectAttempts++;
+      statusMsg.textContent = `Disconnected. Reconnecting in ${(delay/1000).toFixed(1)}s... (attempt ${reconnectAttempts})`;
+      statusBar.classList.add('show');
+      reconnectTimer = setTimeout(() => {
+        connect();
+      }, delay);
+    }
+
+    window.manualReconnect = function() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectAttempts = 0;
+      connect();
+    };
+
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
-      statusMsg.textContent = 'Connecting...';
-      statusBar.classList.remove('show');
+      statusMsg.textContent = reconnectAttempts > 0 ? `Connecting (attempt ${reconnectAttempts})...` : 'Connecting...';
+      statusBar.classList.add('show');
 
-      ws = new WebSocket(wsUrl);
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (err) {
+        scheduleReconnect();
+        return;
+      }
 
       ws.onopen = () => {
+        reconnectAttempts = 0;
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
         statusBar.classList.remove('show');
         fitAddon.fit();
         notifyResize();
         term.focus();
+
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 30000);
       };
 
       ws.onmessage = (event) => {
@@ -251,13 +289,11 @@ WEB_HTML = r"""<!DOCTYPE html>
       };
 
       ws.onclose = () => {
-        statusMsg.textContent = 'Disconnected from Mastui session';
-        statusBar.classList.add('show');
+        scheduleReconnect();
       };
 
       ws.onerror = () => {
-        statusMsg.textContent = 'Connection error';
-        statusBar.classList.add('show');
+        scheduleReconnect();
       };
     }
 
