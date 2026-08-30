@@ -65,20 +65,13 @@ WEB_HTML = r"""<!DOCTYPE html>
       position: absolute;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
       width: 100vw;
       height: 100vh;
       padding: 0;
       margin: 0;
       overflow: hidden;
-    }
-    .xterm {
-      width: 100% !important;
-      height: 100% !important;
-      padding: 0;
-    }
-    .xterm-viewport {
-      width: 100% !important;
-      height: 100% !important;
     }
     .xterm .xterm-screen {
       image-rendering: pixelated;
@@ -585,8 +578,8 @@ class MastuiWebBridge:
                     env = os.environ.copy()
                     env["TERM"] = "xterm-256color"
                     env["COLORTERM"] = "truecolor"
-                    env["COLUMNS"] = str(self.cols)
-                    env["LINES"] = str(self.rows)
+                    env.pop("COLUMNS", None)
+                    env.pop("LINES", None)
 
                     cmd = [sys.executable, "-m", "mastui.app"] + self.cli_args
                     try:
@@ -621,6 +614,66 @@ class MastuiWebBridge:
             self.out_pipe_r = out_r
 
         self.resize_pty(self.cols, self.rows)
+
+        # In-process runner for Android / embedded / pipe fallback environments
+        def run_in_process() -> None:
+            orig_stdin = os.dup(0)
+            orig_stdout = os.dup(1)
+            orig_stderr = os.dup(2)
+            try:
+                if not use_pipes and slave_fd is not None:
+                    os.dup2(slave_fd, 0)
+                    os.dup2(slave_fd, 1)
+                    os.dup2(slave_fd, 2)
+                elif in_r is not None and out_w is not None:
+                    os.dup2(in_r, 0)
+                    os.dup2(out_w, 1)
+                    os.dup2(out_w, 2)
+
+                os.environ["TERM"] = "xterm-256color"
+                os.environ["COLORTERM"] = "truecolor"
+
+                from mastui.app import Mastui, setup_logging
+
+                debug = "--debug" in self.cli_args
+                ssl_verify = "--no-ssl-verify" not in self.cli_args
+                add_account = "--add-account" in self.cli_args
+                action = "add_account" if add_account else None
+
+                if use_pipes or is_android:
+                    PipeDriver.in_fd = in_r if in_r is not None else 0
+                    PipeDriver.out_fd = out_w if out_w is not None else 1
+                    os.environ["MASTUI_WEB"] = "1"
+                    os.environ["TEXTUAL_DRIVER"] = "mastui.web:PipeDriver"
+
+                log_file_path = setup_logging(debug=debug)
+                app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
+                app.log_file_path = log_file_path
+                self.app_instance = app
+                app.run(size=(self.cols, self.rows))
+            except Exception as ex:
+                print(f"Error in in-process Mastui execution: {ex}", file=sys.stderr)
+            finally:
+                try:
+                    os.dup2(orig_stdin, 0)
+                    os.dup2(orig_stdout, 1)
+                    os.dup2(orig_stderr, 2)
+                    os.close(orig_stdin)
+                    os.close(orig_stdout)
+                    os.close(orig_stderr)
+                    if not use_pipes and slave_fd is not None:
+                        os.close(slave_fd)
+                    elif use_pipes:
+                        if in_r is not None:
+                            os.close(in_r)
+                        if out_w is not None:
+                            os.close(out_w)
+                except Exception:
+                    pass
+
+        thread = threading.Thread(target=run_in_process, name="MastuiInProcess", daemon=True)
+        thread.start()
+        self._running = True
 
     def _start_child_reaper(self) -> None:
         """Start a daemon thread to reap the child process when it terminates."""
@@ -680,68 +733,6 @@ class MastuiWebBridge:
             except Exception:
                 pass
             self._broadcast_task = None
-
-        # In-process runner for Android / embedded / pipe fallback environments
-        def run_in_process() -> None:
-            orig_stdin = os.dup(0)
-            orig_stdout = os.dup(1)
-            orig_stderr = os.dup(2)
-            try:
-                if not use_pipes and slave_fd is not None:
-                    os.dup2(slave_fd, 0)
-                    os.dup2(slave_fd, 1)
-                    os.dup2(slave_fd, 2)
-                elif in_r is not None and out_w is not None:
-                    os.dup2(in_r, 0)
-                    os.dup2(out_w, 1)
-                    os.dup2(out_w, 2)
-
-                os.environ["TERM"] = "xterm-256color"
-                os.environ["COLORTERM"] = "truecolor"
-                os.environ["COLUMNS"] = str(self.cols)
-                os.environ["LINES"] = str(self.rows)
-
-                from mastui.app import Mastui, setup_logging
-
-                debug = "--debug" in self.cli_args
-                ssl_verify = "--no-ssl-verify" not in self.cli_args
-                add_account = "--add-account" in self.cli_args
-                action = "add_account" if add_account else None
-
-                if use_pipes or is_android:
-                    PipeDriver.in_fd = in_r if in_r is not None else 0
-                    PipeDriver.out_fd = out_w if out_w is not None else 1
-                    os.environ["MASTUI_WEB"] = "1"
-                    os.environ["TEXTUAL_DRIVER"] = "mastui.web:PipeDriver"
-
-                log_file_path = setup_logging(debug=debug)
-                app = Mastui(action=action, ssl_verify=ssl_verify, debug=debug)
-                app.log_file_path = log_file_path
-                self.app_instance = app
-                app.run(size=(self.cols, self.rows))
-            except Exception as ex:
-                print(f"Error in in-process Mastui execution: {ex}", file=sys.stderr)
-            finally:
-                try:
-                    os.dup2(orig_stdin, 0)
-                    os.dup2(orig_stdout, 1)
-                    os.dup2(orig_stderr, 2)
-                    os.close(orig_stdin)
-                    os.close(orig_stdout)
-                    os.close(orig_stderr)
-                    if not use_pipes and slave_fd is not None:
-                        os.close(slave_fd)
-                    elif use_pipes:
-                        if in_r is not None:
-                            os.close(in_r)
-                        if out_w is not None:
-                            os.close(out_w)
-                except Exception:
-                    pass
-
-        thread = threading.Thread(target=run_in_process, name="MastuiInProcess", daemon=True)
-        thread.start()
-        self._running = True
 
     def resize_pty(self, cols: int, rows: int) -> None:
         self.cols = max(20, cols)
