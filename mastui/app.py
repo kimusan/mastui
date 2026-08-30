@@ -1359,6 +1359,7 @@ def main():
     parser.add_argument("--web", action="store_true", help="Run Mastui in web browser / WebView mode.")
     parser.add_argument("--web-host", default="127.0.0.1", help="Host address for web interface (default: 127.0.0.1).")
     parser.add_argument("--web-port", type=int, default=8000, help="Port for web interface (default: 8000).")
+    parser.add_argument("--web-token", default=None, help="Secret token required to access web terminal session.")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser.")
     args = parser.parse_args()
 
@@ -1378,6 +1379,7 @@ def main():
             port=args.web_port,
             open_browser=not args.no_browser,
             cli_args=forwarded,
+            auth_token=args.web_token,
         )
         return
 

@@ -97,3 +97,47 @@ async def test_websocket_connection_framing():
     frag_conn = WebSocketConnection(reader=frag_reader, writer=writer)
     full_msg = await frag_conn.read_frame()
     assert full_msg == "hello world"
+
+
+@pytest.mark.asyncio
+async def test_web_auth_token():
+    from mastui.web import handle_http_and_ws
+
+    class MockAsyncReader:
+        def __init__(self, data: bytes):
+            self.lines = [line + b"\n" for line in data.split(b"\n")]
+
+        async def readline(self):
+            if self.lines:
+                return self.lines.pop(0)
+            return b""
+
+    class MockAsyncWriter:
+        def __init__(self):
+            self.data = bytearray()
+            self.closed = False
+
+        def write(self, d):
+            self.data.extend(d)
+
+        async def drain(self):
+            pass
+
+        def close(self):
+            self.closed = True
+
+    bridge = MastuiWebBridge()
+
+    # Request without token when token required -> 401 Unauthorized
+    req_no_token = b"GET / HTTP/1.1\r\nHost: localhost:8000\r\n\r\n"
+    r1 = MockAsyncReader(req_no_token)
+    w1 = MockAsyncWriter()
+    await handle_http_and_ws(r1, w1, bridge, auth_token="secret123")
+    assert b"401 Unauthorized" in bytes(w1.data)
+
+    # Request with valid query token -> 200 OK
+    req_valid = b"GET /?token=secret123 HTTP/1.1\r\nHost: localhost:8000\r\n\r\n"
+    r2 = MockAsyncReader(req_valid)
+    w2 = MockAsyncWriter()
+    await handle_http_and_ws(r2, w2, bridge, auth_token="secret123")
+    assert b"200 OK" in bytes(w2.data)

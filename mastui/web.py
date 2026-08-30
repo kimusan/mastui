@@ -24,6 +24,7 @@ import sys
 import termios
 import threading
 import time
+import urllib.parse
 import webbrowser
 from typing import TYPE_CHECKING, Optional, Set
 
@@ -120,52 +121,53 @@ WEB_HTML = r"""<!DOCTYPE html>
         background: '#0d1117',
         foreground: '#c9d1d9',
         cursor: '#58a6ff',
-        selectionBackground: '#1f6feb44',
+        selectionBackground: 'rgba(56, 139, 253, 0.4)'
       }
     });
 
     const fitAddon = new FitAddon.FitAddon();
+    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+    const unicode11Addon = new Unicode11Addon.Unicode11Addon();
     term.loadAddon(fitAddon);
-    if (typeof WebLinksAddon !== 'undefined' && WebLinksAddon.WebLinksAddon) {
-      term.loadAddon(new WebLinksAddon.WebLinksAddon());
-    }
-    let unicode11Instance = null;
-    if (typeof Unicode11Addon !== 'undefined' && Unicode11Addon.Unicode11Addon) {
-      unicode11Instance = new Unicode11Addon.Unicode11Addon();
-      term.loadAddon(unicode11Instance);
-      term.unicode.activeVersion = '11';
-    }
+    term.loadAddon(webLinksAddon);
+    term.loadAddon(unicode11Addon);
+    term.unicode.activeVersion = '11';
 
-    // Register comprehensive modern Unicode provider matching Python Rich / Textual (Unicode 15+)
+    let unicode11Instance = null;
+    try {
+      unicode11Instance = unicode11Addon._unicode11 || unicode11Addon._provider || unicode11Addon;
+    } catch (e) {}
+
     const modernUnicodeProvider = {
       version: 'unicode-modern',
-      wcwidth: function(codepoint) {
-        // Zero-width characters (ZWJ, variation selectors, combining marks)
-        if (codepoint === 0x200D || (codepoint >= 0xFE00 && codepoint <= 0xFE0F) || (codepoint >= 0xE0100 && codepoint <= 0xE01EF)) {
+      wcwidth: (codepoint) => {
+        if (codepoint === 0xFE0F || codepoint === 0xFE0E || (codepoint >= 0xE0020 && codepoint <= 0xE007F)) {
           return 0;
         }
-        // Regional Indicator Symbols (U+1F1E6 to U+1F1FF: Country Flags like 🇮🇹, 🇩🇰)
-        // Each indicator is width 1 so a pair of indicators forms a 2-cell flag
-        if (codepoint >= 0x1F1E6 && codepoint <= 0x1F1FF) {
+        if ((codepoint >= 0x1F3FB && codepoint <= 0x1F3FF) || (codepoint >= 0x1F9B0 && codepoint <= 0x1F9B3)) {
+          return 0;
+        }
+        if (codepoint >= 0x200D && codepoint <= 0x200D) {
+          return 0;
+        }
+        if (codepoint >= 0x0300 && codepoint <= 0x036F) {
+          return 0;
+        }
+        if (codepoint >= 0x20 && codepoint <= 0x7E) {
           return 1;
         }
-        // Enclosed Alphanumeric, Squared Latin, and Alchemical/Geometric symbols (width 1)
         if ((codepoint >= 0x1F100 && codepoint <= 0x1F16F) || (codepoint >= 0x1F190 && codepoint <= 0x1F1AC) || (codepoint >= 0x1F700 && codepoint <= 0x1F8FF) || (codepoint >= 0x1F000 && codepoint <= 0x1F09F)) {
           return 1;
         }
-        // Primary Emoji Blocks (U+1F300..U+1F6FF, U+1F900..U+1FAFF, U+1F200..U+1F251, U+1F0A0..U+1F0FF)
         if ((codepoint >= 0x1F300 && codepoint <= 0x1F6FF) || (codepoint >= 0x1F900 && codepoint <= 0x1FAFF) || (codepoint >= 0x1F200 && codepoint <= 0x1F251) || (codepoint >= 0x1F0A0 && codepoint <= 0x1F0FF)) {
           return 2;
         }
-        // Remaining Supplementary Multilingual Plane
         if (codepoint >= 0x1F000 && codepoint <= 0x1FFFF) {
           return 2;
         }
-        // BMP Symbols and Dingbats with emoji presentation (U+2600..U+27BF, stars U+2B50..U+2B55, symbols)
         if ((codepoint >= 0x2600 && codepoint <= 0x27BF) || (codepoint >= 0x2B50 && codepoint <= 0x2B55) || codepoint === 0x231A || codepoint === 0x231B || (codepoint >= 0x23E9 && codepoint <= 0x23F3) || (codepoint >= 0x23F8 && codepoint <= 0x23FA) || (codepoint >= 0x25AA && codepoint <= 0x25AB) || (codepoint >= 0x25FB && codepoint <= 0x25FE)) {
           return 2;
         }
-        // Standard CJK and Fullwidth ranges
         if (codepoint >= 0x1100 && (
           codepoint <= 0x115F ||
           codepoint === 0x2329 || codepoint === 0x232A ||
@@ -246,7 +248,7 @@ WEB_HTML = r"""<!DOCTYPE html>
 
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/ws${window.location.search}`;
       
       statusMsg.textContent = reconnectAttempts > 0 ? `Connecting (attempt ${reconnectAttempts})...` : 'Connecting...';
       statusBar.classList.add('show');
@@ -801,6 +803,7 @@ async def handle_http_and_ws(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
     bridge: MastuiWebBridge,
+    auth_token: Optional[str] = None,
 ) -> None:
     """Handle incoming HTTP requests and WebSocket handshakes."""
     try:
@@ -808,12 +811,12 @@ async def handle_http_and_ws(
         if not request_line:
             writer.close()
             return
-        
+
         parts = request_line.decode("utf-8").strip().split()
         if len(parts) < 2:
             writer.close()
             return
-        
+
         method, path = parts[0], parts[1]
         headers = {}
         while True:
@@ -825,11 +828,50 @@ async def handle_http_and_ws(
                 k, v = header_str.split(":", 1)
                 headers[k.strip().lower()] = v.strip()
 
+        # Parse query string for token authentication
+        path_only, _, query_str = path.partition("?")
+        query_params = urllib.parse.parse_qs(query_str) if query_str else {}
+
+        if auth_token:
+            provided_token = None
+            if "token" in query_params:
+                provided_token = query_params["token"][0]
+            elif "authorization" in headers:
+                auth_val = headers["authorization"]
+                if auth_val.lower().startswith("bearer "):
+                    provided_token = auth_val[7:].strip()
+                else:
+                    provided_token = auth_val
+
+            if provided_token != auth_token:
+                body = (
+                    b"<!DOCTYPE html><html><head><title>401 Unauthorized</title></head>"
+                    b"<body style='font-family:sans-serif;text-align:center;padding:50px;background:#0d1117;color:#c9d1d9;'>"
+                    b"<h2>401 Unauthorized</h2>"
+                    b"<p>A valid access token is required to connect to this Mastui session.</p>"
+                    b"</body></html>"
+                )
+                resp = (
+                    "HTTP/1.1 401 Unauthorized\r\n"
+                    "Content-Type: text/html; charset=utf-8\r\n"
+                    f"Content-Length: {len(body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode() + body
+                writer.write(resp)
+                await writer.drain()
+                writer.close()
+                return
+
         # Handle WebSocket Upgrade
-        if headers.get("upgrade", "").lower() == "websocket" and "sec-websocket-key" in headers:
+        if (
+            headers.get("upgrade", "").lower() == "websocket"
+            and "sec-websocket-key" in headers
+        ):
             key = headers["sec-websocket-key"]
             guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-            accept = base64.b64encode(hashlib.sha1((key + guid).encode()).digest()).decode()
+            accept = base64.b64encode(
+                hashlib.sha1((key + guid).encode()).digest()
+            ).decode()
 
             response = (
                 "HTTP/1.1 101 Switching Protocols\r\n"
@@ -847,7 +889,9 @@ async def handle_http_and_ws(
             with bridge._history_lock:
                 if bridge.history_buffer:
                     replay_text = "".join(bridge.history_buffer)
-                    await ws.send_text(json.dumps({"type": "output", "data": replay_text}))
+                    await ws.send_text(
+                        json.dumps({"type": "output", "data": replay_text})
+                    )
 
             # Trigger a full redraw from Textual if running
             if bridge.app_instance is not None:
@@ -900,6 +944,7 @@ def run_server(
     port: int = 8000,
     open_browser: bool = True,
     cli_args: list[str] | None = None,
+    auth_token: str | None = None,
 ) -> None:
     """Run the Mastui web bridge server."""
     bridge = MastuiWebBridge(args=cli_args)
@@ -910,12 +955,13 @@ def run_server(
         bridge.start_reader_thread(loop)
 
         server = await asyncio.start_server(
-            lambda r, w: handle_http_and_ws(r, w, bridge),
+            lambda r, w: handle_http_and_ws(r, w, bridge, auth_token=auth_token),
             host,
             port,
         )
 
-        url = f"http://{host}:{port}"
+        token_query = f"?token={auth_token}" if auth_token else ""
+        url = f"http://{host}:{port}/{token_query}"
         print(f"\n=======================================================")
         print(f"  Mastui Web Interface running at: {url}")
         print(f"  Press Ctrl+C to stop the server.")
