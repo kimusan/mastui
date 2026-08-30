@@ -54,3 +54,42 @@ def test_like_and_boost_throttling_and_error_handling():
         "You're pressing like too fast! Status was already updated.",
         severity="warning",
     )
+
+
+def test_modal_actions_guarded_before_timelines_ready():
+    from textual.screen import Screen
+    from mastui.help_screen import HelpScreen
+    from mastui.splash import SplashScreen
+
+    app = Mastui()
+    app.push_screen = MagicMock()
+    app.pause_timers = MagicMock()
+
+    # Setup base screen on stack
+    base_screen = Screen()
+    app._screen_stack.append(base_screen)
+
+    # When timelines are not ready, action_show_help should do nothing
+    assert not app._timelines_ready
+    app.action_show_help()
+    app.push_screen.assert_not_called()
+
+    # When screen is SplashScreen, action_show_help should do nothing
+    app._timelines_ready = True
+    splash = SplashScreen()
+    app._screen_stack.append(splash)
+    app.action_show_help()
+    app.push_screen.assert_not_called()
+
+    # When timelines are ready and splash is dismissed, action_show_help pushes HelpScreen
+    app._screen_stack.remove(splash)
+    app.action_show_help()
+    assert app.push_screen.call_count == 1
+    screen_arg = app.push_screen.call_args[0][0]
+    assert isinstance(screen_arg, HelpScreen)
+
+    # When HelpScreen is already on the stack, it should not be pushed again
+    app._screen_stack.append(screen_arg)
+    app.action_show_help()
+    assert app.push_screen.call_count == 1
+

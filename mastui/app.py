@@ -133,6 +133,7 @@ class Mastui(App):
         self._login_cancel_callback = None
         self.notified_dm_ids = set()
         self._pending_post_actions = set()
+        self._timelines_ready = False
         log.debug(f"Mastui app initialized with action: {self.action}")
 
     def get_driver_class(self):
@@ -520,30 +521,44 @@ class Mastui(App):
         else:
             self.theme = self.config.preferred_light_theme
 
+    def _is_modal_or_splash_active(self) -> bool:
+        """Check whether modal dialogs or splash screen are active, or timelines not yet ready."""
+        if not self._timelines_ready:
+            return True
+        try:
+            screen = self.screen
+            if isinstance(screen, (ModalScreen, SplashScreen)):
+                return True
+        except Exception:
+            return True
+        return False
+
     def action_open_options(self) -> None:
         """An action to open the options screen."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
             return
         self.pause_timers()
         self.push_screen(ConfigScreen(), self.on_config_screen_dismiss)
 
     def action_open_filters(self) -> None:
         """An action to open the filter manager screen."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
             return
         self.pause_timers()
         self.push_screen(FiltersScreen(self.api), self.on_filters_screen_dismiss)
 
     def action_show_help(self) -> None:
         """An action to show the help screen."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
+            return
+        if any(isinstance(s, HelpScreen) for s in self._screen_stack):
             return
         self.pause_timers()
         self.push_screen(HelpScreen(), self.on_help_screen_dismiss)
 
     def action_search(self) -> None:
         """An action to open the search screen."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
             return
         self.pause_timers()
         log.debug(f"SEARCH: API object base URL is {self.api.api_base_url}")
@@ -577,13 +592,15 @@ class Mastui(App):
 
     def action_refresh_timelines(self) -> None:
         """An action to refresh the timelines."""
+        if not self._timelines_ready:
+            return
         log.info("Refreshing all timelines...")
         for timeline in self.query(Timeline):
             timeline.refresh_posts()
 
     def action_compose_post(self) -> None:
         """An action to compose a new post."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
             return
         self.pause_timers()
         self.push_screen(
@@ -1335,7 +1352,7 @@ class Mastui(App):
 
     def action_switch_profile(self) -> None:
         """An action to switch the user profile."""
-        if isinstance(self.screen, ModalScreen):
+        if self._is_modal_or_splash_active():
             return
         self.pause_timers()
         profiles = profile_manager.get_profiles()
@@ -1377,8 +1394,21 @@ class Mastui(App):
         self.bind("x", "show_urls", description="Extract URLs from post", show=False)
 
     def _dismiss_splash_screen(self) -> None:
+        self._timelines_ready = True
+        for screen in list(self._screen_stack):
+            if isinstance(screen, SplashScreen):
+                try:
+                    if self.screen is screen:
+                        self.pop_screen()
+                    else:
+                        self._screen_stack.remove(screen)
+                except Exception:
+                    pass
         if isinstance(self.screen, SplashScreen):
-            self.pop_screen()
+            try:
+                self.pop_screen()
+            except Exception:
+                pass
 
     def get_autocomplete_provider(self) -> AutocompleteProvider | None:
         if not self.autocomplete_provider and self.api and self.config:
@@ -1400,6 +1430,7 @@ class Mastui(App):
     def _tear_down_profile(self):
         """Removes the current profile's UI and data."""
         log.debug("Tearing down current profile.")
+        self._timelines_ready = False
         self._profile_load_generation += 1
 
         if self._timelines_widget:
@@ -1432,6 +1463,8 @@ class Mastui(App):
 
     def action_view_log(self) -> None:
         """An action to view the application log file."""
+        if self._is_modal_or_splash_active():
+            return
         if self._debug and self.log_file_path:
             if not isinstance(self.screen, LogViewerScreen):
                 self.push_screen(LogViewerScreen(self.log_file_path))
