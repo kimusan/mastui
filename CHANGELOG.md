@@ -8,6 +8,35 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.14.0] - 2026-08-30
+
+- fix(app): throttle rapid like and boost actions and handle duplicate errors gracefully
+- feat(search): add direct message and conversation search tab
+- feat(keybinds): add action and shortcut to copy status link to clipboard
+- feat(web): add token authentication support to web bridge
+- feat(log-viewer): add real-time search filter and keybinding to log viewer
+- feat(web): add auto-reconnection and keep-alive ping to web UI
+- perf(timeline): use direct children iteration instead of recursive DOM queries
+- perf(widgets): cache parsed datetime objects to accelerate timeline sorting
+- perf(widgets): avoid full DOM reconstruction on post like and boost updates
+- perf(web): reduce idle CPU wakeups in PTY and PipeDriver selectors
+- perf(web): implement bounded queue and consumer for WebSocket broadcasts
+- perf(web): track running history buffer size in O(1) time
+- perf(image): downsample decoded images to constrain memory footprint
+- fix(logging): enforce root logger configuration with force flag in basicConfig
+- fix(scripts): avoid commit failures in release script when working tree is clean
+- fix(cache): handle concurrent file deletions gracefully in prune_image_cache
+- fix(app): guard theme toggling when config is not yet initialized
+- fix(log-viewer): stream trailing lines of log file to prevent OOM errors
+- fix(web): support fragmented WebSocket frames and enforce client masking
+- fix(web): reap PTY child processes to prevent defunct zombie leaks
+- fix(cache): enable WAL mode and busy timeout for concurrent database access
+- fix(profile): offload follow, mute, and block actions to worker threads
+- fix(timeline): dispatch popup notifications through call_from_thread
+- fix(app): execute status post and reply submissions in worker threads
+- fix(app): offload background DM checks to worker thread
+- Implement nix flake compatibility
+
 ## [1.13.0] - 2026-08-25
 
 ### 🌐 Web Browser Interface (`--web`)
