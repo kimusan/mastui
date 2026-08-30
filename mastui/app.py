@@ -512,6 +512,8 @@ class Mastui(App):
 
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
+        if not self.config:
+            return
         if "light" in self.theme:
             self.theme = self.config.preferred_dark_theme
         else:
