@@ -82,7 +82,10 @@ class ImageWidget(Static):
                 if image_data is None:
                     raise RuntimeError("Image download did not return data")
 
-            self.pil_image = PILImage.open(BytesIO(image_data))
+            img = PILImage.open(BytesIO(image_data))
+            if img.width > 1024 or img.height > 1024:
+                img.thumbnail((1024, 1024), PILImage.Resampling.LANCZOS)
+            self.pil_image = img
             if self._is_mounted:
                 self.app.call_from_thread(self.render_image)
         except Exception as e:
