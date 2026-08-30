@@ -23,7 +23,9 @@ python3 scripts/gen_changelog.py --release-version "$NEW_VER"
 
 # Stage and commit
 git add pyproject.toml CHANGELOG.md || true
-git commit -m "chore(release): v${NEW_VER}"
+if ! git diff-index --cached --quiet HEAD; then
+	git commit -m "chore(release): v${NEW_VER}"
+fi
 
 # Create tag
 git tag "v${NEW_VER}"
