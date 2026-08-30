@@ -8,6 +8,13 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.14.1] - 2026-08-30
+
+- fix(app): prevent premature help screen and modal dialogs during splash loading
+- fix(web): allow dynamic terminal sizing by removing COLUMNS/LINES from environment
+- fix(image): prevent textual_image escape sequence timeouts and improve pty sizing
+- fix(web): ensure full viewport layout fitting and propagate PTY resize signals
+
 ## [1.14.0] - 2026-08-30
 
 - fix(app): throttle rapid like and boost actions and handle duplicate errors gracefully
