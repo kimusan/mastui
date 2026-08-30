@@ -490,6 +490,7 @@ class MastuiWebBridge:
         self.history_buffer: list[str] = []
         self._history_lock = threading.Lock()
         self._max_history_chars = 500000
+        self._history_total_chars = 0
 
     def start_pty(self) -> None:
         """Spawn mastui inside a pseudo-terminal (fork, in-process PTY, or pipe fallback)."""
@@ -708,11 +709,13 @@ class MastuiWebBridge:
                     text = chunk.decode("utf-8", errors="replace")
                     with self._history_lock:
                         self.history_buffer.append(text)
-                        # Keep history buffer bounded
-                        total = sum(len(c) for c in self.history_buffer)
-                        while total > self._max_history_chars and len(self.history_buffer) > 1:
+                        self._history_total_chars += len(text)
+                        while (
+                            self._history_total_chars > self._max_history_chars
+                            and len(self.history_buffer) > 1
+                        ):
                             removed = self.history_buffer.pop(0)
-                            total -= len(removed)
+                            self._history_total_chars -= len(removed)
 
                     msg = json.dumps({"type": "output", "data": text})
                     if self.loop and self.clients:
