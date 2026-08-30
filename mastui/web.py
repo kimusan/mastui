@@ -277,12 +277,14 @@ WEB_HTML = r"""<!DOCTYPE html>
 
 
 class WebSocketConnection:
-    """Minimal RFC 6455 WebSocket connection handler."""
+    """RFC 6455 WebSocket connection handler supporting fragmentation and control frames."""
 
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         self.reader = reader
         self.writer = writer
         self.closed = False
+        self._fragment_buffer = bytearray()
+        self._fragment_opcode: Optional[int] = None
 
     async def send_text(self, text: str) -> None:
         if self.closed:
@@ -304,40 +306,85 @@ class WebSocketConnection:
         except Exception:
             self.closed = True
 
+    async def send_pong(self, data: bytes) -> None:
+        if self.closed:
+            return
+        header = bytearray([0x8A, len(data)])  # FIN + Pong frame
+        try:
+            self.writer.write(header + data)
+            await self.writer.drain()
+        except Exception:
+            self.closed = True
+
     async def read_frame(self) -> Optional[str]:
         if self.closed:
             return None
-        try:
-            head = await self.reader.readexactly(2)
-            b1, b2 = head[0], head[1]
-            opcode = b1 & 0x0F
-            is_masked = bool(b2 & 0x80)
-            payload_len = b2 & 0x7F
+        while not self.closed:
+            try:
+                head = await self.reader.readexactly(2)
+                b1, b2 = head[0], head[1]
+                fin = bool(b1 & 0x80)
+                opcode = b1 & 0x0F
+                is_masked = bool(b2 & 0x80)
+                payload_len = b2 & 0x7F
 
-            if opcode == 0x8:  # Close frame
-                self.closed = True
-                return None
+                # RFC 6455 Section 5.1: Client-to-server frames MUST be masked
+                if not is_masked:
+                    log.warning("WebSocket client sent unmasked frame; closing connection per RFC 6455.")
+                    self.closed = True
+                    return None
 
-            if payload_len == 126:
-                ext = await self.reader.readexactly(2)
-                payload_len = struct.unpack("!H", ext)[0]
-            elif payload_len == 127:
-                ext = await self.reader.readexactly(8)
-                payload_len = struct.unpack("!Q", ext)[0]
+                if payload_len == 126:
+                    ext = await self.reader.readexactly(2)
+                    payload_len = struct.unpack("!H", ext)[0]
+                elif payload_len == 127:
+                    ext = await self.reader.readexactly(8)
+                    payload_len = struct.unpack("!Q", ext)[0]
 
-            mask = await self.reader.readexactly(4) if is_masked else None
-            data = await self.reader.readexactly(payload_len)
+                # Cap max payload to 10MB to prevent memory exhaustion
+                if payload_len > 10 * 1024 * 1024:
+                    self.closed = True
+                    return None
 
-            if mask:
+                mask = await self.reader.readexactly(4)
+                data = await self.reader.readexactly(payload_len)
+
                 unmasked = bytearray(len(data))
                 for i in range(len(data)):
                     unmasked[i] = data[i] ^ mask[i % 4]
-                data = bytes(unmasked)
+                frame_bytes = bytes(unmasked)
 
-            return data.decode("utf-8", errors="replace")
-        except Exception:
-            self.closed = True
-            return None
+                if opcode == 0x8:  # Close frame
+                    self.closed = True
+                    return None
+                elif opcode == 0x9:  # Ping frame -> reply with Pong
+                    await self.send_pong(frame_bytes)
+                    continue
+                elif opcode == 0xA:  # Pong frame -> ignore
+                    continue
+                elif opcode == 0x0:  # Continuation frame
+                    if self._fragment_opcode is None:
+                        self.closed = True
+                        return None
+                    self._fragment_buffer.extend(frame_bytes)
+                    if fin:
+                        full_payload = bytes(self._fragment_buffer)
+                        self._fragment_buffer.clear()
+                        self._fragment_opcode = None
+                        return full_payload.decode("utf-8", errors="replace")
+                elif opcode in (0x1, 0x2):  # Text (0x1) or Binary (0x2)
+                    if not fin:
+                        self._fragment_opcode = opcode
+                        self._fragment_buffer = bytearray(frame_bytes)
+                        continue
+                    return frame_bytes.decode("utf-8", errors="replace")
+                else:
+                    self.closed = True
+                    return None
+            except Exception:
+                self.closed = True
+                return None
+        return None
 
 
 class PipeDriver(Driver):
