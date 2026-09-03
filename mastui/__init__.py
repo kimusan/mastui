@@ -17,11 +17,14 @@ def _read_pyproject_version() -> str | None:
 
 
 def _detect_version() -> str:
+    pyproject_version = _read_pyproject_version()
+    if pyproject_version:
+        return pyproject_version
     try:
         return metadata.version("mastui")
     except metadata.PackageNotFoundError:
         pass
-    return _read_pyproject_version() or "0.0.0"
+    return "0.0.0"
 
 
 __version__ = _detect_version()

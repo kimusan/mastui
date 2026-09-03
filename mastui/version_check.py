@@ -33,19 +33,19 @@ def _parse_version(version_str: str) -> tuple:
 
 
 def get_installed_version() -> str:
-    """Return the installed version of mastui, or fall back to pyproject."""
-    try:
-        return metadata.version("mastui")
-    except metadata.PackageNotFoundError:
-        pass
-    # Try reading pyproject when running from source
+    """Return the version of mastui, prioritizing pyproject.toml as the single source of truth."""
+    # Try reading pyproject when running from source or packaged bundle
     try:
         root = Path(__file__).resolve().parents[1]
         data = tomllib.loads((root / "pyproject.toml").read_text())
         return data["tool"]["poetry"]["version"]
     except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError) as e:
         log.debug(f"Could not read version from pyproject: {e}")
-        return "0.0.0"
+    try:
+        return metadata.version("mastui")
+    except metadata.PackageNotFoundError:
+        pass
+    return "0.0.0"
 
 
 def _load_state(state_path: Path) -> dict:
@@ -77,7 +77,9 @@ def fetch_latest_version() -> str | None:
         return None
 
 
-def check_for_update(profile_path: Path, current_version: str, force: bool = False) -> dict:
+def check_for_update(
+    profile_path: Path, current_version: str, force: bool = False
+) -> dict:
     """Check whether a newer version is available.
 
     Returns dict with:
