@@ -8,6 +8,11 @@ This changelog is derived from git release tags and commit history on `main`.
 
 - No changes yet.
 
+## [1.14.2] - 2026-09-03
+
+- fix(version): prioritize pyproject.toml as single source of truth for version detection
+- fix(Issue#22): resolve login screen crash and suppress terminal size probe warning
+
 ## [1.14.1] - 2026-08-30
 
 - fix(app): prevent premature help screen and modal dialogs during splash loading
