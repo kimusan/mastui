@@ -18,7 +18,8 @@
 }:
 buildPythonPackage (finalAttrs: {
   pname = "mastui";
-  version = "1.13.0";
+  # this will need to be updated when the version changes via CI
+  version = "1.14.2";
   pyproject = true;
   build-system = [ poetry-core ];
 
