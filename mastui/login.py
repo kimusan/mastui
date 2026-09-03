@@ -41,17 +41,25 @@ class LoginScreen(ModalScreen):
             d.border_title = "Mastui Login"
             with ContentSwitcher(initial="login-initial-view"):
                 with Vertical(id="login-initial-view"):
-                    yield Static("[bold]Welcome to Mastui![/bold]\n\nEnter your Mastodon instance to get started.")
+                    yield Static(
+                        "[bold]Welcome to Mastui![/bold]\n\nEnter your Mastodon instance to get started."
+                    )
                     with Grid(id="login-grid"):
                         yield Label("Mastodon Instance:")
-                        yield Input(placeholder="mastodon.social", id="host", value=self.host or "")
+                        yield Input(
+                            placeholder="mastodon.social",
+                            id="host",
+                            value=self.host or "",
+                        )
                     yield Static()  # Spacer
                     with Horizontal(id="login-initial-buttons"):
                         yield Button("Get Auth Link", variant="primary", id="get_auth")
                         yield Button("Cancel", id="cancel")
 
                 with Vertical(id="login-auth-view"):
-                    yield Static("1. An authorization link has been copied to your clipboard (if possible).")
+                    yield Static(
+                        "1. An authorization link has been copied to your clipboard (if possible)."
+                    )
                     yield Static("   Open it in your browser to grant Mastui access.")
                     yield Markdown("", id="auth_link", open_links=False)
                     yield Static("\n2. Paste the authorization code you received here:")
@@ -61,8 +69,27 @@ class LoginScreen(ModalScreen):
                         yield Button("Cancel", id="cancel")
 
                 with Vertical(id="login-loading-view", classes="centered"):
-                     yield Static("Working...")
-                     yield LoadingIndicator()
+                    yield Static("Working...")
+                    yield LoadingIndicator()
+
+            yield Static(id="login-status")
+
+    def on_mount(self) -> None:
+        """Called when the screen is mounted."""
+        host_input = self.query_one("#host")
+        if self.host:
+            host_input.disabled = True
+            self.query_one("#get_auth").focus()
+        else:
+            host_input.focus()
+
+    @on(Input.Submitted, "#host")
+    def on_host_submitted(self) -> None:
+        self.query_one("#get_auth", Button).press()
+
+    @on(Input.Submitted, "#auth_code")
+    def on_auth_code_submitted(self) -> None:
+        self.query_one("#login", Button).press()
 
     def clean_host(self, host_input: str) -> str:
         """Cleans the host input to be a valid domain."""
@@ -151,7 +178,7 @@ class LoginScreen(ModalScreen):
         """Callback for when the auth link is created."""
         status = self.query_one("#login-status")
         switcher = self.query_one(ContentSwitcher)
-        
+
         try:
             auth_url, client_id, client_secret, error = result
             self.client_id = client_id
@@ -178,7 +205,10 @@ class LoginScreen(ModalScreen):
             switcher.current = "login-auth-view"
             self.query_one("#auth_code").focus()
         except (TypeError, ValueError) as e:
-            log.error(f"Error unpacking result in on_auth_link_created: {result} - {e}", exc_info=True)
+            log.error(
+                f"Error unpacking result in on_auth_link_created: {result} - {e}",
+                exc_info=True,
+            )
             status.update("An unexpected error occurred. See log for details.")
             switcher.current = "login-initial-view"
         except (NoMatches, AttributeError, RuntimeError) as e:

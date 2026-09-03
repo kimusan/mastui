@@ -6,18 +6,26 @@ import httpx
 from PIL import Image as PILImage
 from textual import events
 from textual.widgets import Static
-from textual_image.renderable import HalfcellImage, Image, TGPImage
-from textual_image.widget.sixel import Image as SixelWidget
 
-# Avoid textual_image querying terminal via escape sequences on stdin (causes timeouts/glitches in PTY/Web)
+# Avoid textual_image querying terminal via escape sequences on stdin (causes timeouts/glitches in PTY/Web/GNOME Terminal)
 try:
     import textual_image._terminal as _ti_term
     from textual_image._terminal import CellSize as _TICellSize
 
     if not hasattr(_ti_term.get_cell_size, "_result"):
         setattr(_ti_term.get_cell_size, "_result", _TICellSize(10, 20))
+
+    @_ti_term.contextmanager
+    def _suppress_terminal_query(*args, **kwargs):
+        raise TimeoutError("Suppressed terminal query during startup")
+        yield
+
+    _ti_term.capture_terminal_response = _suppress_terminal_query
 except Exception:
     pass
+
+from textual_image.renderable import HalfcellImage, Image, TGPImage
+from textual_image.widget.sixel import Image as SixelWidget
 
 log = logging.getLogger(__name__)
 MAX_IMAGE_RETRIES = 3
