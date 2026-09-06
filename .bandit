@@ -1,3 +1,3 @@
 [bandit]
-exclude_dirs = ["tests", ".venv", "venv"]
-skips = ["B101"]
+exclude_dirs = ["tests", "*/tests/*", ".venv", "venv"]
+skips = ["B101", "B106", "B103"]

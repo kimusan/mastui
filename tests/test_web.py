@@ -132,12 +132,12 @@ async def test_web_auth_token():
     req_no_token = b"GET / HTTP/1.1\r\nHost: localhost:8000\r\n\r\n"
     r1 = MockAsyncReader(req_no_token)
     w1 = MockAsyncWriter()
-    await handle_http_and_ws(r1, w1, bridge, auth_token="secret123")
+    await handle_http_and_ws(r1, w1, bridge, auth_token="secret123")  # nosec B106 - test mock token
     assert b"401 Unauthorized" in bytes(w1.data)
 
     # Request with valid query token -> 200 OK
     req_valid = b"GET /?token=secret123 HTTP/1.1\r\nHost: localhost:8000\r\n\r\n"
     r2 = MockAsyncReader(req_valid)
     w2 = MockAsyncWriter()
-    await handle_http_and_ws(r2, w2, bridge, auth_token="secret123")
+    await handle_http_and_ws(r2, w2, bridge, auth_token="secret123")  # nosec B106 - test mock token
     assert b"200 OK" in bytes(w2.data)

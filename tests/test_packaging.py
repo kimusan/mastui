@@ -56,7 +56,7 @@ def test_pyinstaller_spec_exists():
 def test_normalize_tree_permissions(tmp_path):
     d = tmp_path / "subdir"
     d.mkdir()
-    os.chmod(d, 0o777)
+    os.chmod(d, 0o777)  # nosec B103 - intentionally create permissive directory to test normalizer
     
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -66,7 +66,7 @@ def test_normalize_tree_permissions(tmp_path):
     
     data_file = d / "file.txt"
     data_file.write_text("data")
-    os.chmod(data_file, 0o777)
+    os.chmod(data_file, 0o777)  # nosec B103 - intentionally create permissive file to test normalizer
     
     normalize_tree_permissions(tmp_path)
     
