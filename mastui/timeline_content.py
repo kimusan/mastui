@@ -256,7 +256,7 @@ class TimelineContent(VerticalScroll):
             import clipman
             try:
                 clipman.init()
-            except Exception:
+            except Exception:  # nosec B110 - clipman init might fail in headless/non-X11 environments
                 pass
             clipman.set(url)
             self.app.notify(f"Copied link to clipboard: {url}")

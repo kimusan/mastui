@@ -95,14 +95,14 @@ def normalize_tree_permissions(root: Path) -> None:
         return
     for item in root.rglob("*"):
         if item.is_dir():
-            os.chmod(item, 0o755)
+            os.chmod(item, 0o755)  # nosec B103 - directory traversal permissions for packaging
         elif item.is_file():
             if item.parent.name == "bin" or item.name == "AppRun":
-                os.chmod(item, 0o755)
+                os.chmod(item, 0o755)  # nosec B103 - executable binary permissions for packaging
             else:
                 os.chmod(item, 0o644)
     if root.is_dir():
-        os.chmod(root, 0o755)
+        os.chmod(root, 0o755)  # nosec B103 - root packaging directory permissions
 
 
 def build_deb(version: str) -> Path:
@@ -221,7 +221,7 @@ def build_rpm(version: str) -> Path:
         rpmbuild,
         "-bb",
         "--define", f"_topdir {rpm_topdir}",
-        "--define", f"_tmppath {rpm_topdir}/tmp",
+        "--define", f"_tmppath {rpm_topdir}/tmp",  # nosec B108 - isolated build-specific rpm tmpdir
         "--define", f"_dbpath {rpm_topdir}/db",
         "--define", f"_version {version}",
         str(spec_dest),
@@ -259,7 +259,7 @@ def build_appimage(version: str) -> Path:
     
     # Copy binary
     shutil.copy2(binary, usr_bin / "mastui")
-    os.chmod(usr_bin / "mastui", 0o755)
+    os.chmod(usr_bin / "mastui", 0o755)  # nosec B103 - binary executable permissions
     
     # Desktop and icon inside usr/share
     desktop_src = PACKAGING_DIR / "mastui.desktop"

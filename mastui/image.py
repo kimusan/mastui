@@ -18,10 +18,10 @@ try:
     @_ti_term.contextmanager
     def _suppress_terminal_query(*args, **kwargs):
         raise TimeoutError("Suppressed terminal query during startup")
-        yield
+        yield  # pragma: no cover
 
     _ti_term.capture_terminal_response = _suppress_terminal_query
-except Exception:
+except Exception:  # nosec B110 - textual_image may not be installed in all environments
     pass
 
 from textual_image.renderable import HalfcellImage, Image, TGPImage

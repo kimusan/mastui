@@ -148,7 +148,7 @@ class Mastui(App):
             try:
                 from mastui.web import PipeDriver
                 return PipeDriver
-            except Exception:
+            except Exception:  # nosec B110 - fallback to default driver if PipeDriver unavailable
                 pass
         return super().get_driver_class()
 
@@ -327,8 +327,8 @@ class Mastui(App):
             try:
                 header = self.query_one(CustomHeader)
                 self.call_from_thread(header.hide_dm_notification)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Could not hide DM notification on header: %s", e)
             return
 
         log.debug("Checking for new direct messages in the background...")
@@ -336,7 +336,8 @@ class Mastui(App):
             all_convos = self.api.conversations()  # Fetches up to 20 by default
             try:
                 header = self.query_one(CustomHeader)
-            except Exception:
+            except Exception as e:
+                log.debug("Could not query header widget for DM update: %s", e)
                 header = None
 
             if not all_convos:
@@ -834,8 +835,8 @@ class Mastui(App):
                 try:
                     fresh_post = self.api.status(post_id)
                     self.post_message(PostStatusUpdate(fresh_post))
-                except Exception:
-                    pass
+                except Exception as sync_err:
+                    log.debug("Could not fetch fresh post status after duplicate like: %s", sync_err)
                 return
             log.error(f"Error liking/unliking post {post_id}: {e}", exc_info=True)
             self.call_from_thread(
@@ -897,8 +898,8 @@ class Mastui(App):
                 try:
                     fresh_post = self.api.status(post_id)
                     self.post_message(PostStatusUpdate(fresh_post))
-                except Exception:
-                    pass
+                except Exception as sync_err:
+                    log.debug("Could not fetch fresh post status after duplicate boost: %s", sync_err)
                 return
             log.error(f"Error boosting/unboosting post {post_id}: {e}", exc_info=True)
             self.call_from_thread(
@@ -1339,11 +1340,11 @@ class Mastui(App):
                         import clipman
                         try:
                             clipman.init()
-                        except Exception:
+                        except Exception:  # nosec B110 - clipman initialization may fail if no display
                             pass
                         clipman.set(url)
-                    except Exception:
-                        pass
+                    except Exception as clip_err:  # nosec B110 - best-effort clipboard copy
+                        log.debug("Could not copy URL to system clipboard: %s", clip_err)
                     self.notify(f"Copied link to clipboard: {url}")
                     return
         focused = self.query("Timeline:focus")
@@ -1402,12 +1403,12 @@ class Mastui(App):
                         self.pop_screen()
                     else:
                         self._screen_stack.remove(screen)
-                except Exception:
+                except Exception:  # nosec B110 - splash screen may already be popped
                     pass
         if isinstance(self.screen, SplashScreen):
             try:
                 self.pop_screen()
-            except Exception:
+            except Exception:  # nosec B110 - splash screen already dismissed
                 pass
 
     def get_autocomplete_provider(self) -> AutocompleteProvider | None:

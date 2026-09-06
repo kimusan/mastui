@@ -72,5 +72,5 @@ class LogViewerScreen(ModalScreen):
         """Focus the search filter input."""
         try:
             self.query_one("#log-filter-input", Input).focus()
-        except Exception:
+        except Exception:  # nosec B110 - input widget may not be mounted yet
             pass

@@ -509,12 +509,12 @@ class PipeDriver(Driver):
                                 self.process_message(event)
                     for event in parser.tick():
                         self.process_message(event)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Pipe input loop terminated: %s", e)
             finally:
                 try:
                     sel.close()
-                except Exception:
+                except Exception:  # nosec B110 - best-effort selector cleanup
                     pass
 
         self._key_thread = threading.Thread(target=_run_input, name="pipe-input", daemon=True)
@@ -529,7 +529,7 @@ class PipeDriver(Driver):
     def write(self, data: str) -> None:
         try:
             os.write(self.out_fd, data.encode("utf-8"))
-        except Exception:
+        except OSError:  # nosec B110 - best-effort write during shutdown
             pass
 
     def flush(self) -> None:
@@ -583,7 +583,7 @@ class MastuiWebBridge:
 
                     cmd = [sys.executable, "-m", "mastui.app"] + self.cli_args
                     try:
-                        os.execvpe(cmd[0], cmd, env)
+                        os.execvpe(cmd[0], cmd, env)  # nosec B606 - safely exec mastui inside dedicated pty
                     except Exception as e:
                         print(f"Failed to execute mastui: {e}", file=sys.stderr)
                         os._exit(1)
@@ -668,7 +668,7 @@ class MastuiWebBridge:
                             os.close(in_r)
                         if out_w is not None:
                             os.close(out_w)
-                except Exception:
+                except OSError:  # nosec B110 - best-effort descriptor cleanup
                     pass
 
         thread = threading.Thread(target=run_in_process, name="MastuiInProcess", daemon=True)
@@ -684,7 +684,7 @@ class MastuiWebBridge:
             try:
                 if self.pid is not None:
                     os.waitpid(self.pid, 0)
-            except (ChildProcessError, OSError):
+            except (ChildProcessError, OSError):  # nosec B110 - child already reaped
                 pass
             finally:
                 self._running = False
@@ -698,19 +698,19 @@ class MastuiWebBridge:
         if self.master_fd is not None:
             try:
                 os.close(self.master_fd)
-            except Exception:
+            except OSError:  # nosec B110 - best-effort descriptor close
                 pass
             self.master_fd = None
         if self.in_pipe_w is not None:
             try:
                 os.close(self.in_pipe_w)
-            except Exception:
+            except OSError:  # nosec B110 - best-effort pipe close
                 pass
             self.in_pipe_w = None
         if self.out_pipe_r is not None:
             try:
                 os.close(self.out_pipe_r)
-            except Exception:
+            except OSError:  # nosec B110 - best-effort pipe close
                 pass
             self.out_pipe_r = None
         if self.pid is not None:
@@ -724,13 +724,13 @@ class MastuiWebBridge:
                 else:
                     os.kill(self.pid, 9)  # SIGKILL
                     os.waitpid(self.pid, 0)
-            except (ProcessLookupError, ChildProcessError, OSError):
+            except (ProcessLookupError, ChildProcessError, OSError):  # nosec B110 - process already dead
                 pass
             self.pid = None
         if hasattr(self, "_broadcast_task") and self._broadcast_task is not None:
             try:
                 self._broadcast_task.cancel()
-            except Exception:
+            except Exception:  # nosec B110 - task already finished
                 pass
             self._broadcast_task = None
 
@@ -907,7 +907,7 @@ async def handle_http_and_ws(
             key = headers["sec-websocket-key"]
             guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
             accept = base64.b64encode(
-                hashlib.sha1((key + guid).encode()).digest()
+                hashlib.sha1((key + guid).encode(), usedforsecurity=False).digest()  # nosec B324
             ).decode()
 
             response = (
@@ -935,8 +935,8 @@ async def handle_http_and_ws(
                 try:
                     sz = Size(bridge.cols, bridge.rows)
                     bridge.app_instance.post_message(events.Resize(sz, sz))
-                except Exception:
-                    pass
+                except Exception as ex:
+                    log.debug("Could not post initial resize to app instance: %s", ex)
 
             # Process incoming messages
             while not ws.closed:
@@ -972,7 +972,7 @@ async def handle_http_and_ws(
         log.debug(f"HTTP/WS connection error: {e}")
         try:
             writer.close()
-        except Exception:
+        except (OSError, RuntimeError):  # nosec B110 - best-effort connection close
             pass
 
 

@@ -322,7 +322,7 @@ class Post(Vertical):
             self.query_one("#like-count").update(
                 f"💖 {status_to_display.get('favourites_count', 0)}"
             )
-        except Exception:
+        except Exception:  # nosec B110 - count widgets might not be mounted in all views
             pass
         self.hide_spinner()
 
