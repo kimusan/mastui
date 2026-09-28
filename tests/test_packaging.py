@@ -6,7 +6,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scripts.build_packages import get_version, normalize_tree_permissions
+from scripts.build_packages import (  # noqa: E402
+    DEFAULT_UPDATE_INFORMATION,
+    get_version,
+    normalize_tree_permissions,
+    parse_args,
+)
 
 
 def test_get_version():
@@ -73,4 +78,39 @@ def test_normalize_tree_permissions(tmp_path):
     assert oct(d.stat().st_mode & 0o777) == "0o755"
     assert oct(exe_file.stat().st_mode & 0o777) == "0o755"
     assert oct(data_file.stat().st_mode & 0o777) == "0o644"
+
+
+def test_appimage_update_information():
+    parts = DEFAULT_UPDATE_INFORMATION.split("|")
+    assert len(parts) == 5
+    assert parts[0] == "gh-releases-zsync"
+    assert parts[1] == "kimusan"
+    assert parts[2] == "mastui"
+    assert parts[3] == "latest"
+    assert parts[4].endswith(".AppImage.zsync")
+    assert "*" in parts[4]
+
+
+def test_parse_args_update_information(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["build_packages.py", "--target", "appimage"])
+    args = parse_args()
+    assert args.update_information == DEFAULT_UPDATE_INFORMATION
+    assert args.no_update_information is False
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["build_packages.py", "--target", "appimage", "--no-update-information"],
+    )
+    args_no_update = parse_args()
+    assert args_no_update.no_update_information is True
+
+    custom_info = "gh-releases-zsync|custom|mastui|latest|custom.AppImage.zsync"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["build_packages.py", "--target", "appimage", "--update-information", custom_info],
+    )
+    args_custom = parse_args()
+    assert args_custom.update_information == custom_info
 

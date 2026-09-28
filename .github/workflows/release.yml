@@ -27,7 +27,7 @@ jobs:
       - name: Install system packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm zstd libfuse2
+          sudo apt-get install -y rpm zstd libfuse2 zsync
 
       - name: Download appimagetool and runtime
         run: |

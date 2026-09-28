@@ -33,6 +33,8 @@ DIST_DIR = ROOT_DIR / "dist"
 BUILD_DIR = ROOT_DIR / "build"
 PACKAGING_DIR = ROOT_DIR / "packaging"
 ASSETS_DIR = ROOT_DIR / "assets"
+DEFAULT_UPDATE_INFORMATION = "gh-releases-zsync|kimusan|mastui|latest|mastui-*-x86_64.AppImage.zsync"
+
 
 
 def run_cmd(cmd: List[str], *, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess:
@@ -238,8 +240,8 @@ def build_rpm(version: str) -> Path:
     return out_rpm
 
 
-def build_appimage(version: str) -> Path:
-    """Build standalone AppImage."""
+def build_appimage(version: str, update_information: Optional[str] = DEFAULT_UPDATE_INFORMATION) -> Path:
+    """Build standalone AppImage with AppImageUpdate support."""
     print(f"\n--- Building AppImage for v{version} ---")
     binary = DIST_DIR / "mastui"
     if not binary.exists():
@@ -285,6 +287,12 @@ exec "$HERE/usr/bin/mastui" "$@"
     
     appimagetool = shutil.which("appimagetool")
     out_appimage = DIST_DIR / f"mastui-{version}-x86_64.AppImage"
+    zsync_target = DIST_DIR / f"{out_appimage.name}.zsync"
+
+    if out_appimage.exists():
+        out_appimage.unlink()
+    if zsync_target.exists():
+        zsync_target.unlink()
     
     if not appimagetool:
         # Check if appimagetool exists in build dir
@@ -306,6 +314,10 @@ exec "$HERE/usr/bin/mastui" "$@"
     runtime_file = BUILD_DIR / "runtime-x86_64"
     if runtime_file.exists():
         appimage_cmd.extend(["--runtime-file", str(runtime_file)])
+
+    if update_information:
+        appimage_cmd.extend(["-u", update_information])
+        env["UPDATE_INFORMATION"] = update_information
         
     appimage_cmd.extend([str(appdir), str(out_appimage)])
     print(f"Running {' '.join(appimage_cmd)}...")
@@ -314,6 +326,30 @@ exec "$HERE/usr/bin/mastui" "$@"
         print(f"Warning: appimagetool exited with code {proc.returncode}", file=sys.stderr)
     else:
         print(f"Successfully built AppImage: {out_appimage}")
+
+    # Check if zsync companion file was placed in ROOT_DIR or BUILD_DIR and move to DIST_DIR
+    for candidate in [ROOT_DIR / f"{out_appimage.name}.zsync", BUILD_DIR / f"{out_appimage.name}.zsync"]:
+        if candidate.exists() and not zsync_target.exists():
+            shutil.move(str(candidate), str(zsync_target))
+        elif candidate.exists() and zsync_target.exists():
+            candidate.unlink()
+
+    # Fallback: if update_information was requested but zsync file was not produced by appimagetool
+    if update_information and not zsync_target.exists() and proc.returncode == 0 and out_appimage.exists():
+        zsyncmake = shutil.which("zsyncmake")
+        if zsyncmake:
+            print(f"Generating zsync file manually using zsyncmake: {zsync_target}")
+            run_cmd([zsyncmake, "-u", out_appimage.name, "-o", str(zsync_target), str(out_appimage)], check=False)
+        else:
+            print(
+                "Notice: zsyncmake not found on system. AppImage embedded update info was set, "
+                "but companion .zsync file could not be generated. Install 'zsync' to generate it.",
+                file=sys.stderr,
+            )
+
+    if zsync_target.exists():
+        print(f"Successfully generated zsync file: {zsync_target}")
+
     return out_appimage
 
 
@@ -472,6 +508,16 @@ def parse_args() -> argparse.Namespace:
         "--version",
         help="Override version string (defaults to version in pyproject.toml)",
     )
+    parser.add_argument(
+        "--update-information",
+        default=os.environ.get("UPDATE_INFORMATION", DEFAULT_UPDATE_INFORMATION),
+        help="Update information string for AppImage (e.g. gh-releases-zsync|owner|repo|latest|pattern.zsync)",
+    )
+    parser.add_argument(
+        "--no-update-information",
+        action="store_true",
+        help="Do not embed update information into the AppImage",
+    )
     return parser.parse_args()
 
 
@@ -479,6 +525,7 @@ def main() -> None:
     args = parse_args()
     version = args.version or get_version()
     target = "all-linux" if args.all_linux else args.target
+    update_info = None if args.no_update_information else args.update_information
     print(f"Starting mastui packaging for v{version} (Target: {target})")
     
     if target == "binary":
@@ -488,7 +535,7 @@ def main() -> None:
     elif target == "rpm":
         build_rpm(version)
     elif target == "appimage":
-        build_appimage(version)
+        build_appimage(version, update_information=update_info)
     elif target == "arch":
         build_arch(version)
     elif target == "windows":
@@ -499,7 +546,7 @@ def main() -> None:
         build_binary()
         build_deb(version)
         build_rpm(version)
-        build_appimage(version)
+        build_appimage(version, update_information=update_info)
         build_arch(version)
         generate_checksums()
     
