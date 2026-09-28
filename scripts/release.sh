@@ -21,8 +21,13 @@ NEW_VER="$(poetry version -s)"
 # This promotes current Unreleased commits into the new version section.
 python3 scripts/gen_changelog.py --release-version "$NEW_VER"
 
+# Update version in default.nix for Nix / NixOS packaging
+if [[ -f default.nix ]]; then
+	sed -i -E "s/version = \"[0-9]+\.[0-9]+\.[0-9]+.*\";/version = \"${NEW_VER}\";/" default.nix
+fi
+
 # Stage and commit
-git add pyproject.toml CHANGELOG.md || true
+git add pyproject.toml CHANGELOG.md default.nix || true
 if ! git diff-index --cached --quiet HEAD; then
 	git commit -m "chore(release): v${NEW_VER}"
 fi
