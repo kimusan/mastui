@@ -1,4 +1,4 @@
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, InvalidThemeError
 from textual.binding import Binding
 from textual.widgets import Footer
 from textual import on, events
@@ -245,7 +245,7 @@ class Mastui(App):
         # Update the header with the profile name
         self.sub_title = profile_name
 
-        self.theme = self.config.theme
+        self._safe_set_theme(self.config.theme)
         self.theme_changed_signal.subscribe(self, self.on_theme_changed)
 
         self.push_screen(SplashScreen())
@@ -513,14 +513,32 @@ class Mastui(App):
         else:
             log.debug("Timelines widget not yet mounted; skipping layout check.")
 
+    _FALLBACK_THEME = "textual-dark"
+
+    def _safe_set_theme(self, theme_name: str) -> None:
+        """Set the app theme, falling back to a safe default if the theme is invalid."""
+        try:
+            self.theme = theme_name
+        except InvalidThemeError:
+            log.warning(
+                "Theme %r is not registered; falling back to %r.",
+                theme_name,
+                self._FALLBACK_THEME,
+            )
+            self.theme = self._FALLBACK_THEME
+            self.notify(
+                f"Theme '{theme_name}' not found. Using default theme.",
+                severity="warning",
+            )
+
     def action_toggle_dark(self) -> None:
         """An action to toggle dark mode."""
         if not self.config:
             return
         if "light" in self.theme:
-            self.theme = self.config.preferred_dark_theme
+            self._safe_set_theme(self.config.preferred_dark_theme)
         else:
-            self.theme = self.config.preferred_light_theme
+            self._safe_set_theme(self.config.preferred_light_theme)
 
     def _is_modal_or_splash_active(self) -> bool:
         """Check whether modal dialogs or splash screen are active, or timelines not yet ready."""

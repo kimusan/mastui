@@ -93,3 +93,32 @@ def test_modal_actions_guarded_before_timelines_ready():
     app.action_show_help()
     assert app.push_screen.call_count == 1
 
+
+def test_safe_set_theme_falls_back_on_invalid_theme():
+    """Invalid theme names should fall back to the default instead of crashing."""
+    app = Mastui()
+    app.notify = MagicMock()
+
+    # Set a known good theme first
+    app.theme = "textual-dark"
+
+    # Attempt to set a theme that is not registered
+    app._safe_set_theme("catppuccin-nonexistent")
+
+    # Should have fallen back to the default
+    assert app.theme == Mastui._FALLBACK_THEME
+    app.notify.assert_called_once()
+    call_kwargs = app.notify.call_args
+    assert "not found" in call_kwargs[0][0]
+    assert call_kwargs[1]["severity"] == "warning"
+
+
+def test_safe_set_theme_accepts_valid_theme():
+    """Valid theme names should be set without notification."""
+    app = Mastui()
+    app.notify = MagicMock()
+
+    app._safe_set_theme("textual-light")
+
+    assert app.theme == "textual-light"
+    app.notify.assert_not_called()
