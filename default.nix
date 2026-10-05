@@ -1,5 +1,4 @@
 {
-  fetchFromGitHub,
   buildPythonPackage,
   lib,
   poetry-core,
@@ -18,8 +17,7 @@
 }:
 buildPythonPackage (finalAttrs: {
   pname = "mastui";
-  # this will need to be updated when the version changes via CI
-  version = "1.14.2";
+  version = (lib.importTOML ./pyproject.toml).tool.poetry.version;
   pyproject = true;
   build-system = [ poetry-core ];
 

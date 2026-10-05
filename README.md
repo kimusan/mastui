@@ -130,8 +130,8 @@ Download pre-built standalone packages directly from [GitHub Releases](https://g
   configuration.nix
   ```nix
   environment.systemPackages = with pkgs; [
-    inputs.mastui."${pkgs.stdenv.hostPlatform.system}".default
-  ]
+    inputs.mastui.packages."${pkgs.stdenv.hostPlatform.system}".default
+  ];
   ```
 
   or
@@ -139,9 +139,10 @@ Download pre-built standalone packages directly from [GitHub Releases](https://g
   home.nix
   ```nix
   home.packages = with pkgs; [
-    inputs.mastui."${pkgs.stdenv.hostPlatform.system}".default
-  ]
+    inputs.mastui.packages."${pkgs.stdenv.hostPlatform.system}".default
+  ];
   ```
+  
 - **Windows**:
   Download `mastui-<version>-windows-x86_64.zip`, extract, and run `mastui.exe` in Windows Terminal or PowerShell.
 
