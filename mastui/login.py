@@ -124,7 +124,7 @@ class LoginScreen(ModalScreen):
 
         if event.button.id == "get_auth":
             host_input_widget = self.query_one("#host")
-            host_value = host_input_widget.value
+            host_value = host_input_widget.value.strip()
             if not host_value:
                 status.update("Please enter a Mastodon instance.")
                 return

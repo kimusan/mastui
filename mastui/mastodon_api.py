@@ -22,8 +22,47 @@ def get_api(config_obj):
 
 
 def login(host, client_id, client_secret, auth_code, ssl_verify=True):
-    """Logs in to a Mastodon instance using an auth code and returns the API object or an error."""
+    """Logs in to a Mastodon instance using an auth code (or direct access token) and returns the API object or an error."""
     try:
+        import urllib.parse
+
+        # 1. Clean and normalize the auth input
+        clean_code = str(auth_code or "").strip().strip("'\"")
+        if "code=" in clean_code:
+            try:
+                parsed = urllib.parse.urlparse(clean_code)
+                qs = urllib.parse.parse_qs(parsed.query)
+                if "code" in qs:
+                    clean_code = qs["code"][0].strip().strip("'\"")
+                else:
+                    clean_code = clean_code.split("code=", 1)[1].split("&")[0].split()[0].strip().strip("'\"")
+            except Exception:
+                pass
+        if clean_code.startswith("Bearer "):
+            clean_code = clean_code[7:].strip()
+
+        # 2. Check if clean_code is directly a valid access token (e.g. created via web UI)
+        try:
+            direct_session = Session()
+            direct_session.verify = ssl_verify
+            direct_api = Mastodon(
+                access_token=clean_code,
+                api_base_url=f"https://{host}",
+                session=direct_session,
+            )
+            me = direct_api.me()
+            if me and isinstance(me, dict) and ("username" in me or "id" in me):
+                env_content = (
+                    f"MASTODON_HOST={host}\n"
+                    f"MASTODON_CLIENT_ID={client_id or ''}\n"
+                    f"MASTODON_CLIENT_SECRET={client_secret or ''}\n"
+                    f"MASTODON_ACCESS_TOKEN={clean_code}\n"
+                )
+                return direct_api, env_content, None
+        except Exception:
+            pass
+
+        # 3. Exchange authorization code for access token via OAuth
         s = Session()
         s.verify = ssl_verify
         mastodon = Mastodon(
@@ -33,11 +72,23 @@ def login(host, client_id, client_secret, auth_code, ssl_verify=True):
             session=s,
             mastodon_version="4.0.0",
         )
-        access_token = mastodon.log_in(
-            code=auth_code,
-            redirect_uri="urn:ietf:wg:oauth:2.0:oob",
-            scopes=["read", "write", "follow", "push"],
-        )
+        try:
+            access_token = mastodon.log_in(
+                code=clean_code,
+                redirect_uri="urn:ietf:wg:oauth:2.0:oob",
+                scopes=["read", "write", "follow", "push"],
+            )
+        except Exception as oauth_err:
+            # Fallback without 'push' scope in case server does not support webpush scope
+            try:
+                access_token = mastodon.log_in(
+                    code=clean_code,
+                    redirect_uri="urn:ietf:wg:oauth:2.0:oob",
+                    scopes=["read", "write", "follow"],
+                )
+            except Exception:
+                raise oauth_err
+
         # Create the content for the .env file
         env_content = (
             f"MASTODON_HOST={host}\n"
@@ -56,8 +107,11 @@ def login(host, client_id, client_secret, auth_code, ssl_verify=True):
         )
         return api, env_content, None
     except MastodonError as e:
-        log.error(f"Mastodon API error during login for host '{host}': {e}", exc_info=True)
-        return None, None, str(e)
+        err_msg = str(e)
+        if "invalid_grant" in err_msg:
+            err_msg = "Invalid or expired authorization code. Please verify you copied the entire code, or get a fresh link."
+        log.warning(f"Mastodon API error during login for host '{host}': {e}")
+        return None, None, err_msg
     except (RequestException, OSError, ValueError, TypeError) as e:
         log.error(f"Unexpected error during login for host '{host}': {e}", exc_info=True)
         return None, None, str(e)
